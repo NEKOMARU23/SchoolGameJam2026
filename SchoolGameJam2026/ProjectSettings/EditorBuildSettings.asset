@@ -6,7 +6,16 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/TechC/SchoolGameJam2026/Scenes/Production/Title.unity
+    guid: 005452b4e2037eb41b65fea5cd7e75d0
+  - enabled: 1
+    path: Assets/TechC/SchoolGameJam2026/Scenes/Production/InGame.unity
+    guid: 17f43083b6d64ce47b0e479bb87f49b3
+  - enabled: 1
+    path: Assets/TechC/SchoolGameJam2026/Scenes/Production/Result.unity
+    guid: 94b87ffa5d30d3743bf1206c60ab633a
+  - enabled: 1
+    path: Assets/TechC/SchoolGameJam2026/Scenes/Production/Manager.unity
+    guid: 26b794da434e27145acf8890de55be61
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
