@@ -2,10 +2,11 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace TechC.SchoolGameJam2026.Scene.WorkSpace.Work_UTIMURA.Script
+namespace TechC.SchoolGameJam2026.Script.Core.Manager
 {
     public class AudioManager: MonoBehaviour
     {
+        
         public static AudioManager Instance { get; private set; }
 
         [Header("--オーディオソース--")]
