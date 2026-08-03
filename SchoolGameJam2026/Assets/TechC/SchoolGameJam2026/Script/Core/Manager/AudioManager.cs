@@ -19,6 +19,11 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
         [Header("--SE 素材リスト--")]
         [SerializeField] private AudioClip[] seClips;
 
+
+        //現在の音量を保持するプロパティ
+        public float BGMVolume => bgmSource.volume;
+        public float SEVolume => seSource.volume;
+
         private void Awake()
         {
 
@@ -26,6 +31,10 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
+
+                //初期の音量を設定
+                SetBGMVolume(0.5f);
+                SetSEVolume(0.5f);
             }
             else
             {
@@ -63,6 +72,22 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
 
             //PlayOneShotを使えば、１つのAudioSourceで複数のSEを重ねて再生できる
             seSource.PlayOneShot(seClips[index]);
+        }
+
+        ///<summary>
+        ///BGMの音量を変更する（UIのスライダー等から呼び出す、値は0.0～1.0）
+        /// </summary>
+        public void SetBGMVolume(float volume)
+        {
+            bgmSource.volume = Mathf.Clamp01(volume);
+        }
+
+        ///<summary>
+        ///SEの音量を変更する（UIのスライダー等から呼び出す、値は０．０～１．０）
+        /// </summary>
+        public void SetSEVolume(float volume)
+        {
+            seSource.volume = Mathf.Clamp01(volume);
         }
     }
 }
