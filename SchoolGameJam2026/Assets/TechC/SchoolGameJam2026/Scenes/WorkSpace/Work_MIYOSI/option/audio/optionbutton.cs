@@ -12,7 +12,7 @@ public class optionbutton : MonoBehaviour
         }
     }
 
-    public void OnStartButton()
+    public void OnOpenButton()
     {
         if (panel != null)
         {
@@ -20,11 +20,20 @@ public class optionbutton : MonoBehaviour
         }
     }
 
-    public void OnBackButton()
+    public void OnCloseButton()
     {
         if (panel != null)
         {
             panel.SetActive(false);
         }
     }
-}
+
+    public void OnEndButton()
+    {
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #else
+        Application.Quit();
+        #endif
+    }
+ }
