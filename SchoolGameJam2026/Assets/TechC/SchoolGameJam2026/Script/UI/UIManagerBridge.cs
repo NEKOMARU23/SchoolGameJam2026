@@ -110,7 +110,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             // アクション実行とセリフテキストの更新
             string resultDialogue = InterrogationManager.Instance.ExecuteAction(targetChar, actionType, currentHearingTargetId);
-            
+
             if (dialogueText != null)
             {
                 dialogueText.text = resultDialogue;
@@ -179,6 +179,33 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         {
             if (dialogueText != null) dialogueText.text = "（本日の朝の状態に巻き戻しました）";
             Debug.Log("UIを朝の状態へリセットしました。");
+        }
+
+        /// <summary>
+        /// 【テスト用】現在選択中のキャラの基礎情報をポイント消費して解禁する
+        /// </summary>
+        public void OnClickTestUnlockBasicInfo()
+        {
+            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
+            if (targetChar == null || targetChar.ProfileData == null) return;
+
+            var basicGroup = targetChar.ProfileData.basicInfo;
+
+            if (basicGroup.isUnlocked)
+            {
+                Debug.Log("すでに基礎情報は解禁されています！");
+                return;
+            }
+
+            if (InterrogationManager.Instance.TrySpendPoints(basicGroup.unlockCost))
+            {
+                basicGroup.isUnlocked = true;
+                Debug.Log($"<color=green>【解禁成功】{targetChar.CharacterId} の基礎情報を解禁しました！ (消費: {basicGroup.unlockCost}pt)</color>");
+            }
+            else
+            {
+                Debug.Log("<color=red>ポイントが足りません！</color>");
+            }
         }
 
         #endregion
