@@ -1343,7 +1343,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1897821343
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1409,8 +1409,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 842208579}
-        m_TargetAssemblyTypeName: test, Assembly-CSharp
-        m_MethodName: Onfale
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Script.Other.ResultSceneChange,
+          Assembly-CSharp
+        m_MethodName: change_button
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
