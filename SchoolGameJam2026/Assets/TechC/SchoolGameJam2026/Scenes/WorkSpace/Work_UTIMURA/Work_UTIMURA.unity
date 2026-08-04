@@ -1242,7 +1242,8 @@ MonoBehaviour:
   bgmSource: {fileID: 1770924802}
   seSource: {fileID: 1770924802}
   bgmClips: []
-  seClips: []
+  seClips:
+  - {fileID: 8300000, guid: 52ada0cb1aaa93f47862aea794b2a1b3, type: 3}
 --- !u!4 &1770924801
 Transform:
   m_ObjectHideFlags: 0
