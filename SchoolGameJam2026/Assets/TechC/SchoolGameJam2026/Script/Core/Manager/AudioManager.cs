@@ -1,12 +1,27 @@
 
+using TechC.SchoolGameJam2026.Script.UI;
 using Unity.VisualScripting;
 using UnityEngine;
-
+using UnityEngine.EventSystems;
+using TechC.SchoolGameJam2026.Core.Event;
 namespace TechC.SchoolGameJam2026.Script.Core.Manager
 {
     public class AudioManager: MonoBehaviour
     {
-        
+        private void OnEnable()
+        {
+            EventManager.Subscribe<PlaySEEvent>(OnPlaySEEvent);
+        }
+
+        private void OnDisable()
+        {
+            EventManager.Unsubscribe<PlaySEEvent>(OnPlaySEEvent);
+        }
+
+        private void OnPlaySEEvent(PlaySEEvent evt)
+        {
+            PlaySE(evt.SeIndex);
+        }
         public static AudioManager Instance { get; private set; }
 
         [Header("--オーディオソース--")]
