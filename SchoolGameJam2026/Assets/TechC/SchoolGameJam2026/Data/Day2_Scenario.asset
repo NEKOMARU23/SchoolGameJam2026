@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f9c69554469e9f4b936b84f6eddffd8, type: 3}
   m_Name: Day2_Scenario
   m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.SO.DayScenarioSO
-  dayNumber: 1
+  dayNumber: 2
   characterSettings:
   - characterId: A
     correctAction: 0

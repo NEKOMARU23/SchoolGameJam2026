@@ -17,15 +17,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private TextMeshProUGUI pointText;            // 所持ポイント表示 (例: "120 pt")
         [SerializeField] private TextMeshProUGUI dialogueText;         // キャラクターのセリフ表示枠
 
+        [Header("--- 取調室内の表示パーツ (任意) ---")]
+        [SerializeField] private TextMeshProUGUI targetCharacterNameText; // 取調室内の名前テキスト
+        [SerializeField] private UnityEngine.UI.Image targetCharacterImage;    // 取調室内の立ち絵/アイコン
+
         [Header("--- 画面パネル切り替え ---")]
         [SerializeField] private GameObject monitorPanel;              // モニター選択画面
         [SerializeField] private GameObject interrogationPanel;        // 取調室画面
         [SerializeField] private GameObject profilePanel;              // 資料（DB）画面
         [SerializeField] private GameObject resetConfirmDialog;        // リセット確認ポップアップ
+        [SerializeField] private GameObject dayEndConfirmDialog;       // 一日終了確認ポップアップ
 
         [Header("--- 現在選択中のデータ状態 ---")]
         [SerializeField] private string currentSelectedCharacterId = "A";
-        [SerializeField] private string currentHearingTargetId = "B"; // 聞き取り時に指定する他キャラID
+        [SerializeField] private string currentHearingTargetId = "B";  // 聞き取り時に指定する他キャラID
 
         private void OnEnable()
         {
@@ -75,12 +80,26 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         #region ★ 1年生が Button の OnClick() に登録するメソッド群
 
         /// <summary>
-        /// 取調対象のキャラクターを選択する（モニター画面等から呼ぶ）
+        /// 取調対象のキャラクターを選択する
         /// </summary>
         public void SelectCharacter(string characterId)
         {
             currentSelectedCharacterId = characterId;
             Debug.Log($"対象キャラクターを【{characterId}】にセットしました。");
+
+            // 取調室内の表示（名前やアイコン）を更新
+            UpdateInterrogationRoomDisplay(characterId);
+        }
+
+        /// <summary>
+        /// ★ モニター画面の部屋選択ボタン用
+        /// キャラクターを指定して、直接その部屋の取調室画面を開く
+        /// </summary>
+        /// <param name="characterId">部屋に対応するキャラID ("A", "B", "C", "D" など)</param>
+        public void OpenInterrogationForCharacter(string characterId)
+        {
+            SelectCharacter(characterId);
+            OnClickOpenInterrogationPanel();
         }
 
         /// <summary>
@@ -118,11 +137,38 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         /// <summary>
-        /// 資料画面の「解禁ボタン」を押した時
+        /// 資料画面の「基礎情報 解禁ボタン」を押した時（グループ一括解禁）
+        /// </summary>
+        public void OnClickUnlockBasicProfile()
+        {
+            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
+            if (targetChar == null || targetChar.ProfileData == null) return;
+
+            BasicProfileGroup basicGroup = targetChar.ProfileData.basicInfo;
+
+            if (basicGroup.isUnlocked)
+            {
+                Debug.Log("すでに基礎情報は解禁されています！");
+                return;
+            }
+
+            if (InterrogationManager.Instance.TrySpendPoints(basicGroup.unlockCost))
+            {
+                basicGroup.isUnlocked = true;
+                Debug.Log($"<color=green>【解禁成功】{targetChar.CharacterId} の基礎情報を解禁しました！ (消費: {basicGroup.unlockCost}pt)</color>");
+            }
+            else
+            {
+                Debug.Log("<color=red>ポイントが足りません！</color>");
+            }
+        }
+
+        /// <summary>
+        /// 資料画面の「過去情報 解禁ボタン」を押した時（直接オブジェクト指定）
         /// </summary>
         public void OnClickUnlockProfileItem(ProfileItem item)
         {
-            if (item.isUnlocked) return;
+            if (item == null || item.isUnlocked) return;
 
             if (InterrogationManager.Instance.TrySpendPoints(item.unlockCost))
             {
@@ -136,7 +182,53 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         /// <summary>
-        /// リスタートボタンを押してダイアログを開く
+        /// 資料画面の「過去情報 解禁ボタン」を押した時（UnityのOnClick用：キー文字列で指定）
+        /// </summary>
+        /// <param name="itemKey">解禁したいプロフィールのitemKey</param>
+        public void OnClickUnlockProfileItemByKey(string itemKey)
+        {
+            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
+            if (targetChar == null || targetChar.ProfileData == null) return;
+
+            ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == itemKey);
+            if (item == null)
+            {
+                Debug.LogError($"キー【{itemKey}】に対応する情報が見つかりません。");
+                return;
+            }
+
+            OnClickUnlockProfileItem(item);
+        }
+
+        // --------------------------------------------------
+        // ★ 画面パネル切り替え機能（1年生のボタン用）
+        // --------------------------------------------------
+
+        /// <summary>
+        /// 指定したパネルだけを表示し、他の主要画面パネルを非表示にする
+        /// </summary>
+        public void ShowPanel(GameObject panelToShow)
+        {
+            if (monitorPanel != null) monitorPanel.SetActive(monitorPanel == panelToShow);
+            if (interrogationPanel != null) interrogationPanel.SetActive(interrogationPanel == panelToShow);
+            if (profilePanel != null) profilePanel.SetActive(profilePanel == panelToShow);
+        }
+
+        /// <summary> モニター画面を開く </summary>
+        public void OnClickOpenMonitorPanel() => ShowPanel(monitorPanel);
+
+        /// <summary> 取調室画面を開く </summary>
+        public void OnClickOpenInterrogationPanel() => ShowPanel(interrogationPanel);
+
+        /// <summary> 資料画面を開く </summary>
+        public void OnClickOpenProfilePanel() => ShowPanel(profilePanel);
+
+        // --------------------------------------------------
+        // ★ 当日の朝にリセットするダイアログ関連
+        // --------------------------------------------------
+
+        /// <summary>
+        /// リスタートボタンを押してリセット確認ダイアログを開く
         /// </summary>
         public void OnClickOpenResetDialog()
         {
@@ -152,9 +244,65 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (resetConfirmDialog != null) resetConfirmDialog.SetActive(false);
         }
 
+        /// <summary>
+        /// リセット確認ダイアログで「いいえ」を押した時
+        /// </summary>
+        public void OnClickCancelResetDay()
+        {
+            if (resetConfirmDialog != null) resetConfirmDialog.SetActive(false);
+        }
+
+        // --------------------------------------------------
+        // ★ 一日を終了して翌日へ進むダイアログ関連
+        // --------------------------------------------------
+
+        /// <summary>
+        /// 「一日を終了する」ボタンを押して終了確認ダイアログを開く
+        /// </summary>
+        public void OnClickOpenEndDayDialog()
+        {
+            if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(true);
+            Debug.Log("一日終了の確認ダイアログを開きました。");
+        }
+
+        /// <summary>
+        /// 一日終了確認ダイアログで「はい」を押した時（次の日へ進む）
+        /// </summary>
+        public void OnClickConfirmAdvanceNextDay()
+        {
+            if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(false);
+
+            // GameManager側で次の日をセットしてロード
+            GameManager.Instance.AdvanceToNextDay();
+        }
+
+        /// <summary>
+        /// 一日終了確認ダイアログで「いいえ」を押した時
+        /// </summary>
+        public void OnClickCancelEndDay()
+        {
+            if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(false);
+            Debug.Log("一日の終了をキャンセルしました。");
+        }
+
         #endregion
 
         #region UI更新用の内部処理
+
+        private void UpdateInterrogationRoomDisplay(string characterId)
+        {
+            if (GameManager.Instance == null || GameManager.Instance.AllCharacters == null) return;
+
+            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == characterId);
+            if (targetChar != null && targetChar.ProfileData != null)
+            {
+                if (targetCharacterNameText != null)
+                    targetCharacterNameText.text = targetChar.ProfileData.basicInfo.characterName;
+
+                if (targetCharacterImage != null)
+                    targetCharacterImage.sprite = targetChar.ProfileData.characterIcon;
+            }
+        }
 
         private void UpdatePointUI(int points)
         {
@@ -179,33 +327,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         {
             if (dialogueText != null) dialogueText.text = "（本日の朝の状態に巻き戻しました）";
             Debug.Log("UIを朝の状態へリセットしました。");
-        }
-
-        /// <summary>
-        /// 【テスト用】現在選択中のキャラの基礎情報をポイント消費して解禁する
-        /// </summary>
-        public void OnClickTestUnlockBasicInfo()
-        {
-            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
-            if (targetChar == null || targetChar.ProfileData == null) return;
-
-            var basicGroup = targetChar.ProfileData.basicInfo;
-
-            if (basicGroup.isUnlocked)
-            {
-                Debug.Log("すでに基礎情報は解禁されています！");
-                return;
-            }
-
-            if (InterrogationManager.Instance.TrySpendPoints(basicGroup.unlockCost))
-            {
-                basicGroup.isUnlocked = true;
-                Debug.Log($"<color=green>【解禁成功】{targetChar.CharacterId} の基礎情報を解禁しました！ (消費: {basicGroup.unlockCost}pt)</color>");
-            }
-            else
-            {
-                Debug.Log("<color=red>ポイントが足りません！</color>");
-            }
         }
 
         #endregion

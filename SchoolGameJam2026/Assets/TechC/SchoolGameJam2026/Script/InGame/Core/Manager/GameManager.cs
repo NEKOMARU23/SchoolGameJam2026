@@ -195,20 +195,34 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// 次の日に進む
+        /// 現在の日を終了し、次の日（朝）へ移行する
+        /// </summary>
+        /// <summary>
+        /// 現在の日を終了し、次の日（朝）へ移行する
         /// </summary>
         public void AdvanceToNextDay()
         {
-            if (currentDay < maxDays)
+            currentDay++;
+
+            // 最大日数を超えた場合の処理（ゲームクリアなど）
+            if (currentDay > maxDays)
             {
-                currentDay++;
-                StartNewDay();
+                Debug.Log("<color=gold>全日程が終了しました！ゲームクリア画面へ移行します。</color>");
+                return;
             }
-            else
+
+            // シナリオが存在するか確認
+            DayScenarioSO nextScenario = GetTodayScenario();
+            if (nextScenario == null)
             {
-                Debug.Log("規定日数に達しました。判定フェーズ（エンディング）へ移行します。");
-                // TODO: 最終判定・勝敗処理
+                Debug.LogWarning($"Day {currentDay} のシナリオが見つかりません。");
+                return;
             }
+
+            // 新しい日の朝を開始（ログ出力、行動回数リセット、バックアップ、イベント発火が一括で行われます）
+            StartNewDay();
         }
+
+
     }
 }

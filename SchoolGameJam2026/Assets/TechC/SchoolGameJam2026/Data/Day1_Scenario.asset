@@ -15,9 +15,17 @@ MonoBehaviour:
   dayNumber: 1
   characterSettings:
   - characterId: A
-    correctAction: 2
+    correctAction: 1
     tortureResponse:
       priorityDialogueList:
+      - conditionType: 2
+        targetCharacterId: 
+        requiredAffection: 2
+        dialogueText: "\u3042\u3044\u3046\u3048\u304A"
+      - conditionType: 2
+        targetCharacterId: 
+        requiredAffection: 2
+        dialogueText: "\u3042\u3044\u3046\u3048\u304A"
       - conditionType: 2
         targetCharacterId: 
         requiredAffection: 2
