@@ -659,6 +659,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: Ingame_Chat
       objectReference: {fileID: 0}
+    - target: {fileID: 4399949455280256501, guid: f3c7c55a6f1a75940abe3c9742173863, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4679135905040753139, guid: f3c7c55a6f1a75940abe3c9742173863, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5882899064297973147, guid: f3c7c55a6f1a75940abe3c9742173863, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6234705837284333320, guid: f3c7c55a6f1a75940abe3c9742173863, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -755,6 +767,10 @@ PrefabInstance:
     - target: {fileID: 6668084655125127522, guid: d99a284bfe3039b43bff8080fed0abb8, type: 3}
       propertyPath: m_Name
       value: Ingame_Result
+      objectReference: {fileID: 0}
+    - target: {fileID: 6668084655125127522, guid: d99a284bfe3039b43bff8080fed0abb8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7630181757652514745, guid: d99a284bfe3039b43bff8080fed0abb8, type: 3}
       propertyPath: m_Pivot.x
@@ -857,6 +873,10 @@ PrefabInstance:
     - target: {fileID: 2354828986542426851, guid: a311c0dc7caf90f43ab4b88b1794f11c, type: 3}
       propertyPath: m_Name
       value: Ingame_Data
+      objectReference: {fileID: 0}
+    - target: {fileID: 2354828986542426851, guid: a311c0dc7caf90f43ab4b88b1794f11c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6002497036276514412, guid: a311c0dc7caf90f43ab4b88b1794f11c, type: 3}
       propertyPath: m_Pivot.x
@@ -1035,6 +1055,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Ingame_Chat_Select
       objectReference: {fileID: 0}
+    - target: {fileID: 5288664313946079023, guid: f9f3b33d049b4704eb687b61d139deb6, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1051,6 +1075,10 @@ PrefabInstance:
     - target: {fileID: 370260774227910342, guid: ab61cf58bac534347bccf54b3b00b076, type: 3}
       propertyPath: m_Name
       value: InGame_Home
+      objectReference: {fileID: 0}
+    - target: {fileID: 370260774227910342, guid: ab61cf58bac534347bccf54b3b00b076, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4774010236003162849, guid: ab61cf58bac534347bccf54b3b00b076, type: 3}
       propertyPath: m_Pivot.x
