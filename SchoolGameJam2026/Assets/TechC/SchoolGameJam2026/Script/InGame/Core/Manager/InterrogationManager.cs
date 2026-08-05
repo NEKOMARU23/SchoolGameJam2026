@@ -33,8 +33,16 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [Tooltip("本日実行済みの行動回数")]
         [SerializeField] private int currentDailyActions = 0;
 
-        // ★追加：本日すでに取り調べを行ったキャラクターのIDリスト
+        // 本日すでに取り調べを行ったキャラクターのIDリスト
         private List<string> interrogatedCharacterIdsToday = new List<string>();
+
+        #region ★ リザルト用追加データ
+        /// <summary> 本日各キャラクターに対して実行したアクションの履歴 (キャラID -> アクション) </summary>
+        public Dictionary<string, InterrogationActionType> TodayActionHistory { get; private set; } = new Dictionary<string, InterrogationActionType>();
+
+        /// <summary> 本日（今日1日）の中で獲得/減少した累積ポイント </summary>
+        public int TodayEarnedPoints { get; private set; } = 0;
+        #endregion
 
         #region プロパティ
         /// <summary> 現在の解析ポイント </summary>
@@ -75,7 +83,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// ★指定したキャラクターに今日すでに行動（取り調べ）を行ったか確認する
+        /// 指定したキャラクターに今日すでに行動（取り調べ）を行ったか確認する
         /// </summary>
         public bool HasInterrogatedToday(string characterId)
         {
@@ -98,7 +106,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 return "（本日の取り調べ可能回数を消化しました）";
             }
 
-            // ★ 1.5 キャラクターごとの重複取り調べチェック (1人につき1日1回)
+            // 1.5 キャラクターごとの重複取り調べチェック (1人につき1日1回)
             if (HasInterrogatedToday(targetChar.CharacterId))
             {
                 Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} には本日すでに取り調べを行っています。");
@@ -132,7 +140,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             {
                 // 【他の人の話を聞く】場合：正解判定なし、固定ポイント獲得
                 AddPoints(fixedHearAboutPoint);
+                TodayEarnedPoints += fixedHearAboutPoint; // リザルト用累計
+
                 responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections, hearingTargetId);
+            }
+            else if (actionType == InterrogationActionType.Release || actionType == InterrogationActionType.ConfirmAI)
+            {
+                // 【解放 / AI確定】の場合：ポイント変動・好感度処理なしでセリフを取得
+                responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections);
             }
             else
             {
@@ -142,12 +157,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 if (isCorrect)
                 {
                     AddPoints(successPointReward);
+                    TodayEarnedPoints += successPointReward; // リザルト用累計
                     targetChar.AddAffection(1); // 正解時は好感度も少し上昇
                     Debug.Log($"[InterrogationManager] 正解！ {successPointReward}pt 獲得");
                 }
                 else
                 {
                     ConsumePoints(failPointPenalty);
+                    TodayEarnedPoints -= failPointPenalty; // リザルト用累計（減点）
                     targetChar.AddAffection(-1); // 不正解時は好感度低下
                     Debug.Log($"[InterrogationManager] 不正解…… {failPointPenalty}pt 減少");
                 }
@@ -155,8 +172,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections);
             }
 
-            // ★ 5. 行動済みキャラクターリストに追加
+            // 5. 行動済みキャラクターリストおよびリザルト用履歴に追加
             interrogatedCharacterIdsToday.Add(targetChar.CharacterId);
+            TodayActionHistory[targetChar.CharacterId] = actionType;
 
             // 6. 全体行動回数をカウントアップ
             currentDailyActions++;
@@ -209,17 +227,22 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         #region 日次リセット・復元用
         /// <summary>
-        /// 1日の行動記録（回数およびキャラクターごとの行動済みフラグ）をリセットする
+        /// 1日の行動記録（回数、キャラクターごとの行動済みフラグ、リザルト用履歴）をリセットする
         /// </summary>
         public void ResetDailyActions(int actionCount = 0)
         {
             currentDailyActions = actionCount;
-            interrogatedCharacterIdsToday.Clear(); // ★本日取り調べたキャラリストをリセット
+            interrogatedCharacterIdsToday.Clear();
+            
+            // ★ リザルト用の記録もクリア
+            TodayActionHistory.Clear();
+            TodayEarnedPoints = 0;
+
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
         }
 
         /// <summary>
-        /// ★「今日をやり直す（リセット）」用のバックアップ・復元処理で使うリスト取得
+        /// 「今日をやり直す（リセット）」用のバックアップ・復元処理で使うリスト取得
         /// </summary>
         public List<string> GetInterrogatedCharacterIdsToday()
         {
@@ -227,7 +250,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// ★「今日をやり直す（リセット）」時にバックアップから状態を復元する
+        /// 「今日をやり直す（リセット）」時にバックアップから状態を復元する
         /// </summary>
         public void RestoreInterrogatedCharacterIdsToday(List<string> backupList)
         {

@@ -12,23 +12,14 @@ using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core
 {
-    /// <summary>
-    /// 解禁ボタンと、解禁時に表示するテキストのセット構造体
-    /// </summary>
     [Serializable]
     public struct ProfileUIBinding
     {
-        [Tooltip("識別用キー。基礎情報なら 'BASIC'、過去情報なら ProfileItem の itemKey ('PAST_1' 等) と一致させる")]
         public string key;
-        [Tooltip("解禁用のボタンオブジェクト（解禁後に非表示）")]
         public GameObject unlockButton;
-        [Tooltip("解禁後に表示するテキスト等のオブジェクト（解禁後に表示）")]
         public GameObject contentObject;
     }
 
-    /// <summary>
-    /// ログに記憶するセリフ1件分のデータ構造
-    /// </summary>
     [Serializable]
     public struct DialogueLogData
     {
@@ -43,67 +34,83 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
     }
 
     /// <summary>
-    /// UIボタンやテキストと、ゲームのロジック（Manager類）を繋ぐクラス
+    /// 各キャラクターに対応するモニター画面のボタンと解放時用UIのペア
     /// </summary>
+    [Serializable]
+    public struct MonitorRoomBinding
+    {
+        public string characterId;          // キャラクターID ("A", "B" など)
+        public Button roomButton;           // モニター画面上のボタン
+        public GameObject releasedOverlay;  // 解放済み時に上に被せるロック表示や「RELEASED」画像など
+    }
+
     public class UIManagerBridge : MonoBehaviour
     {
         [Header("--- 表示系UI（TextMeshPro） ---")]
-        [SerializeField] private TextMeshProUGUI dayText;               // 日数表示 (例: "1日目")
-        [SerializeField] private TextMeshProUGUI actionCountText;      // 残り行動回数表示 (例: "残り: 3/4")
-        [SerializeField] private TextMeshProUGUI pointText;            // 所持ポイント表示 (例: "120 pt")
-        [SerializeField] private TextMeshProUGUI dialogueText;         // キャラクターのセリフ表示枠
+        [SerializeField] private TextMeshProUGUI dayText;
+        [SerializeField] private TextMeshProUGUI actionCountText;
+        [SerializeField] private TextMeshProUGUI pointText;
+        [SerializeField] private TextMeshProUGUI dialogueText;
 
-        [Header("--- 取調室内の表示パーツ (任意) ---")]
-        [SerializeField] private TextMeshProUGUI targetCharacterNameText; // 取調室内の名前テキスト
-        [SerializeField] private Image targetCharacterImage;    // 取調室内の立ち絵/アイコン
-        
+        [Header("--- 取調室内の表示パーツ ---")]
+        [SerializeField] private TextMeshProUGUI targetCharacterNameText;
+        [SerializeField] private Image targetCharacterImage;
+
         [Header("--- メッセージウィンドウ ---")]
-        [Tooltip("取り調べコマンド選択時に表示するメッセージボックス親オブジェクト")]
         [SerializeField] private GameObject interrogationChatbox;
-        [Tooltip("セリフ送りの入力待ち時に表示するアイコン (任意)")]
         [SerializeField] private GameObject nextPageIcon;
 
         [Header("--- 文字送り（タイピング演出）設定 ---")]
-        [Tooltip("1文字あたりの表示にかかる時間(秒)。小さくするほど速くなります")]
         [SerializeField] private float textSpeed = 0.03f;
 
         [Header("--- プロフィール（資料）UI登録リスト ---")]
-        [Tooltip("解禁ボタンと表示用テキストのペアを複数登録するリスト")]
         [SerializeField] private List<ProfileUIBinding> profileUIBindings = new List<ProfileUIBinding>();
 
         [Header("--- 取調室のアクションボタン群 ---")]
-        [Tooltip("拷問、対話、交渉、聞き取り の4つのボタンを設定（1日1回使用後の無効化制御用）")]
+        [Tooltip("拷問、対話、交渉、聞き取り の4つのボタン")]
         [SerializeField] private Button[] interrogationButtons;
 
+        [Header("--- 特殊アクションボタン（取調室） ---")]
+        [Tooltip("解放ボタン（押すと対象キャラを解放）")]
+        [SerializeField] private Button releaseButton;
+        [Tooltip("AI確定ボタン（最終日のみ表示・押すと即エンディング）")]
+        [SerializeField] private GameObject confirmAiButtonObject;
+        [Tooltip("最終日とみなす日数（例: 3日目が最終日なら 3）")]
+        [SerializeField] private int finalDayNumber = 3;
+
+        [Header("--- モニター画面の部屋ボタン登録 ---")]
+        [Tooltip("各キャラクターのモニター画面ボタン登録")]
+        [SerializeField] private List<MonitorRoomBinding> monitorRoomBindings = new List<MonitorRoomBinding>();
+
         [Header("--- 画面パネル切り替え ---")]
-        [SerializeField] private GameObject monitorPanel;              // モニター選択画面
-        [SerializeField] private GameObject interrogationPanel;        // 取調室画面
-        [SerializeField] private GameObject profilePanel;              // 資料（DB）画面
-        [SerializeField] private GameObject logPanel;                  // ★ ログ画面
-        [SerializeField] private GameObject resetConfirmDialog;        // リセット確認ポップアップ
-        [SerializeField] private GameObject dayEndConfirmDialog;       // 一日終了確認ポップアップ
+        [SerializeField] private GameObject monitorPanel;
+        [SerializeField] private GameObject interrogationPanel;
+        [SerializeField] private GameObject profilePanel;
+        [SerializeField] private GameObject logPanel;
+        [SerializeField] private GameObject endingPanel;       // エンディング表示用パネル
+        [SerializeField] private GameObject resultPanel;       // ★追加: リザルト表示用パネル
+        [SerializeField] private GameObject resetConfirmDialog;
+        [SerializeField] private GameObject dayEndConfirmDialog;
+
+        [Header("--- リザルト画面UI ---")]
+        [SerializeField] private TextMeshProUGUI resultDetailText; // 行動結果一覧テキスト
+        [SerializeField] private TextMeshProUGUI resultPointText;  // 本日の獲得ポイントテキスト
 
         [Header("--- ログUI設定 ---")]
-        [Tooltip("ScrollView 内の Content オブジェクト（LogItemPrefab を生成して配置する親）")]
         [SerializeField] private Transform logContentParent;
-        [Tooltip("ログ1行分の表示用プレハブ")]
         [SerializeField] private GameObject logItemPrefab;
 
         [Header("--- 現在選択中のデータ状態 ---")]
         [SerializeField] private string currentSelectedCharacterId = "A";
-        [SerializeField] private string currentHearingTargetId = "B";  // 聞き取り時に指定する他キャラID
+        [SerializeField] private string currentHearingTargetId = "B";
 
-        // --------------------------------------------------
-        // ★ ページ送り・文字送り・パネル履歴・ログ管理用の変数
-        // --------------------------------------------------
-        private Queue<string> dialoguePages = new Queue<string>(); // 分割したセリフを保持するキュー
-        private bool isDialoguePlaying = false;                   // 現在一連のセリフ再生中かどうか
-        private bool isTyping = false;                            // 現在1文字ずつ表示処理中（タイピング中）かどうか
-        private string currentFullPageText = "";                  // 現在のページで表示すべき全文
-        private Coroutine typingCoroutine;                        // 文字送りのコルーチン参照
-        private GameObject previousPanel;                         // 直前に開いていたパネルを記憶する参照
-        
-        // ★ 会話ログ履歴データリスト
+        private Queue<string> dialoguePages = new Queue<string>();
+        private bool isDialoguePlaying = false;
+        private bool isTyping = false;
+        private string currentFullPageText = "";
+        private Coroutine typingCoroutine;
+        private GameObject previousPanel;
+
         private List<DialogueLogData> dialogueLogList = new List<DialogueLogData>();
 
         private void OnEnable()
@@ -150,13 +157,13 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             SetChatboxActive(false);
             SetNextPageIconActive(false);
-            
+
             RefreshProfileUIState();
+            RefreshMonitorRoomButtons();
         }
 
         private void Update()
         {
-            // ★ 新Input Systemに対応した入力判定
             if (isDialoguePlaying)
             {
                 bool isClicked = false;
@@ -178,11 +185,228 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
-        #region ★ Button の OnClick() に登録するメソッド群
+        #region ★ リザルト機能・一日終了フロー
 
         /// <summary>
-        /// 取調対象のキャラクターを選択する
+        /// 一日終了ダイアログで「はい（終了する）」を押した時
         /// </summary>
+        public void OnClickConfirmAdvanceNextDay()
+        {
+            if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(false);
+
+            // 直接次の日へ行かず、リザルト画面を表示する
+            ShowResultPanel();
+        }
+
+        /// <summary>
+        /// リザルト画面を構築して表示する
+        /// </summary>
+        /// <summary>
+        /// リザルト画面を構築して表示する
+        /// </summary>
+        private void ShowResultPanel()
+        {
+            // リザルトパネルが設定されていない場合はそのまま次の日へ（安全フォールバック）
+            if (resultPanel == null)
+            {
+                if (GameManager.Instance != null) GameManager.Instance.AdvanceToNextDay();
+                return;
+            }
+
+            ShowPanel(resultPanel);
+
+            System.Text.StringBuilder detailSb = new System.Text.StringBuilder();
+            detailSb.AppendLine("<b>【本日の取り調べ評価】</b>\n");
+
+            int earnedPoints = 0;
+
+            // ★ 修正 1: CurrentDayScenario を GetTodayScenario() に変更
+            DayScenarioSO todayScenario = GameManager.Instance != null ? GameManager.Instance.GetTodayScenario() : null;
+
+            if (InterrogationManager.Instance != null && GameManager.Instance != null && todayScenario != null)
+            {
+                var history = InterrogationManager.Instance.TodayActionHistory;
+                earnedPoints = InterrogationManager.Instance.TodayEarnedPoints;
+
+                foreach (var character in GameManager.Instance.AllCharacters)
+                {
+                    string charName = character.ProfileData != null ? character.ProfileData.basicInfo.characterName : character.CharacterId;
+
+                    if (character.IsReleased)
+                    {
+                        detailSb.AppendLine($"• {charName} : <color=#888888>解放済み（取り調べ対象外）</color>");
+                        continue;
+                    }
+
+                    // キャラクターに対して今日アクションを行ったか判定
+                    if (history.TryGetValue(character.CharacterId, out InterrogationActionType executedAction))
+                    {
+                        // ★ 修正 2: GameManager.Instance.CurrentDayScenario を todayScenario に変更
+                        var setting = todayScenario.GetCharacterSetting(character.CharacterId);
+
+                        if (executedAction == InterrogationActionType.HearAbout)
+                        {
+                            detailSb.AppendLine($"• {charName} : 聞き取り実行 → <color=#00FFFF>情報収集完了</color>");
+                        }
+                        else if (setting != null)
+                        {
+                            bool isCorrect = (executedAction == setting.correctAction);
+                            string actionName = GetActionTypeName(executedAction);
+                            string judgeText = isCorrect ? "<color=#00FF00>有効（正解）</color>" : "<color=#FF4444>効果なし（不正解）</color>";
+
+                            detailSb.AppendLine($"• {charName} : {actionName} 実行 → {judgeText}");
+                        }
+                    }
+                    else
+                    {
+                        detailSb.AppendLine($"• {charName} : <color=#AAAAAA>取り調べ未実施</color>");
+                    }
+                }
+            }
+            else
+            {
+                detailSb.AppendLine("（データが正常に取得できませんでした）");
+            }
+
+            if (resultDetailText != null) resultDetailText.text = detailSb.ToString();
+
+            string pointSign = earnedPoints >= 0 ? "+" : "";
+            if (resultPointText != null) resultPointText.text = $"本日の獲得解析ポイント: <b>{pointSign}{earnedPoints} pt</b>";
+        }
+
+        /// <summary>
+        /// リザルト画面上の「次の日へ進む」ボタンを押した時
+        /// </summary>
+        public void OnClickCloseResultAndAdvanceDay()
+        {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.AdvanceToNextDay();
+            }
+            ShowPanel(monitorPanel); // 次の日が始まったらモニター画面からスタート
+        }
+
+        private string GetActionTypeName(InterrogationActionType type)
+        {
+            switch (type)
+            {
+                case InterrogationActionType.Torture: return "拷問";
+                case InterrogationActionType.Talk: return "対話";
+                case InterrogationActionType.Negotiate: return "交渉";
+                case InterrogationActionType.HearAbout: return "聞き取り";
+                case InterrogationActionType.Release: return "解放";
+                case InterrogationActionType.ConfirmAI: return "AI確定";
+                default: return "不明";
+            }
+        }
+
+        #endregion
+
+        #region ★ 特殊ボタン（解放 & AI確定）機能
+
+        public void OnClickReleaseCharacter()
+        {
+            if (string.IsNullOrEmpty(currentSelectedCharacterId)) return;
+
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
+                : null;
+
+            if (targetChar == null) return;
+
+            if (targetChar.IsReleased)
+            {
+                StartDialogueSequence("システム", "（この対象はすでに解放されています）");
+                return;
+            }
+
+            targetChar.SetReleaseFlag(true);
+            Debug.Log($"<color=cyan>【解放】キャラクター {currentSelectedCharacterId} を解放しました。</color>");
+
+            string rawDialogue = "";
+            if (InterrogationManager.Instance != null)
+            {
+                rawDialogue = InterrogationManager.Instance.ExecuteAction(targetChar, InterrogationActionType.Release, currentHearingTargetId);
+            }
+
+            if (string.IsNullOrEmpty(rawDialogue) || rawDialogue == "「……」")
+            {
+                rawDialogue = "解放される……ということですか。わかりました。|（対象は部屋から退出しました）";
+            }
+
+            string speakerName = targetChar.ProfileData != null ? targetChar.ProfileData.basicInfo.characterName : targetChar.CharacterId;
+            StartDialogueSequence(speakerName, rawDialogue);
+
+            RefreshMonitorRoomButtons();
+            UpdateInterrogationButtonsState();
+        }
+
+        public void OnClickConfirmAI()
+        {
+            Debug.Log($"<color=red>【AI確定】{currentSelectedCharacterId} をAIとして最終確定しました！</color>");
+
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
+                : null;
+
+            if (targetChar != null && InterrogationManager.Instance != null)
+            {
+                string rawDialogue = InterrogationManager.Instance.ExecuteAction(targetChar, InterrogationActionType.ConfirmAI, currentHearingTargetId);
+                string speakerName = targetChar.ProfileData != null ? targetChar.ProfileData.basicInfo.characterName : targetChar.CharacterId;
+
+                if (!string.IsNullOrEmpty(rawDialogue) && rawDialogue != "「……」")
+                {
+                    StartDialogueSequence(speakerName, rawDialogue);
+                }
+            }
+
+            if (endingPanel != null)
+            {
+                ShowPanel(endingPanel);
+            }
+            else
+            {
+                StartDialogueSequence("システム", $"【判定完了】対象【{currentSelectedCharacterId}】をAIと判定し、排除シーケンスを完了しました。 -- GAME OVER / ENDING --");
+            }
+        }
+
+        public void RefreshMonitorRoomButtons()
+        {
+            if (GameManager.Instance == null || GameManager.Instance.AllCharacters == null || GameManager.Instance.AllCharacters.Count == 0)
+            {
+                foreach (var binding in monitorRoomBindings)
+                {
+                    if (binding.roomButton != null) binding.roomButton.interactable = true;
+                    if (binding.releasedOverlay != null) binding.releasedOverlay.SetActive(false);
+                }
+                return;
+            }
+
+            foreach (var binding in monitorRoomBindings)
+            {
+                CharacterInstance charInst = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == binding.characterId);
+
+                if (charInst != null)
+                {
+                    bool isReleased = charInst.IsReleased;
+
+                    if (binding.roomButton != null)
+                    {
+                        binding.roomButton.interactable = !isReleased;
+                    }
+
+                    if (binding.releasedOverlay != null)
+                    {
+                        binding.releasedOverlay.SetActive(isReleased);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region ★ Button の OnClick() に登録するメソッド群
+
         public void SelectCharacter(string characterId)
         {
             currentSelectedCharacterId = characterId;
@@ -194,30 +418,43 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             SetChatboxActive(false);
         }
 
-        /// <summary>
-        /// モニター画面の部屋選択ボタン用
-        /// </summary>
         public void OpenInterrogationForCharacter(string characterId)
         {
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == characterId)
+                : null;
+
+            if (targetChar != null && targetChar.IsReleased)
+            {
+                Debug.Log($"キャラクター【{characterId}】はすでに解放されているため、取調室に入れません。");
+                return;
+            }
+
             SelectCharacter(characterId);
             OnClickOpenInterrogationPanel();
         }
 
-        /// <summary>
-        /// 「聞き取り」の対象キャラクターを選択する
-        /// </summary>
         public void SelectHearingTarget(string targetId)
         {
             currentHearingTargetId = targetId;
             Debug.Log($"聞き取り対象を【{targetId}】にセットしました。");
         }
 
-        /// <summary>
-        /// 取調室の行動ボタン（【0:拷問】【1:対話】【2:交渉】【3:聞き取り】）を押した時
-        /// </summary>
         public void OnClickInterrogationButton(int actionIndex)
         {
             if (isDialoguePlaying) return;
+
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
+                : null;
+
+            if (targetChar == null) return;
+
+            if (targetChar.IsReleased)
+            {
+                StartDialogueSequence("システム", "（このキャラクターはすでに解放されているため、取り調べできません）");
+                return;
+            }
 
             if (InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId))
             {
@@ -227,26 +464,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
 
             InterrogationActionType actionType = (InterrogationActionType)actionIndex;
-
-            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
-            if (targetChar == null)
-            {
-                Debug.LogError($"ID: {currentSelectedCharacterId} のキャラクターが見つかりません。");
-                return;
-            }
-
             string rawDialogue = InterrogationManager.Instance.ExecuteAction(targetChar, actionType, currentHearingTargetId);
 
-            // キャラクター名を取得してログ・セリフ再生を開始
             string speakerName = targetChar.ProfileData != null ? targetChar.ProfileData.basicInfo.characterName : targetChar.CharacterId;
             StartDialogueSequence(speakerName, rawDialogue);
 
             UpdateInterrogationButtonsState();
         }
 
-        /// <summary>
-        /// UI全体（チャットボックス等）をクリックした時に進行させるUIイベント用
-        /// </summary>
         public void OnClickAdvanceDialogue()
         {
             if (isDialoguePlaying)
@@ -255,109 +480,72 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
-        /// <summary>
-        /// 資料画面の「基礎情報 解禁ボタン」を押した時
-        /// </summary>
         public void OnClickUnlockBasicProfile()
         {
-            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
+                : null;
+
             if (targetChar == null || targetChar.ProfileData == null) return;
 
             BasicProfileGroup basicGroup = targetChar.ProfileData.basicInfo;
 
             if (basicGroup.isUnlocked)
             {
-                Debug.Log("すでに基礎情報は解禁されています！");
                 RefreshProfileUIState();
                 return;
             }
 
-            if (InterrogationManager.Instance.TrySpendPoints(basicGroup.unlockCost))
+            if (InterrogationManager.Instance != null && InterrogationManager.Instance.TrySpendPoints(basicGroup.unlockCost))
             {
                 basicGroup.isUnlocked = true;
-                Debug.Log($"<color=green>【解禁成功】{targetChar.CharacterId} の基礎情報を解禁しました！ (消費: {basicGroup.unlockCost}pt)</color>");
                 RefreshProfileUIState();
-            }
-            else
-            {
-                Debug.Log("<color=red>ポイントが足りません！</color>");
             }
         }
 
-        /// <summary>
-        /// 資料画面の「過去情報 解禁ボタン」を押した時（直接オブジェクト指定）
-        /// </summary>
         public void OnClickUnlockProfileItem(ProfileItem item)
         {
             if (item == null || item.isUnlocked) return;
 
-            if (InterrogationManager.Instance.TrySpendPoints(item.unlockCost))
+            if (InterrogationManager.Instance != null && InterrogationManager.Instance.TrySpendPoints(item.unlockCost))
             {
                 item.isUnlocked = true;
-                Debug.Log($"[{item.itemKey}] を解禁しました！");
                 RefreshProfileUIState();
-            }
-            else
-            {
-                Debug.Log("ポイントが足りません！");
             }
         }
 
-        /// <summary>
-        /// 資料画面の「過去情報 解禁ボタン」を押した時（キー指定）
-        /// </summary>
         public void OnClickUnlockProfileItemByKey(string itemKey)
         {
-            CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
+                : null;
+
             if (targetChar == null || targetChar.ProfileData == null) return;
 
             ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == itemKey);
-            if (item == null)
+            if (item != null)
             {
-                Debug.LogError($"キー【{itemKey}】に対応する情報が見つかりません。");
-                return;
+                OnClickUnlockProfileItem(item);
             }
-
-            OnClickUnlockProfileItem(item);
         }
-
-        // --------------------------------------------------
-        // ★ 画面パネル切り替え機能
-        // --------------------------------------------------
 
         public void ShowPanel(GameObject panelToShow)
         {
-            if (monitorPanel != null && monitorPanel.activeSelf && monitorPanel != panelToShow)
-            {
-                previousPanel = monitorPanel;
-            }
-            else if (interrogationPanel != null && interrogationPanel.activeSelf && interrogationPanel != panelToShow)
-            {
-                previousPanel = interrogationPanel;
-            }
-            else if (profilePanel != null && profilePanel.activeSelf && profilePanel != panelToShow)
-            {
-                previousPanel = profilePanel;
-            }
-            else if (logPanel != null && logPanel.activeSelf && logPanel != panelToShow)
-            {
-                previousPanel = logPanel;
-            }
+            if (monitorPanel != null && monitorPanel.activeSelf && monitorPanel != panelToShow) previousPanel = monitorPanel;
+            else if (interrogationPanel != null && interrogationPanel.activeSelf && interrogationPanel != panelToShow) previousPanel = interrogationPanel;
+            else if (profilePanel != null && profilePanel.activeSelf && profilePanel != panelToShow) previousPanel = profilePanel;
+            else if (logPanel != null && logPanel.activeSelf && logPanel != panelToShow) previousPanel = logPanel;
 
             if (monitorPanel != null) monitorPanel.SetActive(monitorPanel == panelToShow);
             if (interrogationPanel != null) interrogationPanel.SetActive(interrogationPanel == panelToShow);
             if (profilePanel != null) profilePanel.SetActive(profilePanel == panelToShow);
             if (logPanel != null) logPanel.SetActive(logPanel == panelToShow);
+            if (endingPanel != null) endingPanel.SetActive(endingPanel == panelToShow);
+            if (resultPanel != null) resultPanel.SetActive(resultPanel == panelToShow);
 
-            if (panelToShow == profilePanel)
-            {
-                RefreshProfileUIState();
-            }
-            else if (panelToShow == logPanel)
-            {
-                // ★ ログ画面を開いたタイミングでログ一覧表示を生成
-                BuildLogListUI();
-            }
+            if (panelToShow == profilePanel) RefreshProfileUIState();
+            else if (panelToShow == logPanel) BuildLogListUI();
+            else if (panelToShow == monitorPanel) RefreshMonitorRoomButtons();
         }
 
         public void OnClickOpenMonitorPanel() => ShowPanel(monitorPanel);
@@ -369,24 +557,13 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         public void OnClickOpenProfilePanel() => ShowPanel(profilePanel);
-
         public void OnClickOpenLogPanel() => ShowPanel(logPanel);
 
         public void OnClickReturnToPreviousPanel()
         {
-            if (previousPanel != null)
-            {
-                ShowPanel(previousPanel);
-            }
-            else
-            {
-                ShowPanel(monitorPanel);
-            }
+            if (previousPanel != null) ShowPanel(previousPanel);
+            else ShowPanel(monitorPanel);
         }
-
-        // --------------------------------------------------
-        // ★ ダイアログ関連
-        // --------------------------------------------------
 
         public void OnClickOpenResetDialog()
         {
@@ -395,7 +572,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         public void OnClickConfirmResetDay()
         {
-            GameManager.Instance.ResetCurrentDay();
+            if (GameManager.Instance != null) GameManager.Instance.ResetCurrentDay();
             if (resetConfirmDialog != null) resetConfirmDialog.SetActive(false);
         }
 
@@ -409,12 +586,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(true);
         }
 
-        public void OnClickConfirmAdvanceNextDay()
-        {
-            if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(false);
-            GameManager.Instance.AdvanceToNextDay();
-        }
-
         public void OnClickCancelEndDay()
         {
             if (dayEndConfirmDialog != null) dayEndConfirmDialog.SetActive(false);
@@ -422,7 +593,42 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #endregion
 
-        #region ★ プロフィールUIの表示制御
+        #region ★ UIの自動制御・更新処理
+
+        private void UpdateInterrogationButtonsState()
+        {
+            CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
+                ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
+                : null;
+
+            bool isReleased = targetChar != null && targetChar.IsReleased;
+
+            bool isInterrogated = InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId);
+            bool isLimitReached = InterrogationManager.Instance != null && InterrogationManager.Instance.IsActionLimitReached;
+
+            bool canInteract = !isReleased && !isInterrogated && !isLimitReached && !isDialoguePlaying;
+
+            if (interrogationButtons != null)
+            {
+                foreach (var btn in interrogationButtons)
+                {
+                    if (btn != null) btn.interactable = canInteract;
+                }
+            }
+
+            if (releaseButton != null)
+            {
+                releaseButton.interactable = !isReleased && !isDialoguePlaying;
+            }
+
+            if (confirmAiButtonObject != null)
+            {
+                int currentDay = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 1;
+                bool isFinalDay = (currentDay >= finalDayNumber);
+
+                confirmAiButtonObject.SetActive(isFinalDay && !isReleased);
+            }
+        }
 
         private void RefreshProfileUIState()
         {
@@ -444,37 +650,42 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 else
                 {
                     ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == binding.key);
-                    if (item != null)
-                    {
-                        isUnlocked = item.isUnlocked;
-                    }
+                    if (item != null) isUnlocked = item.isUnlocked;
                 }
 
-                if (binding.unlockButton != null)
-                {
-                    binding.unlockButton.SetActive(!isUnlocked);
-                }
-
-                if (binding.contentObject != null)
-                {
-                    binding.contentObject.SetActive(isUnlocked);
-                }
+                if (binding.unlockButton != null) binding.unlockButton.SetActive(!isUnlocked);
+                if (binding.contentObject != null) binding.contentObject.SetActive(isUnlocked);
             }
+        }
+
+        private void UpdateDayUI(int day)
+        {
+            if (dayText != null) dayText.text = $"{day} 日目";
+            SetChatboxActive(false);
+            UpdateInterrogationButtonsState();
+            RefreshProfileUIState();
+            RefreshMonitorRoomButtons();
+        }
+
+        private void HandleDayResetUI()
+        {
+            StartDialogueSequence("システム", "（本日の朝の状態に巻き戻しました）");
+            UpdateInterrogationButtonsState();
+            RefreshProfileUIState();
+            RefreshMonitorRoomButtons();
         }
 
         #endregion
 
-        #region ★ 文字送り・ページ送り・ログ保存のコアロジック
+        #region ★ 文字送り & ログ
 
         private void OnPlayerClickDialogue()
         {
             if (isTyping)
             {
                 if (typingCoroutine != null) StopCoroutine(typingCoroutine);
-                
                 if (dialogueText != null) dialogueText.text = currentFullPageText;
                 isTyping = false;
-
                 SetNextPageIconActive(dialoguePages.Count > 0);
             }
             else
@@ -483,13 +694,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
-        /// <summary>
-        /// セリフテキストを区切り文字 '|' で分割し、全体の再生を開始する
-        /// </summary>
         private void StartDialogueSequence(string speakerName, string fullText)
         {
             dialoguePages.Clear();
-
             if (typingCoroutine != null) StopCoroutine(typingCoroutine);
 
             if (string.IsNullOrEmpty(fullText))
@@ -505,8 +712,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 if (!string.IsNullOrEmpty(trimmed))
                 {
                     dialoguePages.Enqueue(trimmed);
-                    
-                    // ★ ログリストにセリフ履歴を追加保存
                     dialogueLogList.Add(new DialogueLogData(speakerName, trimmed));
                 }
             }
@@ -515,7 +720,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             SetChatboxActive(true);
             isDialoguePlaying = true;
-
             AdvanceToNextDialoguePage();
         }
 
@@ -546,25 +750,16 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             for (int i = 0; i < textToType.Length; i++)
             {
                 char c = textToType[i];
-
                 if (c == '<') isInsideTag = true;
                 if (c == '>') isInsideTag = false;
 
                 currentDisplayedText += c;
+                if (dialogueText != null) dialogueText.text = currentDisplayedText;
 
-                if (dialogueText != null)
-                {
-                    dialogueText.text = currentDisplayedText;
-                }
-
-                if (!isInsideTag && textSpeed > 0f)
-                {
-                    yield return new WaitForSeconds(textSpeed);
-                }
+                if (!isInsideTag && textSpeed > 0f) yield return new WaitForSeconds(textSpeed);
             }
 
             isTyping = false;
-
             SetNextPageIconActive(dialoguePages.Count > 0);
         }
 
@@ -573,81 +768,31 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             isDialoguePlaying = false;
             isTyping = false;
             SetNextPageIconActive(false);
+            UpdateInterrogationButtonsState();
         }
 
-        #endregion
-
-        #region ★ ログUI表示処理
-
-        /// <summary>
-        /// ログ画面に蓄積された会話履歴を生成する
-        /// </summary>
         private void BuildLogListUI()
         {
             if (logContentParent == null || logItemPrefab == null) return;
 
-            // 既存の表示要素をクリア
-            foreach (Transform child in logContentParent)
-            {
-                Destroy(child.gameObject);
-            }
+            foreach (Transform child in logContentParent) Destroy(child.gameObject);
 
-            // 保存されたログリストを順番に生成
             foreach (var log in dialogueLogList)
             {
                 GameObject itemObj = Instantiate(logItemPrefab, logContentParent);
                 LogItemUI itemUI = itemObj.GetComponent<LogItemUI>();
-                if (itemUI != null)
-                {
-                    itemUI.SetLog(log.speakerName, log.contentText);
-                }
+                if (itemUI != null) itemUI.SetLog(log.speakerName, log.contentText);
             }
         }
-
-        /// <summary>
-        /// ログデータをクリア（必要に応じて呼び出し）
-        /// </summary>
-        public void ClearDialogueLog()
-        {
-            dialogueLogList.Clear();
-        }
-
-        #endregion
-
-        #region UI更新用の内部処理
 
         private void SetChatboxActive(bool isActive)
         {
-            if (interrogationChatbox != null)
-            {
-                interrogationChatbox.SetActive(isActive);
-            }
+            if (interrogationChatbox != null) interrogationChatbox.SetActive(isActive);
         }
 
         private void SetNextPageIconActive(bool isActive)
         {
-            if (nextPageIcon != null)
-            {
-                nextPageIcon.SetActive(isActive);
-            }
-        }
-
-        private void UpdateInterrogationButtonsState()
-        {
-            if (interrogationButtons == null || interrogationButtons.Length == 0) return;
-
-            bool isInterrogated = InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId);
-            bool isLimitReached = InterrogationManager.Instance != null && InterrogationManager.Instance.IsActionLimitReached;
-
-            bool canInteract = !isInterrogated && !isLimitReached && !isDialoguePlaying;
-
-            foreach (var btn in interrogationButtons)
-            {
-                if (btn != null)
-                {
-                    btn.interactable = canInteract;
-                }
-            }
+            if (nextPageIcon != null) nextPageIcon.SetActive(isActive);
         }
 
         private void UpdateInterrogationRoomDisplay(string characterId)
@@ -657,11 +802,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == characterId);
             if (targetChar != null && targetChar.ProfileData != null)
             {
-                if (targetCharacterNameText != null)
-                    targetCharacterNameText.text = targetChar.ProfileData.basicInfo.characterName;
-
-                if (targetCharacterImage != null)
-                    targetCharacterImage.sprite = targetChar.ProfileData.characterIcon;
+                if (targetCharacterNameText != null) targetCharacterNameText.text = targetChar.ProfileData.basicInfo.characterName;
+                if (targetCharacterImage != null) targetCharacterImage.sprite = targetChar.ProfileData.characterIcon;
             }
         }
 
@@ -677,24 +819,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 int remaining = Mathf.Max(0, maxLimit - currentActions);
                 actionCountText.text = $"残り行動: {remaining}/{maxLimit}";
             }
-
             UpdateInterrogationButtonsState();
-        }
-
-        private void UpdateDayUI(int day)
-        {
-            if (dayText != null) dayText.text = $"{day} 日目";
-            SetChatboxActive(false);
-            UpdateInterrogationButtonsState();
-            RefreshProfileUIState();
-        }
-
-        private void HandleDayResetUI()
-        {
-            StartDialogueSequence("システム", "（本日の朝の状態に巻き戻しました）");
-            UpdateInterrogationButtonsState();
-            RefreshProfileUIState();
-            Debug.Log("UIを朝の状態へリセットしました。");
         }
 
         #endregion

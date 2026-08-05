@@ -42,6 +42,14 @@ MonoBehaviour:
         targetCharacterId: 
         requiredAffection: 3
         dialogueText: "\u304B\u304D\u304F\u3051\u3053"
+    releaseResponse:
+      priorityDialogueList:
+      - conditionType: 0
+        targetCharacterId: 
+        requiredAffection: 0
+        dialogueText: 
+    confirmAIResponse:
+      priorityDialogueList: []
     hearingResponses:
     - targetCharacterId: C
       responseGroup:

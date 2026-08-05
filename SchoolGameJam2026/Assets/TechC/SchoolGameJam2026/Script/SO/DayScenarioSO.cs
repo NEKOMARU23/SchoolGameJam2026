@@ -5,14 +5,16 @@ using UnityEngine;
 namespace TechC.SchoolGameJam2026.Scripts.SO
 {
     /// <summary>
-    /// 取り調べ時の4つの行動種別
+    /// 取り調べ時の行動種別（解放とAI確定を追加）
     /// </summary>
     public enum InterrogationActionType
     {
         Torture,    // 1. 拷問
         Talk,       // 2. 対話
         Negotiate,  // 3. 交渉
-        HearAbout   // 4. 他の人について聞き取り
+        HearAbout,  // 4. 他の人について聞き取り
+        Release,    // 5. 解放
+        ConfirmAI   // 6. AI確定（排除/判定）
     }
 
     /// <summary>
@@ -57,8 +59,6 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         /// <summary>
         /// 現在の好感度状況から、最も優先度の高いセリフを自動取得する
         /// </summary>
-        /// <param name="selfAffection">本人の好感度</param>
-        /// <param name="otherAffections">他キャラの好感度辞書 (Key: キャラID, Value: 好感度)</param>
         public string GetValidDialogue(int selfAffection, Dictionary<string, int> otherAffections)
         {
             if (priorityDialogueList == null || priorityDialogueList.Count == 0)
@@ -71,13 +71,11 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
                 switch (dialogue.conditionType)
                 {
                     case DialogueConditionType.TargetAffection:
-                        // 1. 本人の好感度判定
                         if (selfAffection >= dialogue.requiredAffection)
                             return dialogue.dialogueText;
                         break;
 
                     case DialogueConditionType.OtherAffection:
-                        // 2. 他人の好感度判定
                         if (otherAffections != null && !string.IsNullOrEmpty(dialogue.targetCharacterId))
                         {
                             if (otherAffections.TryGetValue(dialogue.targetCharacterId, out int otherValue))
@@ -89,7 +87,6 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
                         break;
 
                     case DialogueConditionType.Unconditional:
-                        // 3. 条件なし（無条件）
                         return dialogue.dialogueText;
                 }
             }
@@ -129,6 +126,10 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         public ActionResponseGroup talkResponse;      // 対話の時のセリフ
         public ActionResponseGroup negotiateResponse; // 交渉の時のセリフ
 
+        [Header("--- 解放・AI確定時のセリフ ---")]
+        public ActionResponseGroup releaseResponse;   // 解放された時のセリフ
+        public ActionResponseGroup confirmAIResponse; // AI確定（処分/排斥）された時のセリフ
+
         [Header("--- 他の人について聞き取りをする場合のセリフリスト ---")]
         public List<HearingTargetResponse> hearingResponses = new List<HearingTargetResponse>();
 
@@ -140,18 +141,23 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
             switch (actionType)
             {
                 case InterrogationActionType.Torture:
-                    return tortureResponse.GetValidDialogue(selfAffection, otherAffections);
+                    return tortureResponse != null ? tortureResponse.GetValidDialogue(selfAffection, otherAffections) : "「……」";
 
                 case InterrogationActionType.Talk:
-                    return talkResponse.GetValidDialogue(selfAffection, otherAffections);
+                    return talkResponse != null ? talkResponse.GetValidDialogue(selfAffection, otherAffections) : "「……」";
 
                 case InterrogationActionType.Negotiate:
-                    return negotiateResponse.GetValidDialogue(selfAffection, otherAffections);
+                    return negotiateResponse != null ? negotiateResponse.GetValidDialogue(selfAffection, otherAffections) : "「……」";
+
+                case InterrogationActionType.Release:
+                    return releaseResponse != null ? releaseResponse.GetValidDialogue(selfAffection, otherAffections) : "解放される……ということですか。わかりました。|（対象は部屋から退出しました）";
+
+                case InterrogationActionType.ConfirmAI:
+                    return confirmAIResponse != null ? confirmAIResponse.GetValidDialogue(selfAffection, otherAffections) : "【判定完了】対象をAIと判定し、排除シーケンスを完了しました。";
 
                 case InterrogationActionType.HearAbout:
-                    // 聞き取りの場合、指定した他キャラ用のセリフを探す
                     var targetHearing = hearingResponses.Find(h => h.targetCharacterId == hearingTargetId);
-                    if (targetHearing != null)
+                    if (targetHearing != null && targetHearing.responseGroup != null)
                     {
                         return targetHearing.responseGroup.GetValidDialogue(selfAffection, otherAffections);
                     }
