@@ -24,6 +24,9 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
         [Tooltip("このキャラクターが人格AI（真犯人）かどうか")]
         [SerializeField] private bool isAI = false;
 
+        [Tooltip("このキャラクターが解放済みかどうか")]
+        [SerializeField] private bool isReleased = false; // ★ 解放フラグの追加
+
         #region プロパティ (外部参照用)
         /// <summary> キャラクターID </summary>
         public string CharacterId => characterId;
@@ -36,17 +39,21 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
 
         /// <summary> 人格AI（真犯人）フラグ </summary>
         public bool IsAI => isAI;
+
+        /// <summary> 解放フラグ </summary>
+        public bool IsReleased => isReleased; // ★ 外部から確認用プロパティ
         #endregion
 
         /// <summary>
         /// コンストラクタ（コードから生成する場合）
         /// </summary>
-        public CharacterInstance(string characterId, ProfileDataSO profileData, int initialAffection = 0, bool isAI = false)
+        public CharacterInstance(string characterId, ProfileDataSO profileData, int initialAffection = 0, bool isAI = false, bool isReleased = false)
         {
             this.characterId = characterId;
             this.profileData = profileData;
             this.currentAffection = initialAffection;
             this.isAI = isAI;
+            this.isReleased = isReleased;
         }
 
         /// <summary>
@@ -72,6 +79,14 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
         public void SetAIFlag(bool value)
         {
             isAI = value;
+        }
+
+        /// <summary>
+        /// 解放フラグを設定する
+        /// </summary>
+        public void SetReleaseFlag(bool value)
+        {
+            isReleased = value;
         }
     }
 }

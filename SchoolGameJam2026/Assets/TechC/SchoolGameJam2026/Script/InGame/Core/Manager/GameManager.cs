@@ -29,6 +29,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         #region リセット用バックアップデータ
         private int backupPoints;
         private int backupDailyActions;
+        private List<string> backupInterrogatedCharacterIds = new List<string>(); // ★追加：本日行動済みキャラIDのバックアップ
         private Dictionary<string, int> backupAffections = new Dictionary<string, int>();
         private Dictionary<ProfileDataSO, List<bool>> backupProfileStates = new Dictionary<ProfileDataSO, List<bool>>();
         #endregion
@@ -104,7 +105,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             Debug.Log($"<color=cyan>=== {currentDay} 日目の朝が始まりました ===</color>");
 
-            // 行動回数をリセット
+            // 行動回数および本日取り調べたキャラリストをリセット
             if (InterrogationManager.Instance != null)
             {
                 InterrogationManager.Instance.ResetDailyActions(0);
@@ -123,11 +124,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             Debug.Log($"<color=yellow>⚠️ {currentDay} 日目の朝の状態にリセットします。</color>");
 
-            // 1. ポイントの復元
+            // 1. ポイント、行動回数、および「本日行動済みキャラIDリスト」の復元
             if (InterrogationManager.Instance != null)
             {
                 InterrogationManager.Instance.SetPoints(backupPoints);
                 InterrogationManager.Instance.ResetDailyActions(backupDailyActions);
+                InterrogationManager.Instance.RestoreInterrogatedCharacterIdsToday(backupInterrogatedCharacterIds); // ★追加：1日1回制限フラグの復元
             }
 
             // 2. キャラクター好感度の復元
@@ -157,11 +159,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// </summary>
         private void SaveDayBackup()
         {
-            // ポイントと行動回数のバックアップ
+            // ポイント、行動回数、行動済みキャラIDリストのバックアップ
             if (InterrogationManager.Instance != null)
             {
                 backupPoints = InterrogationManager.Instance.CurrentPoints;
                 backupDailyActions = InterrogationManager.Instance.CurrentDailyActions;
+                backupInterrogatedCharacterIds = InterrogationManager.Instance.GetInterrogatedCharacterIdsToday(); // ★追加
             }
 
             // 好感度のバックアップ
@@ -197,9 +200,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary>
         /// 現在の日を終了し、次の日（朝）へ移行する
         /// </summary>
-        /// <summary>
-        /// 現在の日を終了し、次の日（朝）へ移行する
-        /// </summary>
         public void AdvanceToNextDay()
         {
             currentDay++;
@@ -222,7 +222,5 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             // 新しい日の朝を開始（ログ出力、行動回数リセット、バックアップ、イベント発火が一括で行われます）
             StartNewDay();
         }
-
-
     }
 }
