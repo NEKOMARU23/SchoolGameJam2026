@@ -21,7 +21,7 @@ MonoBehaviour:
       - conditionType: 2
         targetCharacterId: 
         requiredAffection: 2
-        dialogueText: "\u3042\u3044\u3046\u3048\u304A"
+        dialogueText: "\u3042\u3044\u3046\u3048\u304A|\u305F\u3059\u304D\u3066|\u611B\u3057\u3066\u308B"
       - conditionType: 2
         targetCharacterId: 
         requiredAffection: 2

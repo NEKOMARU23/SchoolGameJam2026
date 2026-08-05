@@ -24,15 +24,15 @@ MonoBehaviour:
     unlockCost: 30
     isUnlocked: 0
   historyInfoList:
-  - itemKey: "\u75C5\u6C17\u306B\u3064\u3044\u3066"
+  - itemKey: PAST_1
     valueContent: "\u904E\u53BB\u306B\u75C5\u6C17\u3092\u60A3\u3063\u3066\u3044\u305F"
     unlockCost: 50
     isUnlocked: 0
-  - itemKey: "\u7279\u6280"
+  - itemKey: PAST_2
     valueContent: "\u3069\u3053\u3067\u3082\u5BDD\u308C\u308B\u3053\u3068"
     unlockCost: 70
     isUnlocked: 0
-  - itemKey: "\u8DA3\u5473"
+  - itemKey: PAST_3
     valueContent: "\u65E5\u5411\u307C\u3063\u3053"
     unlockCost: 30
     isUnlocked: 0
