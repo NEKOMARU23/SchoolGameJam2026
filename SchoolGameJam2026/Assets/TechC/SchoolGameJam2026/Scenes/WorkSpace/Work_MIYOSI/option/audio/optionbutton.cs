@@ -3,6 +3,7 @@ using UnityEngine;
 public class optionbutton : MonoBehaviour
 {
     [SerializeField] private GameObject panel;
+     [SerializeField] private GameObject tutorial;
 
     private void Start()
     {
@@ -28,6 +29,14 @@ public class optionbutton : MonoBehaviour
         }
     }
 
+    public void OnTutorialButton()
+    {
+        if (tutorial != null)
+        {
+            tutorial.SetActive(false);
+        }
+    }
+
     public void OnEndButton()
     {
         #if UNITY_EDITOR
@@ -36,4 +45,4 @@ public class optionbutton : MonoBehaviour
         Application.Quit();
         #endif
     }
- }
+}
