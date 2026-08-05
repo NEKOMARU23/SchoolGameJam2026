@@ -337,6 +337,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Start_Screen
       objectReference: {fileID: 0}
+    - target: {fileID: 757268640626321625, guid: 059482760cf141945be1ee70bd15283c, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8497776728937344798, guid: 059482760cf141945be1ee70bd15283c, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
