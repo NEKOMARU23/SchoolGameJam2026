@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
@@ -7,7 +8,7 @@ using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 namespace TechC.SchoolGameJam2026.Scripts.Core
 {
     /// <summary>
-    /// 1年生が配置したUIボタンやテキストと、ゲームのロジック（Manager類）を繋ぐクラス
+    /// UIボタンやテキストと、ゲームのロジック（Manager類）を繋ぐクラス
     /// </summary>
     public class UIManagerBridge : MonoBehaviour
     {
@@ -19,7 +20,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         [Header("--- 取調室内の表示パーツ (任意) ---")]
         [SerializeField] private TextMeshProUGUI targetCharacterNameText; // 取調室内の名前テキスト
-        [SerializeField] private UnityEngine.UI.Image targetCharacterImage;    // 取調室内の立ち絵/アイコン
+        [SerializeField] private Image targetCharacterImage;    // 取調室内の立ち絵/アイコン
+        
+        [Header("--- 取調室のアクションボタン群 ---")]
+        [Tooltip("拷問、対話、交渉、聞き取り の4つのボタンを設定（1日1回使用後の無効化制御用）")]
+        [SerializeField] private Button[] interrogationButtons;
 
         [Header("--- 画面パネル切り替え ---")]
         [SerializeField] private GameObject monitorPanel;              // モニター選択画面
@@ -77,7 +82,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
-        #region ★ 1年生が Button の OnClick() に登録するメソッド群
+        #region ★ Button の OnClick() に登録するメソッド群
 
         /// <summary>
         /// 取調対象のキャラクターを選択する
@@ -89,6 +94,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             // 取調室内の表示（名前やアイコン）を更新
             UpdateInterrogationRoomDisplay(characterId);
+
+            // ★ 対象キャラの1日1回制限状態に合わせてボタンの活性/非活性を切り替え
+            UpdateInterrogationButtonsState();
         }
 
         /// <summary>
@@ -117,6 +125,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         /// <param name="actionIndex">0=Torture, 1=Talk, 2=Negotiate, 3=HearAbout</param>
         public void OnClickInterrogationButton(int actionIndex)
         {
+            // ★ 1日1回チェック：既に今日取り調べ済みの場合は処理しない
+            if (InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId))
+            {
+                if (dialogueText != null) dialogueText.text = "（このキャラクターへの本日の取り調べは既に終了しています）";
+                UpdateInterrogationButtonsState();
+                return;
+            }
+
             InterrogationActionType actionType = (InterrogationActionType)actionIndex;
 
             // 対象キャラクターインスタンスの検索
@@ -134,6 +150,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             {
                 dialogueText.text = resultDialogue;
             }
+
+            // ★ アクション実行後、ボタンを非活性化（1日1回制限の適用）
+            UpdateInterrogationButtonsState();
         }
 
         /// <summary>
@@ -218,7 +237,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         public void OnClickOpenMonitorPanel() => ShowPanel(monitorPanel);
 
         /// <summary> 取調室画面を開く </summary>
-        public void OnClickOpenInterrogationPanel() => ShowPanel(interrogationPanel);
+        public void OnClickOpenInterrogationPanel()
+        {
+            ShowPanel(interrogationPanel);
+            UpdateInterrogationButtonsState(); // 開いた時にボタン状態を更新
+        }
 
         /// <summary> 資料画面を開く </summary>
         public void OnClickOpenProfilePanel() => ShowPanel(profilePanel);
@@ -289,6 +312,28 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #region UI更新用の内部処理
 
+        /// <summary>
+        /// 現在選択されているキャラが本日行動済みか、または全体の行動限界に達しているかに応じてボタンの有効/無効を切り替える
+        /// </summary>
+        private void UpdateInterrogationButtonsState()
+        {
+            if (interrogationButtons == null || interrogationButtons.Length == 0) return;
+
+            bool isInterrogated = InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId);
+            bool isLimitReached = InterrogationManager.Instance != null && InterrogationManager.Instance.IsActionLimitReached;
+
+            // 「本日まだ行動していない」かつ「全体行動回数の上限に達していない」場合のみボタンを押せるようにする
+            bool canInteract = !isInterrogated && !isLimitReached;
+
+            foreach (var btn in interrogationButtons)
+            {
+                if (btn != null)
+                {
+                    btn.interactable = canInteract;
+                }
+            }
+        }
+
         private void UpdateInterrogationRoomDisplay(string characterId)
         {
             if (GameManager.Instance == null || GameManager.Instance.AllCharacters == null) return;
@@ -316,16 +361,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 int remaining = Mathf.Max(0, maxLimit - currentActions);
                 actionCountText.text = $"残り行動: {remaining}/{maxLimit}";
             }
+
+            // 行動回数が変わった時もボタン状態を再チェック
+            UpdateInterrogationButtonsState();
         }
 
         private void UpdateDayUI(int day)
         {
             if (dayText != null) dayText.text = $"{day} 日目";
+            UpdateInterrogationButtonsState();
         }
 
         private void HandleDayResetUI()
         {
             if (dialogueText != null) dialogueText.text = "（本日の朝の状態に巻き戻しました）";
+            UpdateInterrogationButtonsState(); // 朝に巻き戻ったのでボタンを再有効化
             Debug.Log("UIを朝の状態へリセットしました。");
         }
 

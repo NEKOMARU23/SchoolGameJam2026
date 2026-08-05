@@ -14,7 +14,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public static InterrogationManager Instance { get; private set; }
 
         [Header("ポイント設定")]
-        [Header("ポイント設定")]
         [Tooltip("現在所持している解析ポイント")]
         [SerializeField] private int currentPoints = 0;
 
@@ -33,6 +32,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         [Tooltip("本日実行済みの行動回数")]
         [SerializeField] private int currentDailyActions = 0;
+
+        // ★追加：本日すでに取り調べを行ったキャラクターのIDリスト
+        private List<string> interrogatedCharacterIdsToday = new List<string>();
 
         #region プロパティ
         /// <summary> 現在の解析ポイント </summary>
@@ -73,6 +75,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
+        /// ★指定したキャラクターに今日すでに行動（取り調べ）を行ったか確認する
+        /// </summary>
+        public bool HasInterrogatedToday(string characterId)
+        {
+            return interrogatedCharacterIdsToday.Contains(characterId);
+        }
+
+        /// <summary>
         /// 取り調べアクションを実行する
         /// </summary>
         /// <param name="targetChar">対象のキャラクター</param>
@@ -81,11 +91,18 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <returns>キャラクターから返ってくるセリフテキスト</returns>
         public string ExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, string hearingTargetId = "")
         {
-            // 1. 行動上限チェック
+            // 1. 1日の全体行動上限チェック
             if (IsActionLimitReached)
             {
                 Debug.LogWarning("[InterrogationManager] 本日の行動上限に達しているため、アクションを実行できません。");
                 return "（本日の取り調べ可能回数を消化しました）";
+            }
+
+            // ★ 1.5 キャラクターごとの重複取り調べチェック (1人につき1日1回)
+            if (HasInterrogatedToday(targetChar.CharacterId))
+            {
+                Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} には本日すでに取り調べを行っています。");
+                return "（このキャラクターへの本日の取り調べは既に終了しています）";
             }
 
             // 2. 本日のシナリオデータを取得
@@ -138,11 +155,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections);
             }
 
-            // 5. 行動回数をカウントアップ
+            // ★ 5. 行動済みキャラクターリストに追加
+            interrogatedCharacterIdsToday.Add(targetChar.CharacterId);
+
+            // 6. 全体行動回数をカウントアップ
             currentDailyActions++;
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
 
-            // 6. 行動上限に達したら夜フェーズ（次の展開）へ移行
+            // 7. 行動上限に達したら夜フェーズ（次の展開）へ移行
             if (IsActionLimitReached)
             {
                 Debug.Log("[InterrogationManager] 1日の行動制限に達しました。夜フェーズへ移行します。");
@@ -156,9 +176,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         #region ポイント操作
-        /// <summary>
-        /// ポイントを加算する
-        /// </summary>
         public void AddPoints(int amount)
         {
             if (amount <= 0) return;
@@ -166,9 +183,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             OnPointsChanged?.Invoke(currentPoints);
         }
 
-        /// <summary>
-        /// ポイントを消費/減少させる（0未満にはならない）
-        /// </summary>
         public void ConsumePoints(int amount)
         {
             if (amount <= 0) return;
@@ -176,18 +190,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             OnPointsChanged?.Invoke(currentPoints);
         }
 
-        /// <summary>
-        /// ポイントを直接セットする（バックアップからの復元用）
-        /// </summary>
         public void SetPoints(int value)
         {
             currentPoints = Mathf.Max(0, value);
             OnPointsChanged?.Invoke(currentPoints);
         }
 
-        /// <summary>
-        /// プロフィール開放などのポイント消費チェック＆実行
-        /// </summary>
         public bool TrySpendPoints(int cost)
         {
             if (currentPoints >= cost)
@@ -201,12 +209,29 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         #region 日次リセット・復元用
         /// <summary>
-        /// 1日の行動回数をリセットする（新しい日になった時、またはリセット時）
+        /// 1日の行動記録（回数およびキャラクターごとの行動済みフラグ）をリセットする
         /// </summary>
         public void ResetDailyActions(int actionCount = 0)
         {
             currentDailyActions = actionCount;
+            interrogatedCharacterIdsToday.Clear(); // ★本日取り調べたキャラリストをリセット
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
+        }
+
+        /// <summary>
+        /// ★「今日をやり直す（リセット）」用のバックアップ・復元処理で使うリスト取得
+        /// </summary>
+        public List<string> GetInterrogatedCharacterIdsToday()
+        {
+            return new List<string>(interrogatedCharacterIdsToday);
+        }
+
+        /// <summary>
+        /// ★「今日をやり直す（リセット）」時にバックアップから状態を復元する
+        /// </summary>
+        public void RestoreInterrogatedCharacterIdsToday(List<string> backupList)
+        {
+            interrogatedCharacterIdsToday = backupList != null ? new List<string>(backupList) : new List<string>();
         }
         #endregion
     }

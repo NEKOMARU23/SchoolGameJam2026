@@ -21,7 +21,7 @@ MonoBehaviour:
     bloodType: B
     likes: "\u5BDD\u308B\u3053\u3068"
     dislikes: "\u8D77\u304D\u3066\u3044\u308B\u3053\u3068"
-    unlockCost: 30
+    unlockCost: 20
     isUnlocked: 0
   historyInfoList:
   - itemKey: "\u75C5\u6C17\u306B\u3064\u3044\u3066"
