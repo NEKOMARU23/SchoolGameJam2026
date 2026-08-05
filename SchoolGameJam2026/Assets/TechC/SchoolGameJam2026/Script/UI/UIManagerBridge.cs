@@ -22,6 +22,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private TextMeshProUGUI targetCharacterNameText; // 取調室内の名前テキスト
         [SerializeField] private Image targetCharacterImage;    // 取調室内の立ち絵/アイコン
         
+        // ★追加：テキスト枠全体をまとめる親オブジェクト (Interrogation_Chatbox)
+        [Header("--- メッセージウィンドウ ---")]
+        [Tooltip("取り調べコマンド選択時に表示するメッセージボックス親オブジェクト")]
+        [SerializeField] private GameObject interrogationChatbox;
+
         [Header("--- 取調室のアクションボタン群 ---")]
         [Tooltip("拷問、対話、交渉、聞き取り の4つのボタンを設定（1日1回使用後の無効化制御用）")]
         [SerializeField] private Button[] interrogationButtons;
@@ -80,6 +85,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             {
                 UpdateDayUI(GameManager.Instance.CurrentDay);
             }
+
+            // ★ 初期状態ではチャットボックスを隠しておく
+            SetChatboxActive(false);
         }
 
         #region ★ Button の OnClick() に登録するメソッド群
@@ -95,12 +103,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             // 取調室内の表示（名前やアイコン）を更新
             UpdateInterrogationRoomDisplay(characterId);
 
-            // ★ 対象キャラの1日1回制限状態に合わせてボタンの活性/非活性を切り替え
+            // 対象キャラの1日1回制限状態に合わせてボタンの活性/非活性を切り替え
             UpdateInterrogationButtonsState();
+
+            // ★ キャラクター（部屋）を切り替えたときは一旦チャットボックスを非表示にする
+            SetChatboxActive(false);
         }
 
         /// <summary>
-        /// ★ モニター画面の部屋選択ボタン用
+        /// モニター画面の部屋選択ボタン用
         /// キャラクターを指定して、直接その部屋の取調室画面を開く
         /// </summary>
         /// <param name="characterId">部屋に対応するキャラID ("A", "B", "C", "D" など)</param>
@@ -125,10 +136,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         /// <param name="actionIndex">0=Torture, 1=Talk, 2=Negotiate, 3=HearAbout</param>
         public void OnClickInterrogationButton(int actionIndex)
         {
-            // ★ 1日1回チェック：既に今日取り調べ済みの場合は処理しない
+            // 1日1回チェック：既に今日取り調べ済みの場合は処理しない
             if (InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId))
             {
                 if (dialogueText != null) dialogueText.text = "（このキャラクターへの本日の取り調べは既に終了しています）";
+                SetChatboxActive(true); // ★ 警告表示のためテキストボックスを表示
                 UpdateInterrogationButtonsState();
                 return;
             }
@@ -151,7 +163,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 dialogueText.text = resultDialogue;
             }
 
-            // ★ アクション実行後、ボタンを非活性化（1日1回制限の適用）
+            // ★ コマンド実行後にテキストのグループ（Interrogation_Chatbox）を表示する
+            SetChatboxActive(true);
+
+            // アクション実行後、ボタンを非活性化（1日1回制限の適用）
             UpdateInterrogationButtonsState();
         }
 
@@ -313,6 +328,17 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         #region UI更新用の内部処理
 
         /// <summary>
+        /// ★ チャットボックス全体の表示/非表示を制御する内部メソッド
+        /// </summary>
+        private void SetChatboxActive(bool isActive)
+        {
+            if (interrogationChatbox != null)
+            {
+                interrogationChatbox.SetActive(isActive);
+            }
+        }
+
+        /// <summary>
         /// 現在選択されているキャラが本日行動済みか、または全体の行動限界に達しているかに応じてボタンの有効/無効を切り替える
         /// </summary>
         private void UpdateInterrogationButtonsState()
@@ -369,13 +395,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         private void UpdateDayUI(int day)
         {
             if (dayText != null) dayText.text = $"{day} 日目";
+            SetChatboxActive(false); // ★ 新しい日になったらチャットボックスを隠す
             UpdateInterrogationButtonsState();
         }
 
         private void HandleDayResetUI()
         {
             if (dialogueText != null) dialogueText.text = "（本日の朝の状態に巻き戻しました）";
-            UpdateInterrogationButtonsState(); // 朝に巻き戻ったのでボタンを再有効化
+            SetChatboxActive(false); // ★ リセット時もチャットボックスを非表示に戻す
+            UpdateInterrogationButtonsState();
             Debug.Log("UIを朝の状態へリセットしました。");
         }
 
