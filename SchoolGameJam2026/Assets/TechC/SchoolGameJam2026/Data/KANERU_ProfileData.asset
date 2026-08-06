@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: KANERU_ProfileData
   m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.SO.ProfileDataSO
   characterId: C
-  characterIcon: {fileID: 21300000, guid: 62832ec9901f6f34681b4653ca35ddf1, type: 3}
+  characterIcon: {fileID: 21300000, guid: d93b7224bb55b4346ad7e2953b46e83a, type: 3}
   basicInfo:
     characterName: "\u30AB\u30CD\u30EB"
     age: "26\u6B73"
