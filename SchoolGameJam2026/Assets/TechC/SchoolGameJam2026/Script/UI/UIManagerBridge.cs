@@ -497,12 +497,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         public void SelectCharacter(string characterId)
         {
+            ResetDialoguePresentation();
+
             currentSelectedCharacterId = characterId;
             Debug.Log($"対象キャラクターを【{characterId}】にセットしました。");
-
-            // ★ キャラの切り替え時に会話フラグを解除して状態更新
-            isDialoguePlaying = false;
-            isTyping = false;
 
             UpdateInterrogationRoomDisplay(characterId);
             UpdateInterrogationButtonsState();
@@ -923,6 +921,31 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             isTyping = false;
             SetNextPageIconActive(false);
             UpdateInterrogationButtonsState();
+        }
+
+        /// <summary>
+        /// キャラクター切り替え時に、直前の会話表示と再生状態を完全に破棄する。
+        /// ログ履歴は別画面で参照するため消去しない。
+        /// </summary>
+        private void ResetDialoguePresentation()
+        {
+            if (typingCoroutine != null)
+            {
+                StopCoroutine(typingCoroutine);
+                typingCoroutine = null;
+            }
+
+            dialoguePages.Clear();
+            isDialoguePlaying = false;
+            isTyping = false;
+            currentFullPageText = "";
+            currentSpeakerName = "";
+
+            if (dialogueText != null) dialogueText.text = "";
+            if (targetCharacterNameText != null) targetCharacterNameText.text = "";
+
+            SetNextPageIconActive(false);
+            SetChatboxActive(false);
         }
 
         private void BuildLogListUI()
