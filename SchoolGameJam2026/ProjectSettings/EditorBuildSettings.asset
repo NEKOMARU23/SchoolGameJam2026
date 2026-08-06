@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/TechC/SchoolGameJam2026/Scenes/Production/Title.unity
+    path: Assets/TechC/SchoolGameJam2026/Scenes/WorkSpace/Work_ABE/Wolk_ABE.unity
     guid: 005452b4e2037eb41b65fea5cd7e75d0
   - enabled: 1
     path: Assets/TechC/SchoolGameJam2026/Scenes/Production/InGame.unity
