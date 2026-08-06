@@ -61,9 +61,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private TextMeshProUGUI pointText;
         [SerializeField] private TextMeshProUGUI dialogueText;
 
-        [Header("--- 取調室内の表示パーツ ---")]
+        [Header("--- 取調室・プロフィール共通の表示パーツ ---")]
         [SerializeField] private TextMeshProUGUI targetCharacterNameText;
         [SerializeField] private Image targetCharacterImage;
+
+        [Header("--- プロフィール専用表示パーツ（追加） ---")]
+        [Tooltip("プロフィール画面左上のキャラ名テキスト（New Textの部分）")]
+        [SerializeField] private TextMeshProUGUI profileNameText;
+        [Tooltip("プロフィール画面のキャラ画像枠")]
+        [SerializeField] private Image profileCharacterImage;
 
         [Header("--- メッセージウィンドウ ---")]
         [SerializeField] private GameObject interrogationChatbox;
@@ -173,7 +179,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 UpdateDayUI(GameManager.Instance.CurrentDay);
             }
 
-            // 聞き取りパネルの閉じるボタン設定
             if (closeHearingPanelButton != null)
             {
                 closeHearingPanelButton.onClick.AddListener(CloseHearingPanel);
@@ -186,7 +191,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             RefreshProfileUIState();
             RefreshMonitorRoomButtons();
 
-            // ★ 初期状態でテキスト再生中フラグを解除し、コマンドボタンを押せる状態にする
             isDialoguePlaying = false;
             isTyping = false;
             UpdateInterrogationButtonsState();
@@ -430,9 +434,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #region ★ 他キャラ選択パネル（配置済みボタンの動的制御）
 
-        /// <summary>
-        /// 「その他に話す（聞き取り）」ボタンを押した時にパネルを開く
-        /// </summary>
         public void OnClickOpenHearingPanel()
         {
             if (hearingPanel == null || characterButtonContainer == null) return;
@@ -500,7 +501,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             currentSelectedCharacterId = characterId;
             Debug.Log($"対象キャラクターを【{characterId}】にセットしました。");
 
-            // ★ キャラの切り替え時に会話フラグを解除して状態更新
             isDialoguePlaying = false;
             isTyping = false;
 
@@ -696,11 +696,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             bool isInterrogated = InterrogationManager.Instance != null && InterrogationManager.Instance.HasInterrogatedToday(currentSelectedCharacterId);
             bool isLimitReached = InterrogationManager.Instance != null && InterrogationManager.Instance.IsActionLimitReached;
-            Debug.Log($"[Check] Target: {currentSelectedCharacterId} | Released: {isReleased} | Interrogated: {isInterrogated} | Limit: {isLimitReached} | Playing: {isDialoguePlaying}");
-            // 行動可能フラグ（未解放 且つ 本日未取り調べ 且つ 上限未到達 且つ 会話未再生中）
+
             bool canInteract = !isReleased && !isInterrogated && !isLimitReached && !isDialoguePlaying;
 
-            // ① 通常のアクションボタン群（拷問、対話、交渉など）の連動制御
             if (interrogationButtons != null)
             {
                 foreach (var btn in interrogationButtons)
@@ -709,13 +707,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 }
             }
 
-            // ② 解放ボタンも行動制限（canInteract）に完全連動させる
             if (releaseButton != null)
             {
                 releaseButton.interactable = canInteract;
             }
 
-            // ③ AI確定ボタンも行動制限（canInteract）および最終日判定に連動させる
             if (confirmAiButtonObject != null)
             {
                 int currentDay = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 1;
@@ -731,6 +727,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
+        /// <summary>
+        /// プロフィール画面のデータ反映および解放状態の更新
+        /// </summary>
         private void RefreshProfileUIState()
         {
             if (GameManager.Instance == null || GameManager.Instance.AllCharacters == null) return;
@@ -738,24 +737,86 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
 
+            // ① 【共通枠】取調室側の表示更新
+            if (targetCharacterNameText != null)
+            {
+                targetCharacterNameText.text = targetChar.ProfileData.basicInfo.characterName;
+            }
+
+            if (targetCharacterImage != null)
+            {
+                targetCharacterImage.gameObject.SetActive(true);
+                if (targetChar.ProfileData.characterIcon != null)
+                {
+                    targetCharacterImage.sprite = targetChar.ProfileData.characterIcon;
+                }
+            }
+
+            // ② 【プロフィール画面専用枠】名前と画像の更新
+            if (profileNameText != null)
+            {
+                profileNameText.text = targetChar.ProfileData.basicInfo.characterName;
+            }
+
+            if (profileCharacterImage != null)
+            {
+                profileCharacterImage.gameObject.SetActive(true);
+                if (targetChar.ProfileData.characterIcon != null)
+                {
+                    profileCharacterImage.sprite = targetChar.ProfileData.characterIcon;
+                }
+            }
+
+            // ③ 各解禁項目の表示更新
             foreach (var binding in profileUIBindings)
             {
                 if (string.IsNullOrEmpty(binding.key)) continue;
 
                 bool isUnlocked = false;
+                string displayText = "";
 
                 if (binding.key.Equals("BASIC", StringComparison.OrdinalIgnoreCase))
                 {
                     isUnlocked = targetChar.ProfileData.basicInfo.isUnlocked;
+
+                    // 基礎情報を成形してテキスト化
+                    var basic = targetChar.ProfileData.basicInfo;
+                    displayText = $"年齢：{basic.age}\n" +
+                                  $"職業：{basic.occupation}\n" +
+                                  $"誕生日：{basic.birthday}\n" +
+                                  $"身長：{basic.height}\n" +
+                                  $"体重：{basic.weight}\n" +
+                                  $"特技：{basic.skills}\n" +
+                                  $"好きなこと：{basic.likes}";
                 }
                 else
                 {
                     ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == binding.key);
-                    if (item != null) isUnlocked = item.isUnlocked;
+                    if (item != null)
+                    {
+                        isUnlocked = item.isUnlocked;
+                        displayText = item.valueContent;
+                    }
                 }
 
-                if (binding.unlockButton != null) binding.unlockButton.SetActive(!isUnlocked);
-                if (binding.contentObject != null) binding.contentObject.SetActive(isUnlocked);
+                // 未解放ならボタンを表示、解禁済みなら非表示
+                if (binding.unlockButton != null) 
+                    binding.unlockButton.SetActive(!isUnlocked);
+
+                // 解禁済みならコンテンツ枠を表示し、中のテキストを更新する
+                if (binding.contentObject != null)
+                {
+                    binding.contentObject.SetActive(isUnlocked);
+
+                    if (isUnlocked)
+                    {
+                        var contentTmp = binding.contentObject.GetComponentInChildren<TextMeshProUGUI>();
+                        if (contentTmp != null && !string.IsNullOrEmpty(displayText))
+                        {
+                            contentTmp.text = displayText;
+                        }
+                    }
+                }
             }
         }
 
@@ -763,7 +824,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         {
             if (dayText != null) dayText.text = $"{day} 日目";
 
-            // ★ 日付更新時にも会話フラグをクリア
             isDialoguePlaying = false;
             isTyping = false;
 
