@@ -11678,6 +11678,7 @@ MonoBehaviour:
   releaseButton: {fileID: 9146334093034893467}
   confirmAiButtonObject: {fileID: 1284965853859860451}
   finalDayNumber: 7
+  resultSceneName: Result
   monitorRoomBindings:
   - characterId: A
     roomButton: {fileID: 1992567212084895546}

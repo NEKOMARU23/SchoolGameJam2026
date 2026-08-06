@@ -26,6 +26,13 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [Tooltip("『他の人の話を聞く』選択時の固定獲得ポイント")]
         [SerializeField] private int fixedHearAboutPoint = 10;
 
+        [Header("好感度調整設定（インスペクターで変更可能）")]
+        [Tooltip("Element 0（最優先セリフ）表示時の好感度加算値")]
+        [SerializeField] private int correctAffectionReward = 1;
+
+        [Tooltip("特定NG行動（penaltyAction）を実行した時の好感度減少値")]
+        [SerializeField] private int failAffectionPenalty = 1;
+
         [Header("行動制限設定")]
         [Tooltip("1日の最大行動回数")]
         [SerializeField] private int dailyActionLimit = 4;
@@ -33,10 +40,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [Tooltip("本日実行済みの行動回数")]
         [SerializeField] private int currentDailyActions = 0;
 
+        // キャラID -> ( アクション種別 -> 通算実行回数 )
+        private Dictionary<string, Dictionary<InterrogationActionType, int>> characterActionCounts 
+            = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
+
         // 本日すでに取り調べを行ったキャラクターのIDリスト
         private List<string> interrogatedCharacterIdsToday = new List<string>();
 
-        #region ★ リザルト用追加データ
+        #region リザルト用追加データ
         /// <summary> 本日各キャラクターに対して実行したアクションの履歴 (キャラID -> アクション) </summary>
         public Dictionary<string, InterrogationActionType> TodayActionHistory { get; private set; } = new Dictionary<string, InterrogationActionType>();
 
@@ -91,12 +102,23 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
+        /// 特定キャラクターの特定アクションにおける通算実行回数を取得する
+        /// </summary>
+        public int GetCharacterActionCount(string characterId, InterrogationActionType actionType)
+        {
+            if (characterActionCounts.TryGetValue(characterId, out var actionMap))
+            {
+                if (actionMap.TryGetValue(actionType, out int count))
+                {
+                    return count;
+                }
+            }
+            return 0;
+        }
+
+        /// <summary>
         /// 取り調べアクションを実行する
         /// </summary>
-        /// <param name="targetChar">対象のキャラクター</param>
-        /// <param name="actionType">実行するアクション種別</param>
-        /// <param name="hearingTargetId">【HearAboutの場合のみ】噂を聞く対象キャラのID</param>
-        /// <returns>キャラクターから返ってくるセリフテキスト</returns>
         public string ExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, string hearingTargetId = "")
         {
             // 1. 1日の全体行動上限チェック
@@ -133,54 +155,81 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 ? GameManager.Instance.GetAllCharacterAffections() 
                 : new Dictionary<string, int>();
 
+            // ★ 4. 対象キャラの該当アクションにおける現在の通算実行回数を取得
+            int currentActionCountForThisType = GetCharacterActionCount(targetChar.CharacterId, actionType);
+
             string responseDialogue = "";
 
-            // 4. アクションごとのロジック処理
+            // 5. アクションごとのロジック処理（判定時には通算回数 currentActionCountForThisType を渡す）
             if (actionType == InterrogationActionType.HearAbout)
             {
-                // 【他の人の話を聞く】場合：正解判定なし、固定ポイント獲得
                 AddPoints(fixedHearAboutPoint);
-                TodayEarnedPoints += fixedHearAboutPoint; // リザルト用累計
+                TodayEarnedPoints += fixedHearAboutPoint;
 
-                responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections, hearingTargetId);
+                var result = dailySetting.GetResponseWithIndex(actionType, targetChar.CurrentAffection, otherAffections, currentActionCountForThisType, hearingTargetId);
+                responseDialogue = result.dialogueText;
             }
             else if (actionType == InterrogationActionType.Release || actionType == InterrogationActionType.ConfirmAI)
             {
-                // 【解放 / AI確定】の場合：ポイント変動・好感度処理なしでセリフを取得
-                responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections);
+                var result = dailySetting.GetResponseWithIndex(actionType, targetChar.CurrentAffection, otherAffections, currentActionCountForThisType);
+                responseDialogue = result.dialogueText;
             }
             else
             {
-                // 【拷問 / 対話 / 交渉】の場合：正解判定
-                bool isCorrect = (actionType == dailySetting.correctAction);
+                var (dialogueText, elementIndex) = dailySetting.GetResponseWithIndex(actionType, targetChar.CurrentAffection, otherAffections, currentActionCountForThisType);
+                responseDialogue = dialogueText;
+
+                bool isCorrect = (elementIndex == 0 && actionType == dailySetting.correctAction);
+                bool isPenaltyAction = (actionType == dailySetting.penaltyAction);
 
                 if (isCorrect)
                 {
                     AddPoints(successPointReward);
-                    TodayEarnedPoints += successPointReward; // リザルト用累計
-                    targetChar.AddAffection(1); // 正解時は好感度も少し上昇
-                    Debug.Log($"[InterrogationManager] 正解！ {successPointReward}pt 獲得");
+                    TodayEarnedPoints += successPointReward;
+                    
+                    if (correctAffectionReward != 0)
+                    {
+                        targetChar.AddAffection(correctAffectionReward);
+                    }
+                    Debug.Log($"<color=green>[InterrogationManager] 正解行動（{actionType}）！ 好感度+{correctAffectionReward}、{successPointReward}pt 獲得。</color>");
                 }
                 else
                 {
                     ConsumePoints(failPointPenalty);
-                    TodayEarnedPoints -= failPointPenalty; // リザルト用累計（減点）
-                    targetChar.AddAffection(-1); // 不正解時は好感度低下
-                    Debug.Log($"[InterrogationManager] 不正解…… {failPointPenalty}pt 減少");
-                }
+                    TodayEarnedPoints -= failPointPenalty;
 
-                responseDialogue = dailySetting.GetResponse(actionType, targetChar.CurrentAffection, otherAffections);
+                    if (isPenaltyAction && failAffectionPenalty != 0)
+                    {
+                        targetChar.AddAffection(-failAffectionPenalty);
+                        Debug.Log($"<color=red>[InterrogationManager] NG行動（{actionType}）を実行！ 好感度-{failAffectionPenalty}。</color>");
+                    }
+                    else
+                    {
+                        Debug.Log($"<color=yellow>[InterrogationManager] 不正解（{actionType}）。好感度変動なし。{failPointPenalty}pt 減少。</color>");
+                    }
+                }
             }
 
-            // 5. 行動済みキャラクターリストおよびリザルト用履歴に追加
+            // ★ 6. キャラクター×アクションごとの通算カウントをインクリメント
+            if (!characterActionCounts.ContainsKey(targetChar.CharacterId))
+            {
+                characterActionCounts[targetChar.CharacterId] = new Dictionary<InterrogationActionType, int>();
+            }
+            if (!characterActionCounts[targetChar.CharacterId].ContainsKey(actionType))
+            {
+                characterActionCounts[targetChar.CharacterId][actionType] = 0;
+            }
+            characterActionCounts[targetChar.CharacterId][actionType]++;
+
+            // 7. 行動済みキャラクターリストおよびリザルト用履歴に追加
             interrogatedCharacterIdsToday.Add(targetChar.CharacterId);
             TodayActionHistory[targetChar.CharacterId] = actionType;
 
-            // 6. 全体行動回数をカウントアップ
+            // 8. 本日の全体行動回数をカウントアップ
             currentDailyActions++;
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
 
-            // 7. 行動上限に達したら夜フェーズ（次の展開）へ移行
+            // 9. 行動上限に達したら夜フェーズへ移行
             if (IsActionLimitReached)
             {
                 Debug.Log("[InterrogationManager] 1日の行動制限に達しました。夜フェーズへ移行します。");
@@ -204,7 +253,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public void ConsumePoints(int amount)
         {
             if (amount <= 0) return;
-            currentPoints = Mathf.Max(0, currentPoints - amount);
+            currentPoints = Mathf.Max(0, amount); // 0未満にならないよう設定
             OnPointsChanged?.Invoke(currentPoints);
         }
 
@@ -226,15 +275,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         #endregion
 
         #region 日次リセット・復元用
-        /// <summary>
-        /// 1日の行動記録（回数、キャラクターごとの行動済みフラグ、リザルト用履歴）をリセットする
-        /// </summary>
         public void ResetDailyActions(int actionCount = 0)
         {
             currentDailyActions = actionCount;
             interrogatedCharacterIdsToday.Clear();
-            
-            // ★ リザルト用の記録もクリア
             TodayActionHistory.Clear();
             TodayEarnedPoints = 0;
 
@@ -242,16 +286,26 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// 「今日をやり直す（リセット）」用のバックアップ・復元処理で使うリスト取得
+        /// セーブ・ロード用のデータ取得
         /// </summary>
+        public Dictionary<string, Dictionary<InterrogationActionType, int>> GetCharacterActionCounts()
+        {
+            return characterActionCounts;
+        }
+
+        /// <summary>
+        /// セーブ・ロード用のデータ復元
+        /// </summary>
+        public void RestoreCharacterActionCounts(Dictionary<string, Dictionary<InterrogationActionType, int>> backupData)
+        {
+            characterActionCounts = backupData != null ? backupData : new Dictionary<string, Dictionary<InterrogationActionType, int>>();
+        }
+
         public List<string> GetInterrogatedCharacterIdsToday()
         {
             return new List<string>(interrogatedCharacterIdsToday);
         }
 
-        /// <summary>
-        /// 「今日をやり直す（リセット）」時にバックアップから状態を復元する
-        /// </summary>
         public void RestoreInterrogatedCharacterIdsToday(List<string> backupList)
         {
             interrogatedCharacterIdsToday = backupList != null ? new List<string>(backupList) : new List<string>();
