@@ -43,13 +43,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         public GameObject releasedOverlay;
     }
 
-    /// <summary>
-    /// 表情・画像差分制御用のバインディング構造体
-    /// </summary>
     [Serializable]
     public struct CharacterSpriteBinding
     {
-        public string spriteKey; // 例: "Normal", "Surprised", "Angry" など
+        public string spriteKey;
         public Sprite sprite;
     }
 
@@ -65,10 +62,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private TextMeshProUGUI targetCharacterNameText;
         [SerializeField] private Image targetCharacterImage;
 
-        [Header("--- プロフィール専用表示パーツ（追加） ---")]
-        [Tooltip("プロフィール画面左上のキャラ名テキスト（New Textの部分）")]
+        [Header("--- プロフィール専用表示パーツ ---")]
         [SerializeField] private TextMeshProUGUI profileNameText;
-        [Tooltip("プロフィール画面のキャラ画像枠")]
         [SerializeField] private Image profileCharacterImage;
 
         [Header("--- メッセージウィンドウ ---")]
@@ -82,7 +77,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private List<ProfileUIBinding> profileUIBindings = new List<ProfileUIBinding>();
 
         [Header("--- キャラクター差分画像登録 ---")]
-        [Tooltip("[IMG:キー名] で呼び出す画像を登録。 [IMG:OFF] で画像を非表示。")]
         [SerializeField] private List<CharacterSpriteBinding> characterSpriteBindings = new List<CharacterSpriteBinding>();
 
         [Header("--- 取調室のアクションボタン群 ---")]
@@ -91,16 +85,18 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [Header("--- 特殊アクションボタン（取調室） ---")]
         [SerializeField] private Button releaseButton;
         [SerializeField] private GameObject confirmAiButtonObject;
-        [SerializeField] private int finalDayNumber = 3;
+        [SerializeField] private int finalDayNumber = 7;
 
         [Header("--- 聞き取り（他キャラ選択）パネルUI ---")]
-        [SerializeField] private GameObject hearingPanel;          // パネル本体
-        [SerializeField] private Transform characterButtonContainer; // 配置済みキャラボタンの親オブジェクト
-        [SerializeField] private Button closeHearingPanelButton;   // 閉じるボタン
+        [SerializeField] private GameObject hearingPanel;
+        [SerializeField] private Transform characterButtonContainer;
+        [SerializeField] private Button closeHearingPanelButton;
 
         [Header("--- シーン遷移設定 ---")]
-        [Tooltip("最終日終了後に遷移するリザルトシーンの名前")]
-        [SerializeField] private string resultSceneName = "ResultScene";
+        [Tooltip("クリア時に遷移するシーン名")]
+        [SerializeField] private string clearSceneName = "ClearScene";
+        [Tooltip("ゲームオーバー時に遷移するシーン名")]
+        [SerializeField] private string gameOverSceneName = "GameOverScene";
 
         [Header("--- モニター画面の部屋ボタン登録 ---")]
         [SerializeField] private List<MonitorRoomBinding> monitorRoomBindings = new List<MonitorRoomBinding>();
@@ -127,11 +123,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private string currentSelectedCharacterId = "A";
         [SerializeField] private string currentHearingTargetId = "B";
 
+        // 勝敗フラグ管理
+        private bool hasEscapedAI = false;        // AIを逃してしまったか
+        private bool isAiIdentified = false;     // AIを正しく特定できたか
+
         private Queue<string> dialoguePages = new Queue<string>();
         private bool isDialoguePlaying = false;
         private bool isTyping = false;
         private string currentFullPageText = "";
-        private string currentSpeakerName = ""; // 現在のキャラ名を保持
+        private string currentSpeakerName = "";
         private Coroutine typingCoroutine;
         private GameObject previousPanel;
 
@@ -219,7 +219,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
-        #region ★ リザルト機能・一日終了フロー
+        #region リザルト機能・一日終了フロー
 
         public void OnClickConfirmAdvanceNextDay()
         {
@@ -293,21 +293,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (resultPointText != null) resultPointText.text = $"本日の獲得解析ポイント: <b>{pointSign}{earnedPoints} pt</b>";
         }
 
+        /// <summary>
+        /// リザルト画面を閉じて次の日へ進む（または7日目終了でクリア/ゲームオーバーへ）
+        /// </summary>
         public void OnClickCloseResultAndAdvanceDay()
         {
             int currentDay = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 1;
 
             if (currentDay >= finalDayNumber)
             {
-                Debug.Log($"最終日の取り調べが完了しました。リザルトシーン（{resultSceneName}）へ遷移します。");
+                Debug.Log($"最終日（{finalDayNumber}日目）のリザルトを確認完了。勝敗判定を行います。");
 
-                if (!string.IsNullOrEmpty(resultSceneName))
+                // 勝敗分岐処理
+                if (isAiIdentified && !hasEscapedAI)
                 {
-                    SceneManager.LoadScene(resultSceneName);
+                    Debug.Log("<color=green>【GAME CLEAR】AIを見破り、無事に7日目を終了しました！</color>");
+                    if (!string.IsNullOrEmpty(clearSceneName)) SceneManager.LoadScene(clearSceneName);
                 }
                 else
                 {
-                    if (endingPanel != null) ShowPanel(endingPanel);
+                    Debug.LogWarning($"<color=red>【GAME OVER】条件を満たせませんでした。（AI逃亡: {hasEscapedAI}, AI特定成功: {isAiIdentified}）</color>");
+                    if (!string.IsNullOrEmpty(gameOverSceneName)) SceneManager.LoadScene(gameOverSceneName);
                 }
             }
             else
@@ -336,7 +342,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #endregion
 
-        #region ★ 特殊ボタン（解放 & AI確定）機能
+        #region 特殊ボタン（解放 & AI確定）機能
 
         public void OnClickReleaseCharacter()
         {
@@ -356,6 +362,13 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             targetChar.SetReleaseFlag(true);
             Debug.Log($"<color=cyan>【解放】キャラクター {currentSelectedCharacterId} を解放しました。</color>");
+
+            // ★ CharacterInstance が持つ AI 判定フラグをチェック
+            if (CheckIsAI(targetChar))
+            {
+                hasEscapedAI = true;
+                Debug.LogWarning($"<color=red>【警告】AIである {currentSelectedCharacterId} が解放されました。（7日目ラストでゲームオーバーになります）</color>");
+            }
 
             string rawDialogue = "";
             if (InterrogationManager.Instance != null)
@@ -377,13 +390,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         public void OnClickConfirmAI()
         {
-            Debug.Log($"<color=red>【AI確定】{currentSelectedCharacterId} をAIとして最終確定しました！</color>");
+            Debug.Log($"<color=red>【AI確定】{currentSelectedCharacterId} をAIとして選択しました。</color>");
 
             CharacterInstance targetChar = GameManager.Instance != null && GameManager.Instance.AllCharacters != null
                 ? GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId)
                 : null;
 
-            if (targetChar != null && InterrogationManager.Instance != null)
+            if (targetChar == null) return;
+
+            // ★ CharacterInstance が持つ AI 判定フラグをチェック
+            if (CheckIsAI(targetChar))
+            {
+                isAiIdentified = true;
+                Debug.Log("<color=green>【判定成功】正しくAIを選択できました！</color>");
+            }
+            else
+            {
+                isAiIdentified = false;
+                Debug.LogWarning("<color=red>【判定失敗】人間を選択してしまいました。</color>");
+            }
+
+            if (InterrogationManager.Instance != null)
             {
                 string rawDialogue = InterrogationManager.Instance.ExecuteAction(targetChar, InterrogationActionType.ConfirmAI, currentHearingTargetId);
                 string speakerName = targetChar.ProfileData != null ? targetChar.ProfileData.basicInfo.characterName : targetChar.CharacterId;
@@ -395,6 +422,30 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
 
             ShowResultPanel();
+        }
+
+        /// <summary>
+        /// CharacterInstance の AI フラグ判定（プロパティ: IsAI / フィールド: isAI の両対応）
+        /// </summary>
+        private bool CheckIsAI(CharacterInstance targetChar)
+        {
+            if (targetChar == null) return false;
+
+            // プロパティ IsAI があるか、フィールド isAI があるかをリフレクションまたは直接参照で判定
+            var type = targetChar.GetType();
+            var prop = type.GetProperty("IsAI") ?? type.GetProperty("isAI");
+            if (prop != null)
+            {
+                return (bool)prop.GetValue(targetChar);
+            }
+
+            var field = type.GetField("IsAI") ?? type.GetField("isAI");
+            if (field != null)
+            {
+                return (bool)field.GetValue(targetChar);
+            }
+
+            return false;
         }
 
         public void RefreshMonitorRoomButtons()
@@ -432,7 +483,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #endregion
 
-        #region ★ 他キャラ選択パネル（配置済みボタンの動的制御）
+        #region 他キャラ選択パネル（配置済みボタンの動的制御）
 
         public void OnClickOpenHearingPanel()
         {
@@ -494,7 +545,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #endregion
 
-        #region ★ Button の OnClick() に登録するメソッド群
+        #region Button の OnClick() に登録するメソッド群
 
         public void SelectCharacter(string characterId)
         {
@@ -684,7 +735,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #endregion
 
-        #region ★ UIの自動制御・更新処理
+        #region UIの自動制御・更新処理
 
         private void UpdateInterrogationButtonsState()
         {
@@ -727,9 +778,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
         }
 
-        /// <summary>
-        /// プロフィール画面のデータ反映および解放状態の更新
-        /// </summary>
         private void RefreshProfileUIState()
         {
             if (GameManager.Instance == null || GameManager.Instance.AllCharacters == null) return;
@@ -737,7 +785,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c => c.CharacterId == currentSelectedCharacterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
 
-            // ① 【共通枠】取調室側の表示更新
             if (targetCharacterNameText != null)
             {
                 targetCharacterNameText.text = targetChar.ProfileData.basicInfo.characterName;
@@ -752,7 +799,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 }
             }
 
-            // ② 【プロフィール画面専用枠】名前と画像の更新
             if (profileNameText != null)
             {
                 profileNameText.text = targetChar.ProfileData.basicInfo.characterName;
@@ -767,7 +813,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 }
             }
 
-            // ③ 各解禁項目の表示更新
             foreach (var binding in profileUIBindings)
             {
                 if (string.IsNullOrEmpty(binding.key)) continue;
@@ -779,7 +824,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 {
                     isUnlocked = targetChar.ProfileData.basicInfo.isUnlocked;
 
-                    // 基礎情報を成形してテキスト化
                     var basic = targetChar.ProfileData.basicInfo;
                     displayText = $"年齢：{basic.age}\n" +
                                   $"職業：{basic.occupation}\n" +
@@ -799,11 +843,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                     }
                 }
 
-                // 未解放ならボタンを表示、解禁済みなら非表示
                 if (binding.unlockButton != null) 
                     binding.unlockButton.SetActive(!isUnlocked);
 
-                // 解禁済みならコンテンツ枠を表示し、中のテキストを更新する
                 if (binding.contentObject != null)
                 {
                     binding.contentObject.SetActive(isUnlocked);
@@ -842,7 +884,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         #endregion
 
-        #region ★ 文字送り & ログ（特殊タグ [SYS], [IMG:xxx] 対応）
+        #region 文字送り & ログ（特殊タグ [SYS], [IMG:xxx] 対応）
 
         private void OnPlayerClickDialogue()
         {
