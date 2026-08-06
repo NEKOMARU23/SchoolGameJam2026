@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MERI_ProfileData
   m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.SO.ProfileDataSO
   characterId: B
-  characterIcon: {fileID: 21300000, guid: 1097224e877a2a842b90bcf11a5aa059, type: 3}
+  characterIcon: {fileID: 21300000, guid: 6fe6669e5562da84da7fab163076eed0, type: 3}
   basicInfo:
     characterName: C
     age: 22
