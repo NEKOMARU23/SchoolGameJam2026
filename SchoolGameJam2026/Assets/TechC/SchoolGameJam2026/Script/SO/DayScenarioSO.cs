@@ -22,9 +22,10 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
     /// </summary>
     public enum DialogueConditionType
     {
-        TargetAffection,  // 1. 対象キャラ(本人)の内部好感度
-        OtherAffection,   // 2. その他のキャラの内部好感度
-        Unconditional     // 3. 条件なし（デフォルトセリフ）
+        TargetAffection, // 1. 対象キャラ(本人)の内部好感度
+        OtherAffection,  // 2. その他のキャラの内部好感度
+        TotalActions,    // 3. 対象キャラへの「該当アクション」の通算実行回数
+        Unconditional    // 4. 条件なし（デフォルトセリフ）
     }
 
     /// <summary>
@@ -39,8 +40,9 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         [Header("【タイプ2の場合】参照する他キャラのID/名前")]
         public string targetCharacterId;
 
-        [Header("必要好感度（この値以上なら再生可能）")]
-        public int requiredAffection = 0;
+        [Header("必要数値（好感度条件、または対象アクションの通算回数）")]
+        [Tooltip("好感度条件なら『必要好感度』、通算回数条件なら『このキャラへこのアクションを行った通算回数がこの値以上』で成立します")]
+        public int requiredValue = 0;
 
         [Header("セリフ本文")]
         [TextArea(2, 5)] public string dialogueText;
@@ -57,22 +59,23 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         public List<ConditionalDialogue> priorityDialogueList = new List<ConditionalDialogue>();
 
         /// <summary>
-        /// 現在の好感度状況から、最も優先度の高いセリフを自動取得する
+        /// 現在の状況（好感度、このアクションのキャラ別通算回数）から、最も優先度の高いセリフと採用されたElement番号を取得する
         /// </summary>
-        public string GetValidDialogue(int selfAffection, Dictionary<string, int> otherAffections)
+        public (string dialogueText, int elementIndex) GetValidDialogueWithIndex(int selfAffection, Dictionary<string, int> otherAffections, int totalActionCountForThisType)
         {
             if (priorityDialogueList == null || priorityDialogueList.Count == 0)
             {
-                return "「……」";
+                return ("「……」", -1);
             }
 
-            foreach (var dialogue in priorityDialogueList)
+            for (int i = 0; i < priorityDialogueList.Count; i++)
             {
+                var dialogue = priorityDialogueList[i];
                 switch (dialogue.conditionType)
                 {
                     case DialogueConditionType.TargetAffection:
-                        if (selfAffection >= dialogue.requiredAffection)
-                            return dialogue.dialogueText;
+                        if (selfAffection >= dialogue.requiredValue)
+                            return (dialogue.dialogueText, i);
                         break;
 
                     case DialogueConditionType.OtherAffection:
@@ -80,18 +83,31 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
                         {
                             if (otherAffections.TryGetValue(dialogue.targetCharacterId, out int otherValue))
                             {
-                                if (otherValue >= dialogue.requiredAffection)
-                                    return dialogue.dialogueText;
+                                if (otherValue >= dialogue.requiredValue)
+                                    return (dialogue.dialogueText, i);
                             }
                         }
                         break;
 
+                    case DialogueConditionType.TotalActions:
+                        if (totalActionCountForThisType >= dialogue.requiredValue)
+                            return (dialogue.dialogueText, i);
+                        break;
+
                     case DialogueConditionType.Unconditional:
-                        return dialogue.dialogueText;
+                        return (dialogue.dialogueText, i);
                 }
             }
 
-            return "「……」";
+            return ("「……」", -1);
+        }
+
+        /// <summary>
+        /// （互換用）セリフテキストのみを取得する
+        /// </summary>
+        public string GetValidDialogue(int selfAffection, Dictionary<string, int> otherAffections, int totalActionCountForThisType)
+        {
+            return GetValidDialogueWithIndex(selfAffection, otherAffections, totalActionCountForThisType).dialogueText;
         }
     }
 
@@ -104,7 +120,7 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         [Header("対象となる他キャラのID/名前 (例: B, スズキ 等)")]
         public string targetCharacterId;
 
-        [Header("そのキャラについて話すセリフ（好感度条件付き）")]
+        [Header("そのキャラについて話すセリフ（条件付き）")]
         public ActionResponseGroup responseGroup;
     }
 
@@ -121,6 +137,10 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         [Tooltip("Torture, Talk, Negotiate の中から今日の正解を選択")]
         public InterrogationActionType correctAction = InterrogationActionType.Talk;
 
+        [Header("今日好感度が下がる行動（不正解/NG行動）")]
+        [Tooltip("この行動を選択した時のみ好感度が下がります")]
+        public InterrogationActionType penaltyAction = InterrogationActionType.Torture;
+
         [Header("--- アクションごとの返答セリフ ---")]
         public ActionResponseGroup tortureResponse;   // 拷問の時のセリフ
         public ActionResponseGroup talkResponse;      // 対話の時のセリフ
@@ -134,38 +154,55 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         public List<HearingTargetResponse> hearingResponses = new List<HearingTargetResponse>();
 
         /// <summary>
-        /// アクション種別と対象に応じて適切なセリフを取得する
+        /// アクション種別と対象に応じて適切なセリフと採用Element番号を取得する
         /// </summary>
-        public string GetResponse(InterrogationActionType actionType, int selfAffection, Dictionary<string, int> otherAffections, string hearingTargetId = "")
+        public (string dialogueText, int elementIndex) GetResponseWithIndex(InterrogationActionType actionType, int selfAffection, Dictionary<string, int> otherAffections, int totalActionCountForThisType, string hearingTargetId = "")
         {
+            ActionResponseGroup targetGroup = null;
+
             switch (actionType)
             {
                 case InterrogationActionType.Torture:
-                    return tortureResponse != null ? tortureResponse.GetValidDialogue(selfAffection, otherAffections) : "「……」";
+                    targetGroup = tortureResponse;
+                    break;
 
                 case InterrogationActionType.Talk:
-                    return talkResponse != null ? talkResponse.GetValidDialogue(selfAffection, otherAffections) : "「……」";
+                    targetGroup = talkResponse;
+                    break;
 
                 case InterrogationActionType.Negotiate:
-                    return negotiateResponse != null ? negotiateResponse.GetValidDialogue(selfAffection, otherAffections) : "「……」";
+                    targetGroup = negotiateResponse;
+                    break;
 
                 case InterrogationActionType.Release:
-                    return releaseResponse != null ? releaseResponse.GetValidDialogue(selfAffection, otherAffections) : "解放される……ということですか。わかりました。|（対象は部屋から退出しました）";
+                    return (releaseResponse != null ? releaseResponse.GetValidDialogue(selfAffection, otherAffections, totalActionCountForThisType) : "解放される……ということですか。わかりました。|（対象は部屋から退出しました）", -1);
 
                 case InterrogationActionType.ConfirmAI:
-                    return confirmAIResponse != null ? confirmAIResponse.GetValidDialogue(selfAffection, otherAffections) : "【判定完了】対象をAIと判定し、排除シーケンスを完了しました。";
+                    return (confirmAIResponse != null ? confirmAIResponse.GetValidDialogue(selfAffection, otherAffections, totalActionCountForThisType) : "【判定完了】対象をAIと判定し、排除シーケンスを完了しました。", -1);
 
                 case InterrogationActionType.HearAbout:
                     var targetHearing = hearingResponses.Find(h => h.targetCharacterId == hearingTargetId);
                     if (targetHearing != null && targetHearing.responseGroup != null)
                     {
-                        return targetHearing.responseGroup.GetValidDialogue(selfAffection, otherAffections);
+                        return targetHearing.responseGroup.GetValidDialogueWithIndex(selfAffection, otherAffections, totalActionCountForThisType);
                     }
-                    return "「その者については何も知りません。」";
+                    return ("「その者については何も知りません。」", -1);
 
                 default:
-                    return "「……」";
+                    return ("「……」", -1);
             }
+
+            if (targetGroup != null)
+            {
+                return targetGroup.GetValidDialogueWithIndex(selfAffection, otherAffections, totalActionCountForThisType);
+            }
+
+            return ("「……」", -1);
+        }
+
+        public string GetResponse(InterrogationActionType actionType, int selfAffection, Dictionary<string, int> otherAffections, int totalActionCountForThisType, string hearingTargetId = "")
+        {
+            return GetResponseWithIndex(actionType, selfAffection, otherAffections, totalActionCountForThisType, hearingTargetId).dialogueText;
         }
     }
 

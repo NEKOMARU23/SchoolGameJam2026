@@ -12,6 +12,12 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
     {
         [Header("名前")]
         public string characterName;
+        [Header("年齢")]
+        public string age;
+        [Header("職業")]
+        public string occupation;
+        [Header("誕生日")]
+        public string birthday;
 
         [Header("身長")]
         public string height;
@@ -19,8 +25,8 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         [Header("体重")]
         public string weight;
 
-        [Header("血液型")]
-        public string bloodType;
+        [Header("特技")]
+        public string skills;
 
         [Header("好きなこと")]
         public string likes;

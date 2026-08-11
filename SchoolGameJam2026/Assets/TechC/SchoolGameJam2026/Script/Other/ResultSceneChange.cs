@@ -6,13 +6,13 @@ namespace TechC.SchoolGameJam2026.Script.Other
 {
 
     /// <summary>
-    /// Result Scene‚É•ÎˆÚ‚·‚éB
+    /// Result Sceneï¿½É•ÎˆÚ‚ï¿½ï¿½ï¿½B
     /// </summary>
     public class ResultSceneChange : MonoBehaviour
     {
         public void change_button()
         {
-            SceneManager.LoadScene("Result");
+            SceneManager.LoadScene("InGame");
         }
 
     }
