@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TechC.SchoolGameJam2026.Scripts.Core;
-using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -37,43 +36,31 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// キャラクターの解放状態に合わせてモニターボタンの活性/非活性およびオーバーレイを更新
+        /// IDごとの解放状態を受け取り、ボタンの活性/非活性およびオーバーレイを表示（描画専用）
         /// </summary>
-        public void RefreshMonitorButtons(List<CharacterInstance> allCharacters)
+        public void UpdateRoomStatus(Dictionary<string, bool> releaseStatusMap)
         {
-            if (allCharacters == null || allCharacters.Count == 0)
-            {
-                foreach (var binding in monitorRoomBindings)
-                {
-                    if (binding.roomButton != null) binding.roomButton.interactable = true;
-                    if (binding.releasedOverlay != null) binding.releasedOverlay.SetActive(false);
-                }
-                return;
-            }
-
             foreach (var binding in monitorRoomBindings)
             {
-                CharacterInstance charInst = allCharacters.Find(c => c.CharacterId == binding.characterId);
+                // 辞書から対象キャラの解放状態を取得（見つからなければ false）
+                bool isReleased = releaseStatusMap != null 
+                    && releaseStatusMap.TryGetValue(binding.characterId, out bool released) 
+                    && released;
 
-                if (charInst != null)
+                if (binding.roomButton != null)
                 {
-                    bool isReleased = charInst.IsReleased;
+                    binding.roomButton.interactable = !isReleased;
+                }
 
-                    if (binding.roomButton != null)
-                    {
-                        binding.roomButton.interactable = !isReleased;
-                    }
-
-                    if (binding.releasedOverlay != null)
-                    {
-                        binding.releasedOverlay.SetActive(isReleased);
-                    }
+                if (binding.releasedOverlay != null)
+                {
+                    binding.releasedOverlay.SetActive(isReleased);
                 }
             }
         }
 
         /// <summary>
-        /// 部屋ボタン押下時の処理
+        /// 部屋ボタン押下時のイベント通知
         /// </summary>
         private void OnClickRoomButton(string characterId)
         {
