@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using TechC.SchoolGameJam2026.Scripts.Core;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {

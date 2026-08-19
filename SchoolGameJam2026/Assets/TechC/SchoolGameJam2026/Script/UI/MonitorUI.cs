@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TechC.SchoolGameJam2026.Scripts.Core;
 
 
 namespace TechC.SchoolGameJam2026.Scripts.UI

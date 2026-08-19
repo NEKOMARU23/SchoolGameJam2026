@@ -319,11 +319,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         private void RefreshMonitorView()
         {
             var characters = GameManager.Instance?.AllCharacters;
-            var statusMap = new Dictionary<string, bool>();
+            Dictionary<string, bool> statusMap = new Dictionary<string, bool>();
 
             if (characters != null)
             {
-                foreach (var c in characters)
+                foreach (CharacterInstance c in characters)
                 {
                     statusMap[c.CharacterId] = c.IsReleased;
                 }
@@ -367,15 +367,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             if (todayScenario != null)
             {
-                sb.AppendLine($"<b>【本日のできごと】</b>\n{todayScenario.daySummary}\n");
+                // DayScenarioSO 内のテキストフィールド（description / daySummary 等）を取得
+                string scenarioText = GetScenarioDescription(todayScenario);
+                if (!string.IsNullOrEmpty(scenarioText))
+                {
+                    sb.AppendLine($"<b>【本日のできごと】</b>\n{scenarioText}\n");
+                }
             }
 
             sb.AppendLine("<b>【本日の取り調べログ】</b>");
             if (history != null && history.Count > 0)
             {
-                foreach (var record in history)
+                // KeyValuePair<string, InterrogationActionType> に対応
+                foreach (KeyValuePair<string, InterrogationActionType> record in history)
                 {
-                    sb.AppendLine($"・{record.characterId} へ 「{record.actionType}」 を実行");
+                    sb.AppendLine($"・{record.Key} へ 「{record.Value}」 を実行");
                 }
             }
             else
@@ -394,14 +400,37 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         private bool CheckIsAI(CharacterInstance targetChar)
         {
             if (targetChar == null) return false;
-            var type = targetChar.GetType();
-            var prop = type.GetProperty("IsAI") ?? type.GetProperty("isAI");
+            Type type = targetChar.GetType();
+            System.Reflection.PropertyInfo prop = type.GetProperty("IsAI") ?? type.GetProperty("isAI");
             if (prop != null) return (bool)prop.GetValue(targetChar);
 
-            var field = type.GetField("IsAI") ?? type.GetField("isAI");
+            System.Reflection.FieldInfo field = type.GetField("IsAI") ?? type.GetField("isAI");
             if (field != null) return (bool)field.GetValue(targetChar);
 
             return false;
+        }
+
+        /// <summary>
+        /// DayScenarioSO 内のテキストフィールドを動的に取得するヘルパー
+        /// </summary>
+        private string GetScenarioDescription(DayScenarioSO scenario)
+        {
+            if (scenario == null) return "";
+            Type type = scenario.GetType();
+
+            // よくあるフィールド・プロパティ名をチェック
+            string[] possibleNames = { "daySummary", "description", "summary", "scenarioText", "dayDescription" };
+
+            foreach (string name in possibleNames)
+            {
+                System.Reflection.FieldInfo field = type.GetField(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (field != null) return field.GetValue(scenario)?.ToString() ?? "";
+
+                System.Reflection.PropertyInfo prop = type.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (prop != null) return prop.GetValue(scenario)?.ToString() ?? "";
+            }
+
+            return "";
         }
 
         #endregion

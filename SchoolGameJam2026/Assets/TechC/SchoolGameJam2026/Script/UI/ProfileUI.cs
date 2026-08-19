@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using TechC.SchoolGameJam2026.Scripts.Core;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+using TechC.SchoolGameJam2026.Scripts.SO; // ProfileItem が定義されている ScriptableObject の名前空間を追加
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -62,7 +63,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 {
                     isUnlocked = targetChar.ProfileData.basicInfo.isUnlocked;
 
-                    var basic = targetChar.ProfileData.basicInfo;
+                    BasicProfileGroup basic = targetChar.ProfileData.basicInfo;
                     displayText = $"年齢：{basic.age}\n" +
                                   $"職業：{basic.occupation}\n" +
                                   $"誕生日：{basic.birthday}\n" +
@@ -73,6 +74,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 }
                 else
                 {
+                    // 明示的な型指定（using TechC.SchoolGameJam2026.Scripts.SO により ProfileItem が参照可能）
                     ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == binding.key);
                     if (item != null)
                     {
@@ -92,7 +94,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
                     if (isUnlocked)
                     {
-                        var contentTmp = binding.contentObject.GetComponentInChildren<TextMeshProUGUI>();
+                        TextMeshProUGUI contentTmp = binding.contentObject.GetComponentInChildren<TextMeshProUGUI>();
                         if (contentTmp != null && !string.IsNullOrEmpty(displayText))
                         {
                             contentTmp.text = displayText;
