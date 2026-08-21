@@ -7,6 +7,21 @@ using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
     /// <summary>
+    /// バックアップ用のプロフィール解禁状態データ構造体
+    /// </summary>
+    public struct ProfileUnlockStateBackup
+    {
+        public bool isBasicUnlocked;
+        public List<string> historyKeys;
+
+        public ProfileUnlockStateBackup(bool isBasicUnlocked, List<string> historyKeys)
+        {
+            this.isBasicUnlocked = isBasicUnlocked;
+            this.historyKeys = historyKeys;
+        }
+    }
+
+    /// <summary>
     /// ゲーム全体の進行管理、日数、および「その日の朝に戻す」リセット機能を管理するマネージャー (Singleton)
     /// </summary>
     public class GameManager : MonoBehaviour
@@ -29,9 +44,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         #region リセット用バックアップデータ
         private int backupPoints;
         private int backupDailyActions;
-        private List<string> backupInterrogatedCharacterIds = new List<string>(); // ★追加：本日行動済みキャラIDのバックアップ
+        private List<string> backupInterrogatedCharacterIds = new List<string>();
         private Dictionary<string, int> backupAffections = new Dictionary<string, int>();
-        private Dictionary<ProfileDataSO, List<bool>> backupProfileStates = new Dictionary<ProfileDataSO, List<bool>>();
+        
+        // ★ ProfileDataSO ではなく キャラクターID をキーにして解禁状態を保持
+        private Dictionary<string, ProfileUnlockStateBackup> backupProfileStates = new Dictionary<string, ProfileUnlockStateBackup>();
         #endregion
 
         #region プロパティ
@@ -111,7 +128,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 InterrogationManager.Instance.ResetDailyActions(0);
             }
 
-            // ★ 朝の時点の状態をバックアップ保存
+            // 朝の時点の状態をバックアップ保存
             SaveDayBackup();
 
             OnDayStarted?.Invoke(currentDay);
@@ -129,7 +146,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             {
                 InterrogationManager.Instance.SetPoints(backupPoints);
                 InterrogationManager.Instance.ResetDailyActions(backupDailyActions);
-                InterrogationManager.Instance.RestoreInterrogatedCharacterIdsToday(backupInterrogatedCharacterIds); // ★追加：1日1回制限フラグの復元
+                InterrogationManager.Instance.RestoreInterrogatedCharacterIdsToday(backupInterrogatedCharacterIds);
             }
 
             // 2. キャラクター好感度の復元
@@ -141,12 +158,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 }
             }
 
-            // 3. プロフィール解禁状態の復元
-            foreach (var pair in backupProfileStates)
+            // 3. プロフィール解禁状態の復元（★ CharacterInstance 経由で復元）
+            foreach (var character in allCharacters)
             {
-                if (pair.Key != null)
+                if (character != null && backupProfileStates.TryGetValue(character.CharacterId, out var backupState))
                 {
-                    pair.Key.RestoreUnlockStates(pair.Value);
+                    character.RestoreUnlockStates(backupState.isBasicUnlocked, backupState.historyKeys);
                 }
             }
 
@@ -164,7 +181,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             {
                 backupPoints = InterrogationManager.Instance.CurrentPoints;
                 backupDailyActions = InterrogationManager.Instance.CurrentDailyActions;
-                backupInterrogatedCharacterIds = InterrogationManager.Instance.GetInterrogatedCharacterIdsToday(); // ★追加
+                backupInterrogatedCharacterIds = InterrogationManager.Instance.GetInterrogatedCharacterIdsToday();
             }
 
             // 好感度のバックアップ
@@ -177,13 +194,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 }
             }
 
-            // プロフィール解禁状態のバックアップ
+            // プロフィール解禁状態のバックアップ（★ CharacterInstance 経由で取得）
             backupProfileStates.Clear();
             foreach (var character in allCharacters)
             {
-                if (character != null && character.ProfileData != null)
+                if (character != null && !string.IsNullOrEmpty(character.CharacterId))
                 {
-                    backupProfileStates[character.ProfileData] = character.ProfileData.GetUnlockStates();
+                    var (basicUnlocked, historyKeys) = character.GetUnlockStates();
+                    backupProfileStates[character.CharacterId] = new ProfileUnlockStateBackup(basicUnlocked, historyKeys);
                 }
             }
         }
@@ -219,7 +237,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 return;
             }
 
-            // 新しい日の朝を開始（ログ出力、行動回数リセット、バックアップ、イベント発火が一括で行われます）
+            // 新しい日の朝を開始
             StartNewDay();
         }
     }
