@@ -121,7 +121,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GetCharacter(characterId);
             interrogationUI.UpdateCharacterRoomDisplay(targetChar);
             profileUI.RefreshProfileDisplay(targetChar);
-            
+
             navigationUI.ShowInterrogationPanel();
             UpdateInterrogationState();
         }
@@ -150,8 +150,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             }
 
             InterrogationActionType actionType = (InterrogationActionType)actionIndex;
-            string rawDialogue = InterrogationManager.Instance != null 
-                ? InterrogationManager.Instance.ExecuteAction(targetChar, actionType, currentHearingTargetId) 
+            string rawDialogue = InterrogationManager.Instance != null
+                ? InterrogationManager.Instance.ExecuteAction(targetChar, actionType, currentHearingTargetId)
                 : "";
 
             string speakerName = targetChar.ProfileData != null ? targetChar.ProfileData.basicInfo.characterName : targetChar.CharacterId;
@@ -224,13 +224,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
 
-            BasicProfileGroup basicGroup = targetChar.ProfileData.basicInfo;
-            if (basicGroup.isUnlocked) return;
+            // すでに解禁されている場合は処理しない
+            if (targetChar.IsBasicInfoUnlocked) return;
 
-            if (InterrogationManager.Instance != null && InterrogationManager.Instance.TrySpendPoints(basicGroup.unlockCost))
+            // ProfileDataSO の basicInfo から unlockCost を取得
+            int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
+
+            if (InterrogationManager.Instance != null)
             {
-                basicGroup.isUnlocked = true;
-                profileUI.RefreshProfileDisplay(targetChar);
+                // ポイントが足りているかチェックして消費
+                if (InterrogationManager.Instance.CurrentPoints >= cost)
+                {
+                    InterrogationManager.Instance.ConsumePoints(cost);
+                    targetChar.SetBasicInfoUnlocked(true);
+                    profileUI.RefreshProfileDisplay(targetChar);
+                }
             }
         }
 
@@ -242,17 +250,25 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
 
-            ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == itemKey);
-            if (item != null && !item.isUnlocked)
+            // すでに解禁されている場合は処理しない
+            if (targetChar.IsHistoryUnlocked(itemKey)) return;
+
+            // ProfileDataSO の historyInfoList から対象のアイテムを取得
+            var item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
+            if (item == null) return;
+
+            if (InterrogationManager.Instance != null)
             {
-                if (InterrogationManager.Instance != null && InterrogationManager.Instance.TrySpendPoints(item.unlockCost))
+                // ポイントが足りているかチェックして消費
+                if (InterrogationManager.Instance.CurrentPoints >= item.unlockCost)
                 {
-                    item.isUnlocked = true;
+                    InterrogationManager.Instance.ConsumePoints(item.unlockCost);
+                    targetChar.UnlockHistoryItem(itemKey);
                     profileUI.RefreshProfileDisplay(targetChar);
                 }
             }
         }
-
+        
         /// <summary>
         /// 聞き取りターゲット選択の受付
         /// </summary>
