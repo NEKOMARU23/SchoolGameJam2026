@@ -253,7 +253,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickUnlockProfileItemByKey
@@ -634,7 +634,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenInterrogationPanel
@@ -647,7 +647,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OpenInterrogationForCharacter
@@ -780,7 +780,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickReleaseCharacter
@@ -913,7 +913,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenInterrogationPanel
@@ -926,7 +926,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OpenInterrogationForCharacter
@@ -1197,7 +1197,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: SelectCharacter
@@ -1467,7 +1467,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickConfirmAI
@@ -2309,7 +2309,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OpenInterrogationForCharacter
@@ -2773,7 +2773,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickReturnToPreviousPanel
@@ -3044,7 +3044,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenMonitorPanel
@@ -3523,7 +3523,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
@@ -3657,7 +3657,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickUnlockProfileItemByKey
@@ -3670,6 +3670,37 @@ MonoBehaviour:
           m_StringArgument: PAST_3
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!1 &2748403647425425214
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 210682767591075947}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &210682767591075947
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2748403647425425214}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1614.4456, y: 0.00003, z: 2451.1382}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1714094021013871502}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2785017577229586259
 GameObject:
   m_ObjectHideFlags: 0
@@ -3930,7 +3961,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickUnlockBasicProfile
@@ -4063,7 +4094,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
@@ -4110,6 +4141,7 @@ Transform:
   - {fileID: 2188431969454500566}
   - {fileID: 8717556090791923791}
   - {fileID: 8641182064880903757}
+  - {fileID: 210682767591075947}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2936077565146946383
@@ -4369,7 +4401,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickAdvanceDialogue
@@ -4717,7 +4749,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickCloseResultAndAdvanceDay
@@ -4987,7 +5019,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenLogPanel
@@ -5120,7 +5152,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
@@ -5569,7 +5601,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickConfirmAdvanceNextDay
@@ -6234,7 +6266,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickConfirmResetDay
@@ -6506,7 +6538,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenProfilePanel
@@ -6639,7 +6671,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenInterrogationPanel
@@ -6652,7 +6684,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OpenInterrogationForCharacter
@@ -7159,7 +7191,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickCancelResetDay
@@ -7425,7 +7457,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickUnlockProfileItemByKey
@@ -7595,7 +7627,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenLogPanel
@@ -8682,7 +8714,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
@@ -8896,7 +8928,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickCancelEndDay
@@ -8944,7 +8976,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 62.3, y: -84.9}
+  m_AnchoredPosition: {x: 62.30005, y: -84.900024}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1981967259344708748
@@ -9371,7 +9403,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: SelectCharacter
@@ -10214,7 +10246,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickReturnToPreviousPanel
@@ -10870,7 +10902,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenEndDayDialog
@@ -11004,7 +11036,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: SelectCharacter
@@ -11462,7 +11494,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenResetDialog
@@ -11596,7 +11628,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: SelectCharacter
@@ -11729,7 +11761,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 4656967332402118211}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
           Assembly-CSharp
         m_MethodName: OnClickOpenProfilePanel
@@ -12226,7 +12258,6 @@ GameObject:
   - component: {fileID: 6635711704840229828}
   - component: {fileID: 7216666353368153684}
   - component: {fileID: 9060186676737419975}
-  - component: {fileID: 4656967332402118211}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -12269,21 +12300,29 @@ MonoBehaviour:
     currentAffection: 0
     isAI: 1
     isReleased: 0
+    isBasicInfoUnlocked: 0
+    unlockedHistoryKeys: []
   - characterId: B
     profileData: {fileID: 11400000, guid: c8ded02dcc116844ba1650705e093a63, type: 2}
     currentAffection: 0
     isAI: 0
     isReleased: 0
+    isBasicInfoUnlocked: 0
+    unlockedHistoryKeys: []
   - characterId: C
     profileData: {fileID: 11400000, guid: 74149145705789f44a8e093fe6397d68, type: 2}
     currentAffection: 0
     isAI: 0
     isReleased: 0
+    isBasicInfoUnlocked: 0
+    unlockedHistoryKeys: []
   - characterId: D
     profileData: {fileID: 11400000, guid: 8229bd95be9b18f448a4c6f2c7c69fe0, type: 2}
     currentAffection: 0
     isAI: 0
     isReleased: 0
+    isBasicInfoUnlocked: 0
+    unlockedHistoryKeys: []
   dayScenarios:
   - {fileID: 11400000, guid: 395e95fa95dd0f14ca9bd5caae9974ff, type: 2}
   - {fileID: 11400000, guid: fbb11d16b78b7964ea5121496db8cf1b, type: 2}
@@ -12312,86 +12351,6 @@ MonoBehaviour:
   failAffectionPenalty: 1
   dailyActionLimit: 4
   currentDailyActions: 0
---- !u!114 &4656967332402118211
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8762172388528793037}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d9fef57bc698814fb9dcb241fbd6ce0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge
-  dayText: {fileID: 1152734100104709572}
-  actionCountText: {fileID: 3662870891335644812}
-  pointText: {fileID: 1504265931900211246}
-  dialogueText: {fileID: 5144542750675371459}
-  targetCharacterNameText: {fileID: 7554667793994012341}
-  targetCharacterImage: {fileID: 4932351316243448555}
-  profileNameText: {fileID: 5678190301732401295}
-  profileCharacterImage: {fileID: 2023157726815623225}
-  interrogationChatbox: {fileID: 5644676219536722176}
-  nextPageIcon: {fileID: 0}
-  textSpeed: 0.03
-  profileUIBindings:
-  - key: BASIC
-    unlockButton: {fileID: 2830899922753476232}
-    contentObject: {fileID: 8774561696355986965}
-  - key: PAST_1
-    unlockButton: {fileID: 125618222101488216}
-    contentObject: {fileID: 3961631342469467511}
-  - key: PAST_2
-    unlockButton: {fileID: 5208250134803253858}
-    contentObject: {fileID: 4580303988824721330}
-  - key: PAST_3
-    unlockButton: {fileID: 2733638220046034514}
-    contentObject: {fileID: 5954410478911155912}
-  characterSpriteBindings:
-  - spriteKey: 
-    sprite: {fileID: 0}
-  interrogationButtons:
-  - {fileID: 3721970942152669067}
-  - {fileID: 8213268127322722907}
-  - {fileID: 7259424435467978683}
-  - {fileID: 6153077012631804950}
-  - {fileID: 5201311560198697418}
-  - {fileID: 9146334093034893467}
-  releaseButton: {fileID: 9146334093034893467}
-  confirmAiButtonObject: {fileID: 1284965853859860451}
-  finalDayNumber: 7
-  hearingPanel: {fileID: 6686112911502857869}
-  characterButtonContainer: {fileID: 1261719406611552576}
-  closeHearingPanelButton: {fileID: 0}
-  resultSceneName: Result
-  monitorRoomBindings:
-  - characterId: A
-    roomButton: {fileID: 1992567212084895546}
-    releasedOverlay: {fileID: 0}
-  - characterId: B
-    roomButton: {fileID: 6194479382867372451}
-    releasedOverlay: {fileID: 0}
-  - characterId: C
-    roomButton: {fileID: 4474509808900247128}
-    releasedOverlay: {fileID: 0}
-  - characterId: D
-    roomButton: {fileID: 6894867218738803613}
-    releasedOverlay: {fileID: 0}
-  monitorPanel: {fileID: 6056070719320347505}
-  interrogationPanel: {fileID: 2665764251540451085}
-  profilePanel: {fileID: 295335291814423814}
-  logPanel: {fileID: 7223907705118244760}
-  endingPanel: {fileID: 0}
-  resultPanel: {fileID: 5463884281378699312}
-  resetConfirmDialog: {fileID: 2200037891999105558}
-  dayEndConfirmDialog: {fileID: 2158532912989646826}
-  resultDetailText: {fileID: 7982358594417610994}
-  resultPointText: {fileID: 4843807290285335604}
-  logContentParent: {fileID: 3190255750076533575}
-  logItemPrefab: {fileID: 3702428856259819899, guid: d81fae1f29066a54ebc58da6d402ee85, type: 3}
-  currentSelectedCharacterId: A
-  currentHearingTargetId: B
 --- !u!1 &8774561696355986965
 GameObject:
   m_ObjectHideFlags: 0
