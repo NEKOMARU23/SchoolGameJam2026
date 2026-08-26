@@ -31,6 +31,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         private bool hasEscapedAI = false;
         private bool isAiIdentified = false;
 
+        public string CurrentSelectedCharacterId => currentSelectedCharacterId;
+
         private void OnEnable()
         {
             if (InterrogationManager.Instance != null)
@@ -81,18 +83,18 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         private void HandlePointsChanged(int points)
         {
-            interrogationUI.UpdatePointDisplay(points);
+            if (interrogationUI != null) interrogationUI.UpdatePointDisplay(points);
         }
 
         private void HandleActionCountChanged(int currentActions, int maxLimit)
         {
-            interrogationUI.UpdateActionCountDisplay(currentActions, maxLimit);
+            if (interrogationUI != null) interrogationUI.UpdateActionCountDisplay(currentActions, maxLimit);
             UpdateInterrogationState();
         }
 
         private void HandleDayStarted(int day)
         {
-            interrogationUI.UpdateDayDisplay(day);
+            if (interrogationUI != null) interrogationUI.UpdateDayDisplay(day);
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
             RefreshAllViews();
         }
@@ -111,6 +113,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         #region UIからの操作受付・ゲームロジックの処理
 
         /// <summary>
+        /// 現在選択中の CharacterInstance を取得
+        /// </summary>
+        public CharacterInstance GetSelectedCharacter()
+        {
+            return GetCharacter(currentSelectedCharacterId);
+        }
+
+        /// <summary>
         /// キャラクター選択時の処理
         /// </summary>
         public void SelectCharacter(string characterId)
@@ -119,11 +129,23 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
 
             CharacterInstance targetChar = GetCharacter(characterId);
-            interrogationUI.UpdateCharacterRoomDisplay(targetChar);
-            profileUI.RefreshProfileDisplay(targetChar);
+            
+            if (interrogationUI != null) interrogationUI.UpdateCharacterRoomDisplay(targetChar);
+            if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
 
-            navigationUI.ShowInterrogationPanel();
+            // 表示の全般更新
             UpdateInterrogationState();
+        }
+
+        /// <summary>
+        /// プロフィール画面等の「戻る」ボタン用処理
+        /// </summary>
+        public void OnClickReturnToInterrogationOrMonitor()
+        {
+            if (navigationUI != null)
+            {
+                navigationUI.ShowInterrogationPanel();
+            }
         }
 
         /// <summary>
@@ -224,20 +246,17 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
 
-            // すでに解禁されている場合は処理しない
             if (targetChar.IsBasicInfoUnlocked) return;
 
-            // ProfileDataSO の basicInfo から unlockCost を取得
             int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
 
             if (InterrogationManager.Instance != null)
             {
-                // ポイントが足りているかチェックして消費
                 if (InterrogationManager.Instance.CurrentPoints >= cost)
                 {
                     InterrogationManager.Instance.ConsumePoints(cost);
                     targetChar.SetBasicInfoUnlocked(true);
-                    profileUI.RefreshProfileDisplay(targetChar);
+                    if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
                 }
             }
         }
@@ -250,21 +269,18 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
 
-            // すでに解禁されている場合は処理しない
             if (targetChar.IsHistoryUnlocked(itemKey)) return;
 
-            // ProfileDataSO の historyInfoList から対象のアイテムを取得
             var item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
             if (item == null) return;
 
             if (InterrogationManager.Instance != null)
             {
-                // ポイントが足りているかチェックして消費
                 if (InterrogationManager.Instance.CurrentPoints >= item.unlockCost)
                 {
                     InterrogationManager.Instance.ConsumePoints(item.unlockCost);
                     targetChar.UnlockHistoryItem(itemKey);
-                    profileUI.RefreshProfileDisplay(targetChar);
+                    if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
                 }
             }
         }
@@ -275,7 +291,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         public void OnSelectHearingTarget(string targetId)
         {
             currentHearingTargetId = targetId;
-            interrogationUI.CloseHearingPanel();
+            if (interrogationUI != null) interrogationUI.CloseHearingPanel();
             ExecuteInterrogationAction((int)InterrogationActionType.HearAbout);
         }
 
@@ -316,7 +332,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             else
             {
                 GameManager.Instance?.AdvanceToNextDay();
-                navigationUI.ShowMonitorPanel();
+                if (navigationUI != null) navigationUI.ShowMonitorPanel();
             }
         }
 
@@ -327,7 +343,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         private void RefreshAllViews()
         {
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            profileUI.RefreshProfileDisplay(targetChar);
+            if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
             RefreshMonitorView();
             UpdateInterrogationState();
         }
@@ -345,7 +361,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 }
             }
 
-            monitorUI.UpdateRoomStatus(statusMap);
+            if (monitorUI != null) monitorUI.UpdateRoomStatus(statusMap);
         }
 
         private void UpdateInterrogationState()
@@ -357,13 +373,16 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             int currentDay = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 1;
             bool isPlaying = dialogueUI != null && dialogueUI.IsDialoguePlaying;
 
-            interrogationUI.UpdateButtonsInteractable(
-                isReleased,
-                isInterrogated,
-                isLimitReached,
-                isPlaying,
-                currentDay >= finalDayNumber
-            );
+            if (interrogationUI != null)
+            {
+                interrogationUI.UpdateButtonsInteractable(
+                    isReleased,
+                    isInterrogated,
+                    isLimitReached,
+                    isPlaying,
+                    currentDay >= finalDayNumber
+                );
+            }
         }
 
         /// <summary>
@@ -371,7 +390,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         /// </summary>
         private void ShowResultFlow()
         {
-            navigationUI.ShowResultPanel();
+            if (navigationUI != null) navigationUI.ShowResultPanel();
 
             int currentDay = GameManager.Instance != null ? GameManager.Instance.CurrentDay : 1;
             DayScenarioSO todayScenario = GameManager.Instance?.GetTodayScenario();
@@ -383,7 +402,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
             if (todayScenario != null)
             {
-                // DayScenarioSO 内のテキストフィールド（description / daySummary 等）を取得
                 string scenarioText = GetScenarioDescription(todayScenario);
                 if (!string.IsNullOrEmpty(scenarioText))
                 {
@@ -394,7 +412,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             sb.AppendLine("<b>【本日の取り調べログ】</b>");
             if (history != null && history.Count > 0)
             {
-                // KeyValuePair<string, InterrogationActionType> に対応
                 foreach (KeyValuePair<string, InterrogationActionType> record in history)
                 {
                     sb.AppendLine($"・{record.Key} へ 「{record.Value}」 を実行");
@@ -405,7 +422,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 sb.AppendLine("・本日は誰にも取り調べを行いませんでした。");
             }
 
-            resultUI.DisplayResult(titleText, sb.ToString(), earnedPoints);
+            if (resultUI != null) resultUI.DisplayResult(titleText, sb.ToString(), earnedPoints);
         }
 
         private CharacterInstance GetCharacter(string characterId)
@@ -426,15 +443,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             return false;
         }
 
-        /// <summary>
-        /// DayScenarioSO 内のテキストフィールドを動的に取得するヘルパー
-        /// </summary>
         private string GetScenarioDescription(DayScenarioSO scenario)
         {
             if (scenario == null) return "";
             Type type = scenario.GetType();
 
-            // よくあるフィールド・プロパティ名をチェック
             string[] possibleNames = { "daySummary", "description", "summary", "scenarioText", "dayDescription" };
 
             foreach (string name in possibleNames)

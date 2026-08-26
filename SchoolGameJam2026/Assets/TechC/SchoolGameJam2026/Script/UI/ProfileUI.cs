@@ -108,6 +108,30 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         #region UIボタンからのイベント通知窓口
 
+        /// <summary>
+        /// キャラクター選択切り替えボタン用 (OnClick)
+        /// Inspectorの Button -> OnClick で引数文字列 (例: "A", "B", "C", "D") を指定して呼び出します。
+        /// </summary>
+        public void OnClickSelectCharacter(string characterId)
+        {
+            if (gameUIController != null)
+            {
+                gameUIController.SelectCharacter(characterId);
+            }
+        }
+
+        /// <summary>
+        /// ナビゲーションバー等の「戻る」ボタン用 (OnClick)
+        /// 取調室パネルまたはモニター画面へ戻します。
+        /// </summary>
+        public void OnClickBack()
+        {
+            if (gameUIController != null)
+            {
+                gameUIController.OnClickReturnToInterrogationOrMonitor();
+            }
+        }
+
         public void OnClickUnlockBasicProfile()
         {
             if (gameUIController != null)
