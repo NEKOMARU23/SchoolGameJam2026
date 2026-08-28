@@ -13,11 +13,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- 司令塔コントローラー ---")]
         [SerializeField] private GameUIController gameUIController;
 
-        [Header("--- ステータス表示テキスト ---")]
-        [SerializeField] private TextMeshProUGUI dayText;
-        [SerializeField] private TextMeshProUGUI actionCountText;
-        [SerializeField] private TextMeshProUGUI pointText;
-
         [Header("--- キャラクター表示 ---")]
         [SerializeField] private TextMeshProUGUI targetCharacterNameText;
         [SerializeField] private Image targetCharacterImage;
@@ -47,25 +42,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         #region 表示更新メソッド (GameUIControllerから呼ばれる)
 
-        public void UpdateDayDisplay(int day)
-        {
-            if (dayText != null) dayText.text = $"{day} 日目";
-        }
-
-        public void UpdatePointDisplay(int points)
-        {
-            if (pointText != null) pointText.text = $"{points} pt";
-        }
-
-        public void UpdateActionCountDisplay(int currentActions, int maxLimit)
-        {
-            if (actionCountText != null)
-            {
-                int remaining = Mathf.Max(0, maxLimit - currentActions);
-                actionCountText.text = $"残り行動: {remaining}/{maxLimit}";
-            }
-        }
-
+        /// <summary>
+        /// 選択されているキャラクターの画像と名前を描画更新
+        /// </summary>
         public void UpdateCharacterRoomDisplay(CharacterInstance targetChar)
         {
             if (targetChar == null || targetChar.ProfileData == null) return;
@@ -165,8 +144,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         #endregion
 
         #region UIボタンから呼び出すイベンター
-
-        // Inspectorの UnityEvent (OnClick) で設定するためのイベントハンドラ群
 
         public void OnClickInterrogationButton(int actionIndex)
         {
