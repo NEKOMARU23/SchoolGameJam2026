@@ -10,57 +10,50 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- 司令塔コントローラー ---")]
         [SerializeField] private GameUIController gameUIController;
 
-        [Header("--- リザルト表示パーツ ---")]
-        [SerializeField] private TextMeshProUGUI resultTitleText;
-        [SerializeField] private TextMeshProUGUI resultText;
-        [SerializeField] private TextMeshProUGUI earnedPointsText;
+        [Header("--- UI表示要素 ---")]
+        [SerializeField] private TextMeshProUGUI detailsText;    // 本日のできごと / 取り調べログ
+        [SerializeField] private TextMeshProUGUI pointText;      // 獲得ポイント表示
 
-        [Header("--- 操作ボタン ---")]
-        [SerializeField] private Button advanceDayButton;
+        [Header("--- ボタン要素 ---")]
+        [SerializeField] private Button nextDayButton;           // NextDay_Button
 
-        private void Awake()
+        private void Start()
         {
-            if (advanceDayButton != null)
+            if (nextDayButton != null)
             {
-                advanceDayButton.onClick.AddListener(OnClickAdvanceDay);
+                nextDayButton.onClick.AddListener(OnClickNextDay);
             }
         }
-
-        #region 描画専用メソッド
 
         /// <summary>
-        /// リザルト画面の各種テキストを描画（表示専用）
+        /// リザルト画面の描画更新と表示
         /// </summary>
-        public void DisplayResult(string title, string mainContent, int earnedPoints)
+        public void DisplayResult(string title, string details, int earnedPoints)
         {
-            if (resultTitleText != null)
+
+            if (detailsText != null)
             {
-                resultTitleText.text = title;
+                detailsText.text = details;
             }
 
-            if (resultText != null)
+            if (pointText != null)
             {
-                resultText.text = mainContent;
+                pointText.text = $"獲得ポイント: +{earnedPoints} pt";
             }
 
-            if (earnedPointsText != null)
-            {
-                earnedPointsText.text = $"+{earnedPoints} pt";
-            }
+            gameObject.SetActive(true);
         }
 
-        #endregion
-
-        #region UIボタンイベント通知
-
-        private void OnClickAdvanceDay()
+        /// <summary>
+        /// 「次の日へ」ボタン押下時の処理
+        /// </summary>
+        private void OnClickNextDay()
         {
             if (gameUIController != null)
             {
                 gameUIController.OnClickCloseResultAndAdvanceDay();
             }
+            gameObject.SetActive(false);
         }
-
-        #endregion
     }
 }
