@@ -1,0 +1,2 @@
+﻿DayNumber,CharacterId,CorrectAction,PenaltyAction,ActionType,HearingTargetId,Priority,ConditionType,TargetCharacterId,RequiredValue,DialogueText
+1,A,Talk,Torture,Talk,,1,Unconditional,,0,「普通にお話ししましょうか。」
