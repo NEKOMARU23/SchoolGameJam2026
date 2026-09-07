@@ -1,6 +1,6 @@
 ﻿DayNumber,CharacterId,CorrectAction,PenaltyAction,ActionType,HearingTargetId,Priority,ConditionType,TargetCharacterId,RequiredValue,DialogueText
 1,A,Talk,Torture,Talk,,1,Unconditional,,0,「普通にお話ししましょうか。」
-2,A,Talk,Torture,Talk,,1,Unconditional,,0,「普通にお話ししましょうか。」
+2,A,Talk,Torture,Talk,,1,Unconditional,,0,iya
 3,A,Talk,Torture,Talk,,1,Unconditional,,0,「普通にお話ししましょうか。」
 4,A,Talk,Torture,Talk,,1,Unconditional,,0,「普通にお話ししましょうか。」
 5,A,Talk,Torture,Talk,,1,Unconditional,,0,「普通にお話ししましょうか。」
