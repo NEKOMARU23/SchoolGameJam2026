@@ -24,7 +24,7 @@ MonoBehaviour:
       - conditionType: 3
         targetCharacterId: 
         requiredValue: 0
-        dialogueText: "\u300C\u666E\u901A\u306B\u304A\u8A71\u3057\u3057\u307E\u3057\u3087\u3046\u304B\u3002\u300D"
+        dialogueText: iya
     negotiateResponse:
       priorityDialogueList: []
     releaseResponse:
