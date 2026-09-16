@@ -1,25 +1,32 @@
 using TechC.SchoolGameJam2026.Core.Event;
-using TechC.SchoolGameJam2026.Script.UI;
 using UnityEngine;
-using UnityEngine.InputSystem; // 新しい Input System の参照を追加
+using UnityEngine.SceneManagement;
 
 namespace TechC.SchoolGameJam2026.Script.Core.Manager
 {
+    /// <summary>
+    /// BGMおよびSEの再生・音量を一括管理するマネージャー
+    /// Rule 10 準拠
+    /// </summary>
     public class AudioManager : MonoBehaviour
     {
         public static AudioManager Instance { get; private set; }
 
-        [Header("--オーディオソース--")]
+        [Header("-- オーディオソース --")]
         [SerializeField] private AudioSource bgmSource;
         [SerializeField] private AudioSource seSource;
 
-        [Header("--BGM 素材リスト--")]
+        [Header("-- BGM 素材リスト --")]
         [SerializeField] private AudioClip[] bgmClips;
 
-        [Header("--SE 素材リスト--")]
+        [Header("-- SE 素材リスト --")]
         [SerializeField] private AudioClip[] seClips;
 
-        // 現在の音量を保持するプロパティ
+        [Header("-- シーン別BGM設定 --")]
+        [SerializeField] private AudioClip titleBGM;
+        [SerializeField] private AudioClip gameBGM;
+        [SerializeField] private AudioClip resultBGM;
+
         public float BGMVolume => bgmSource != null ? bgmSource.volume : 0f;
         public float SEVolume => seSource != null ? seSource.volume : 0f;
 
@@ -30,7 +37,6 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
 
-                // 初期の音量を設定
                 SetBGMVolume(0.5f);
                 SetSEVolume(0.5f);
             }
@@ -43,11 +49,29 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
         private void OnEnable()
         {
             EventManager.Subscribe<PlaySEEvent>(OnPlaySEEvent);
+            SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
         private void OnDisable()
         {
             EventManager.Unsubscribe<PlaySEEvent>(OnPlaySEEvent);
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            switch (scene.name)
+            {
+                case "TitleScene":
+                    PlayBGMClip(titleBGM);
+                    break;
+                case "GameScene":
+                    PlayBGMClip(gameBGM);
+                    break;
+                case "Result":
+                    PlayBGMClip(resultBGM);
+                    break;
+            }
         }
 
         private void OnPlaySEEvent(PlaySEEvent evt)
@@ -55,24 +79,22 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
             PlaySE(evt.SeIndex);
         }
 
-        /// <summary>
-        /// BGMを再生する(インデックス指定)
-        /// </summary>
         public void PlayBGM(int index)
         {
             if (bgmClips == null || index < 0 || index >= bgmClips.Length) return;
+            PlayBGMClip(bgmClips[index]);
+        }
 
-            // すでに同じBGMが流れている場合は何もしない
-            if (bgmSource.isPlaying && bgmSource.clip == bgmClips[index]) return;
+        public void PlayBGMClip(AudioClip clip)
+        {
+            if (clip == null || (bgmSource.isPlaying && bgmSource.clip == clip)) return;
 
-            bgmSource.clip = bgmClips[index];
+            bgmSource.Stop();
+            bgmSource.clip = clip;
             bgmSource.loop = true;
             bgmSource.Play();
         }
 
-        /// <summary>
-        /// BGMを停止する
-        /// </summary>
         public void StopBGM()
         {
             if (bgmSource != null)
@@ -81,20 +103,12 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
             }
         }
 
-        /// <summary>
-        /// SE(効果音)を再生する(インデックス指定)
-        /// </summary>
         public void PlaySE(int index)
         {
             if (seClips == null || index < 0 || index >= seClips.Length) return;
-
-            // PlayOneShotを使えば、１つのAudioSourceで複数のSEを重ねて再生できる
             seSource.PlayOneShot(seClips[index]);
         }
 
-        /// <summary>
-        /// BGMの音量を変更する（UIのスライダー等から呼び出す、値は0.0～1.0）
-        /// </summary>
         public void SetBGMVolume(float volume)
         {
             if (bgmSource != null)
@@ -103,9 +117,6 @@ namespace TechC.SchoolGameJam2026.Script.Core.Manager
             }
         }
 
-        /// <summary>
-        /// SEの音量を変更する（UIのスライダー等から呼び出す、値は0.0～1.0）
-        /// </summary>
         public void SetSEVolume(float volume)
         {
             if (seSource != null)
