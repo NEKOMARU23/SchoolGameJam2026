@@ -33,9 +33,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1261719406611552576}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1100, y: -15}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &178513647611510140
@@ -277,13 +277,14 @@ GameObject:
   - component: {fileID: 250926657270071294}
   - component: {fileID: 5979064902279144605}
   - component: {fileID: 9059774060863005959}
+  - component: {fileID: 1421899173729478357}
   m_Layer: 5
   m_Name: ProfilePanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &250926657270071294
 RectTransform:
   m_ObjectHideFlags: 0
@@ -349,6 +350,28 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1421899173729478357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 295335291814423814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a4909ab58c9afb44ae60b81e3bf511c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.ProfileUI
+  gameUIController: {fileID: 8892950995207965899}
+  profileNameText: {fileID: 5678190301732401295}
+  profileCharacterImage: {fileID: 2023157726815623225}
+  profileUIBindings:
+  - key: BASIC
+    unlockButton: {fileID: 2830899922753476232}
+    contentObject: {fileID: 8774561696355986965}
+  - key: ITEM_1
+    unlockButton: {fileID: 2733638220046034514}
+    contentObject: {fileID: 5954410478911155912}
 --- !u!1 &418791949512613749
 GameObject:
   m_ObjectHideFlags: 0
@@ -459,9 +482,9 @@ RectTransform:
   m_Father: {fileID: 1641745906219981322}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -17, y: -17}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &4040221614402722415
 CanvasRenderer:
@@ -780,10 +803,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 735181164149097286}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI,
           Assembly-CSharp
-        m_MethodName: OnClickReleaseCharacter
+        m_MethodName: OnClickReleaseButton
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1089,7 +1112,7 @@ GameObject:
   - component: {fileID: 6219652884359751317}
   - component: {fileID: 7301961685152363915}
   m_Layer: 5
-  m_Name: Button
+  m_Name: ACharacterChange_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1197,10 +1220,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: SelectCharacter
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickSelectCharacter
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1467,10 +1489,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 735181164149097286}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI,
           Assembly-CSharp
-        m_MethodName: OnClickConfirmAI
+        m_MethodName: OnClickConfirmAiButton
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1661,9 +1683,9 @@ RectTransform:
   m_Father: {fileID: 1641745906219981322}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: -45.599976}
-  m_SizeDelta: {x: -17, y: 20}
+  m_SizeDelta: {x: 0, y: 20}
   m_Pivot: {x: 0, y: 0}
 --- !u!222 &6621497238262154415
 CanvasRenderer:
@@ -2333,6 +2355,7 @@ GameObject:
   - component: {fileID: 929291554949771086}
   - component: {fileID: 6444835914746990373}
   - component: {fileID: 7378055278599318258}
+  - component: {fileID: 8850461656655397373}
   m_Layer: 5
   m_Name: DayEndConfirmDialog
   m_TagString: Untagged
@@ -2401,6 +2424,21 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8850461656655397373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2158532912989646826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a73e4a0515c592146b7afbe6ff1d8782, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.DayEndConfirmDialogUI
+  gameUIController: {fileID: 8892950995207965899}
+  yesButton: {fileID: 4548162789630285084}
+  noButton: {fileID: 5466355122496241582}
 --- !u!1 &2200037891999105558
 GameObject:
   m_ObjectHideFlags: 0
@@ -2412,6 +2450,7 @@ GameObject:
   - component: {fileID: 7980991398272053158}
   - component: {fileID: 2302486393061647350}
   - component: {fileID: 1822439751985372892}
+  - component: {fileID: 4696425395508593939}
   m_Layer: 5
   m_Name: ResetConfirmDialog
   m_TagString: Untagged
@@ -2480,6 +2519,21 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4696425395508593939
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2200037891999105558}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abbb880a47224844cbd2514f5ab9ae35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.ResetConfirmDialogUI
+  gameUIController: {fileID: 8892950995207965899}
+  yesButton: {fileID: 4957350047449089093}
+  noButton: {fileID: 8842069593876061435}
 --- !u!1 &2269745086645354101
 GameObject:
   m_ObjectHideFlags: 0
@@ -2773,10 +2827,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 8892950995207965899}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.GameUIController,
           Assembly-CSharp
-        m_MethodName: OnClickReturnToPreviousPanel
+        m_MethodName: OnClickReturnToInterrogationOrMonitor
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3044,10 +3098,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 8892950995207965899}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.GameUIController,
           Assembly-CSharp
-        m_MethodName: OnClickOpenMonitorPanel
+        m_MethodName: OnClickReturnToInterrogationOrMonitor
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3143,6 +3197,7 @@ GameObject:
   - component: {fileID: 890979992329235765}
   - component: {fileID: 5332193075215480812}
   - component: {fileID: 3283848655651289206}
+  - component: {fileID: 735181164149097286}
   m_Layer: 5
   m_Name: InterrogationPanel
   m_TagString: Untagged
@@ -3213,6 +3268,31 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &735181164149097286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2665764251540451085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2732b65907f0cf6489d6319d529d733f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI
+  gameUIController: {fileID: 8892950995207965899}
+  targetCharacterNameText: {fileID: 7554667793994012341}
+  targetCharacterImage: {fileID: 4932351316243448555}
+  interrogationButtons:
+  - {fileID: 3721970942152669067}
+  - {fileID: 8213268127322722907}
+  - {fileID: 7259424435467978683}
+  - {fileID: 6153077012631804950}
+  releaseButton: {fileID: 9146334093034893467}
+  confirmAiButtonObject: {fileID: 1284965853859860451}
+  hearingPanel: {fileID: 6686112911502857869}
+  characterButtonContainer: {fileID: 1261719406611552576}
+  closeHearingPanelButton: {fileID: 2583247250338569987}
 --- !u!1 &2667292228955453730
 GameObject:
   m_ObjectHideFlags: 0
@@ -3361,7 +3441,7 @@ RectTransform:
   m_Father: {fileID: 100018202272202073}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -3523,8 +3603,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 735181164149097286}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
         m_Mode: 3
@@ -4094,11 +4174,11 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 735181164149097286}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI,
           Assembly-CSharp
-        m_MethodName: OnClickInterrogationButton
-        m_Mode: 3
+        m_MethodName: OnClickOpenHearingPanel
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -4586,7 +4666,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0.00005583554}
-  m_SizeDelta: {x: 0, y: 40}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &8043482328755477908
 MonoBehaviour:
@@ -5152,8 +5232,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 735181164149097286}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
         m_Mode: 3
@@ -5768,9 +5848,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1261719406611552576}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 80, y: -15}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7927679135657207131
@@ -6037,7 +6117,7 @@ RectTransform:
   m_Father: {fileID: 8162245187652637173}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7237,9 +7317,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1261719406611552576}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1610, y: -15}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3789229828755598569
@@ -7673,9 +7753,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1261719406611552576}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 590, y: -15}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7001563448386453274
@@ -7783,6 +7863,7 @@ GameObject:
   - component: {fileID: 8188829347088117379}
   - component: {fileID: 8111522029741029141}
   - component: {fileID: 7426077435365396289}
+  - component: {fileID: 1650681480082467782}
   m_Layer: 5
   m_Name: ResultPanel
   m_TagString: Untagged
@@ -7851,6 +7932,22 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1650681480082467782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5463884281378699312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc98ca7b99a1d8244b565f00b78f9179, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.ResultUI
+  gameUIController: {fileID: 8892950995207965899}
+  detailsText: {fileID: 7982358594417610994}
+  pointText: {fileID: 4843807290285335604}
+  nextDayButton: {fileID: 584854063589466251}
 --- !u!1 &5488557349287224784
 GameObject:
   m_ObjectHideFlags: 0
@@ -8252,9 +8349,9 @@ RectTransform:
   m_Father: {fileID: 1641745906219981322}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 20, y: 0}
-  m_SizeDelta: {x: 20, y: -17}
+  m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &6790717222977807563
 CanvasRenderer:
@@ -8714,8 +8811,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
+      - m_Target: {fileID: 735181164149097286}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.InterrogationUI,
           Assembly-CSharp
         m_MethodName: OnClickInterrogationButton
         m_Mode: 3
@@ -8738,6 +8835,7 @@ GameObject:
   - component: {fileID: 4492812356850368724}
   - component: {fileID: 6046106526236632205}
   - component: {fileID: 7585112048216755492}
+  - component: {fileID: 1762519590160357425}
   m_Layer: 5
   m_Name: MonitorPanel
   m_TagString: Untagged
@@ -8807,6 +8905,32 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1762519590160357425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6056070719320347505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49be67291bd71684db71e3c80c724b9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.MonitorUI
+  gameUIController: {fileID: 8892950995207965899}
+  monitorRoomBindings:
+  - characterId: A
+    roomButton: {fileID: 1992567212084895546}
+    releasedOverlay: {fileID: 1611163796214109841}
+  - characterId: B
+    roomButton: {fileID: 6194479382867372451}
+    releasedOverlay: {fileID: 8682247996900893154}
+  - characterId: C
+    roomButton: {fileID: 4474509808900247128}
+    releasedOverlay: {fileID: 4576345698188276762}
+  - characterId: D
+    roomButton: {fileID: 6894867218738803613}
+    releasedOverlay: {fileID: 6412906546902915405}
 --- !u!1 &6146119153189697284
 GameObject:
   m_ObjectHideFlags: 0
@@ -9295,7 +9419,7 @@ GameObject:
   - component: {fileID: 3697075061288016503}
   - component: {fileID: 1287370744691374844}
   m_Layer: 5
-  m_Name: Button (3)
+  m_Name: BCharacterChange_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9403,10 +9527,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: SelectCharacter
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickSelectCharacter
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -9433,7 +9556,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &7045363977412333576
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10098,6 +10221,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3757133456452984760}
+  - component: {fileID: 1035069311232201608}
   m_Layer: 5
   m_Name: Log Panel
   m_TagString: Untagged
@@ -10126,6 +10250,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1035069311232201608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7223907705118244760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cdbe9275e15a5c44946b27d309a9caf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.LogUI
+  contentTransform: {fileID: 3190255750076533575}
+  backButton: {fileID: 4924484305589614990}
+  scrollRect: {fileID: 2352640072157288061}
+  logItemPrefab: {fileID: 3501542368325628890, guid: d81fae1f29066a54ebc58da6d402ee85, type: 3}
 --- !u!1 &7299004635317963847
 GameObject:
   m_ObjectHideFlags: 0
@@ -10928,7 +11068,7 @@ GameObject:
   - component: {fileID: 92005807505155869}
   - component: {fileID: 6614997212626885275}
   m_Layer: 5
-  m_Name: Button (2)
+  m_Name: DCharacterChange_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11036,10 +11176,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: SelectCharacter
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickSelectCharacter
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -11520,7 +11659,7 @@ GameObject:
   - component: {fileID: 8957041725273963426}
   - component: {fileID: 5505147214815407567}
   m_Layer: 5
-  m_Name: Button (1)
+  m_Name: CCharacterChange_Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11628,10 +11767,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: SelectCharacter
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickSelectCharacter
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -12258,6 +12396,7 @@ GameObject:
   - component: {fileID: 6635711704840229828}
   - component: {fileID: 7216666353368153684}
   - component: {fileID: 9060186676737419975}
+  - component: {fileID: 8892950995207965899}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -12351,6 +12490,28 @@ MonoBehaviour:
   failAffectionPenalty: 1
   dailyActionLimit: 4
   currentDailyActions: 0
+--- !u!114 &8892950995207965899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8762172388528793037}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce67927bbacd4d047a55ea6caf378f29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.Core.GameUIController
+  navigationUI: {fileID: 0}
+  interrogationUI: {fileID: 0}
+  dialogueUI: {fileID: 0}
+  profileUI: {fileID: 0}
+  monitorUI: {fileID: 0}
+  resultUI: {fileID: 0}
+  statusHeaders: []
+  finalDayNumber: 7
+  clearSceneName: ClearScene
+  gameOverSceneName: GameOverScene
 --- !u!1 &8774561696355986965
 GameObject:
   m_ObjectHideFlags: 0
