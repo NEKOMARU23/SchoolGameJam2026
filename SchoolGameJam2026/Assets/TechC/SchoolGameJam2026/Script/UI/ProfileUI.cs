@@ -34,8 +34,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         public void RefreshProfileDisplay(CharacterInstance targetChar)
         {
-            if (targetChar == null || targetChar.ProfileData == null) return;
-
+            if (targetChar == null || targetChar.ProfileData == null)
+            {
+                Debug.LogWarning("[ProfileUI] RefreshProfileDisplay: targetChar または ProfileData が null のため更新をスキップしました。");
+                return;
+            }
             // 名前・アイコンの表示更新
             if (profileNameText != null)
             {

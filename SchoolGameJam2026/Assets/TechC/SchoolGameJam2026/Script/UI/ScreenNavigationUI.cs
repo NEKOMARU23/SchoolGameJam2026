@@ -1,9 +1,11 @@
-using System.Collections.Generic;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.Core;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
+    /// <summary>
+    /// 画面遷移UIの制御（描画専用）
+    /// </summary>
     public class ScreenNavigationUI : MonoBehaviour
     {
         [Header("--- 司令塔コントローラー ---")]
@@ -24,7 +26,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void Start()
         {
-            // 初期状態はすべてのダイアログを非表示に
             CloseAllModals();
         }
 
@@ -105,7 +106,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         #region UIボタンイベント通知
 
-        // 確認ダイアログ等で「はい」が押された時の通知窓口
 
         public void OnClickConfirmReset()
         {
