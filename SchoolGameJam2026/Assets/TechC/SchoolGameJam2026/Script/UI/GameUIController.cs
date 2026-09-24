@@ -134,7 +134,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         /// <summary>
-        /// キャラクター選択時の処理
+        /// キャラクター選択時の処理（モニターから各キャラの部屋へ遷移）
         /// </summary>
         public void SelectCharacter(string characterId)
         {
@@ -142,12 +142,16 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
 
             CharacterInstance targetChar = GetCharacter(characterId);
-            
+
             if (interrogationUI != null) interrogationUI.UpdateCharacterRoomDisplay(targetChar);
             if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
 
-            // 表示の全般更新
             UpdateInterrogationState();
+
+            if (navigationUI != null)
+            {
+                navigationUI.ShowInterrogationPanel();
+            }
         }
 
         /// <summary>
@@ -297,7 +301,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
                 }
             }
         }
-        
+
         /// <summary>
         /// 聞き取りターゲット選択の受付
         /// </summary>
