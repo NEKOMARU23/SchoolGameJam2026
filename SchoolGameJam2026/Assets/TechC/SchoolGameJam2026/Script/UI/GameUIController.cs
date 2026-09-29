@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TechC.SchoolGameJam2026.Scripts.UI;
@@ -20,9 +21,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private MonitorUI monitorUI;
         [SerializeField] private ResultUI resultUI;
 
-        [Header("--- 共通ステータスヘッダー（複数パネル分を登録） ---")]
-        [SerializeField] private List<StatusHeaderUI> statusHeaders = new List<StatusHeaderUI>();
-
+        [Header("--- 共通ステータス表示（TMP） ---")]
+        [SerializeField] private List<TextMeshProUGUI> dayTexts = new List<TextMeshProUGUI>();       // 日数テキスト群
+        [SerializeField] private List<TextMeshProUGUI> pointTexts = new List<TextMeshProUGUI>();     // ポイントテキスト群
+        [SerializeField] private List<TextMeshProUGUI> actionTexts = new List<TextMeshProUGUI>();    // 行動回数テキスト群
         [Header("--- ゲーム進行設定 ---")]
         [SerializeField] private int finalDayNumber = 7;
         [SerializeField] private string clearSceneName = "ClearScene";
@@ -86,30 +88,26 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
 
         private void HandlePointsChanged(int points)
         {
-            foreach (var header in statusHeaders)
+            foreach (var text in pointTexts)
             {
-                if (header != null) header.UpdatePointDisplay(points);
+                if (text != null) text.text = $"PT: {points}";
             }
         }
 
         private void HandleActionCountChanged(int currentActions, int maxLimit)
         {
-            foreach (var header in statusHeaders)
+            foreach (var text in actionTexts)
             {
-                if (header != null) header.UpdateActionCountDisplay(currentActions, maxLimit);
+                if (text != null) text.text = $"行動回数: {currentActions} / {maxLimit}";
             }
-            UpdateInterrogationState();
         }
 
         private void HandleDayStarted(int day)
         {
-            foreach (var header in statusHeaders)
+            foreach (var text in dayTexts)
             {
-                if (header != null) header.UpdateDayDisplay(day);
+                if (text != null) text.text = $"{day}日目";
             }
-
-            if (dialogueUI != null) dialogueUI.ResetDialogueState();
-            RefreshAllViews();
         }
 
         private void HandleDayReset()
@@ -134,9 +132,22 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         /// <summary>
-        /// キャラクター選択時の処理（モニターから各キャラの部屋へ遷移）
+        /// 【モニター用】キャラクターを選択し、取調（拷問）画面を表示します。
         /// </summary>
         public void SelectCharacter(string characterId)
+        {
+            SelectCharacterForProfile(characterId);
+
+            if (navigationUI != null)
+            {
+                navigationUI.ShowInterrogationPanel();
+            }
+        }
+
+        /// <summary>
+        /// 【プロフィールパネル用】画面遷移を行わずにプロフィール表示情報のみを更新します。
+        /// </summary>
+        public void SelectCharacterForProfile(string characterId)
         {
             currentSelectedCharacterId = characterId;
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
@@ -147,11 +158,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
 
             UpdateInterrogationState();
-
-            if (navigationUI != null)
-            {
-                navigationUI.ShowInterrogationPanel();
-            }
         }
 
         /// <summary>

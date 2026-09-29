@@ -27,25 +27,44 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private void Start()
         {
             CloseAllModals();
+
+            // 初期状態としてMonitorPanelを現在地に設定（バック機能の起点）
+            if (monitorPanel != null)
+            {
+                currentActivePanel = monitorPanel;
+                monitorPanel.SetActive(true);
+            }
         }
 
         #region パネル表示切り替え（描画専用）
 
+        /// <summary>
+        /// モニターパネルを表示する
+        /// </summary>
         public void ShowMonitorPanel()
         {
             SwitchPanel(monitorPanel);
         }
 
+        /// <summary>
+        /// 質問パネルを表示する
+        /// </summary>
         public void ShowInterrogationPanel()
         {
             SwitchPanel(interrogationPanel);
         }
 
+        /// <summary>
+        /// プロファイルパネルを表示する
+        /// </summary>
         public void ShowProfilePanel()
         {
             SwitchPanel(profilePanel);
         }
 
+        /// <summary>
+        /// 結果パネルを表示する
+        /// </summary>  
         public void ShowResultPanel()
         {
             SwitchPanel(resultPanel);
@@ -66,7 +85,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (targetPanel == null) return;
 
-            if (currentActivePanel != null && currentActivePanel != targetPanel)
+            // すでに表示されているパネルを再度開こうとした場合は上書きを防ぐためスキップ
+            if (currentActivePanel == targetPanel) return;
+
+            if (currentActivePanel != null)
             {
                 previousPanel = currentActivePanel;
                 currentActivePanel.SetActive(false);
@@ -80,6 +102,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         #region モーダル・確認ダイアログ制御（描画専用）
 
+        /// <summary>
+        /// リセット確認モーダルの表示切り替え
+        /// </summary>
+        /// <param name="isShow"></param>
         public void ShowResetConfirmModal(bool isShow)
         {
             if (resetConfirmModal != null)
@@ -88,6 +114,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
         }
 
+        /// <summary>
+        /// 1日の終了確認モーダルの表示切り替え
+        /// </summary>
+        /// <param name="isShow"></param>
         public void ShowDayEndConfirmModal(bool isShow)
         {
             if (dayEndConfirmModal != null)
@@ -96,6 +126,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
         }
 
+        /// <summary>
+        /// すべてのモーダルを閉じる
+        /// </summary>
         public void CloseAllModals()
         {
             ShowResetConfirmModal(false);
@@ -106,7 +139,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         #region UIボタンイベント通知
 
-
+        /// <summary>
+        /// リセット確認モーダルの「はい」ボタンが押されたときの処理
+        /// </summary>
         public void OnClickConfirmReset()
         {
             ShowResetConfirmModal(false);
@@ -116,6 +151,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
         }
 
+        /// <summary>
+        /// 1日の終了確認モーダルの「はい」ボタンが押されたときの処理
+        /// </summary>
         public void OnClickConfirmDayEnd()
         {
             ShowDayEndConfirmModal(false);

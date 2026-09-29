@@ -21,6 +21,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
     {
         [Header("--- 司令塔コントローラー ---")]
         [SerializeField] private GameUIController gameUIController;
+        [SerializeField] private ScreenNavigationUI navigationUI;
 
         [Header("--- プロフィール表示パーツ ---")]
         [SerializeField] private TextMeshProUGUI profileNameText;
@@ -125,12 +126,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         /// <summary>
         /// ナビゲーションバー等の「戻る」ボタン用 (OnClick)
-        /// 取調室パネルまたはモニター画面へ戻します。
+        /// 1つ前のパネルへ直接戻します。
         /// </summary>
         public void OnClickBack()
         {
-            if (gameUIController != null)
+            if (navigationUI != null)
             {
+                navigationUI.BackToPreviousPanel();
+            }
+            else if (gameUIController != null)
+            {
+                // フォールバック: navigationUIが設定されていない場合
                 gameUIController.OnClickReturnToInterrogationOrMonitor();
             }
         }
