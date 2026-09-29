@@ -3,6 +3,9 @@ using TMPro;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
+    /// <summary>
+    /// ログアイテムUIの制御クラス
+    /// </summary>
     public class LogItemUI : MonoBehaviour
     {
         [SerializeField] private TextMeshProUGUI speakerNameText;

@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.SO;
 
 namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
 {
     /// <summary>
-    /// ゲームプレイ中の個々のキャラクターの状態（動的データ）を管理するクラス
+    /// ゲームプレイ中の個々のキャラクターの状態（動的・ランタイムデータ）を管理するクラス
     /// </summary>
     [Serializable]
     public class CharacterInstance
@@ -25,9 +26,17 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
         [SerializeField] private bool isAI = false;
 
         [Tooltip("このキャラクターが解放済みかどうか")]
-        [SerializeField] private bool isReleased = false; // ★ 解放フラグの追加
+        [SerializeField] private bool isReleased = false;
+
+        [Header("プロフィール解禁状態（ランタイム管理）")]
+        [Tooltip("基礎情報（名前、年齢等）が解禁済みか")]
+        [SerializeField] private bool isBasicInfoUnlocked = false;
+
+        [Tooltip("解禁済みの過去情報項目キー一覧")]
+        [SerializeField] private List<string> unlockedHistoryKeys = new List<string>();
 
         #region プロパティ (外部参照用)
+
         /// <summary> キャラクターID </summary>
         public string CharacterId => characterId;
 
@@ -41,11 +50,18 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
         public bool IsAI => isAI;
 
         /// <summary> 解放フラグ </summary>
-        public bool IsReleased => isReleased; // ★ 外部から確認用プロパティ
+        public bool IsReleased => isReleased;
+
+        /// <summary> 基礎情報が解禁済みか </summary>
+        public bool IsBasicInfoUnlocked => isBasicInfoUnlocked;
+
+        /// <summary> 解禁済みの過去情報キー一覧（読み取り専用） </summary>
+        public IReadOnlyList<string> UnlockedHistoryKeys => unlockedHistoryKeys;
+
         #endregion
 
         /// <summary>
-        /// コンストラクタ（コードから生成する場合）
+        /// コンストラクタ（コードから生成・初期化する場合）
         /// </summary>
         public CharacterInstance(string characterId, ProfileDataSO profileData, int initialAffection = 0, bool isAI = false, bool isReleased = false)
         {
@@ -54,12 +70,15 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
             this.currentAffection = initialAffection;
             this.isAI = isAI;
             this.isReleased = isReleased;
+            this.isBasicInfoUnlocked = false;
+            this.unlockedHistoryKeys = new List<string>();
         }
+
+        #region パラメータ変更・状態操作メソッド
 
         /// <summary>
         /// 好感度を加減算する
         /// </summary>
-        /// <param name="amount">加算値（マイナス値で減少）</param>
         public void AddAffection(int amount)
         {
             currentAffection += amount;
@@ -88,5 +107,55 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
         {
             isReleased = value;
         }
+
+        #endregion
+
+        #region プロフィール解禁制御メソッド
+
+        /// <summary>
+        /// 基礎情報の解禁フラグを設定する
+        /// </summary>
+        public void SetBasicInfoUnlocked(bool isUnlocked)
+        {
+            isBasicInfoUnlocked = isUnlocked;
+        }
+
+        /// <summary>
+        /// 指定された過去情報キーが解禁されているかチェックする
+        /// </summary>
+        public bool IsHistoryUnlocked(string itemKey)
+        {
+            return unlockedHistoryKeys.Contains(itemKey);
+        }
+
+        /// <summary>
+        /// 過去情報項目を解禁する
+        /// </summary>
+        public void UnlockHistoryItem(string itemKey)
+        {
+            if (!unlockedHistoryKeys.Contains(itemKey))
+            {
+                unlockedHistoryKeys.Add(itemKey);
+            }
+        }
+
+        /// <summary>
+        /// 解禁状態をリスト形式で取得（当日の朝へ戻すバックアップ用）
+        /// </summary>
+        public (bool basicUnlocked, List<string> historyKeys) GetUnlockStates()
+        {
+            return (isBasicInfoUnlocked, new List<string>(unlockedHistoryKeys));
+        }
+
+        /// <summary>
+        /// バックアップから解禁状態を復元する（リセット用）
+        /// </summary>
+        public void RestoreUnlockStates(bool basicUnlocked, List<string> historyKeys)
+        {
+            isBasicInfoUnlocked = basicUnlocked;
+            unlockedHistoryKeys = historyKeys != null ? new List<string>(historyKeys) : new List<string>();
+        }
+
+        #endregion
     }
 }
