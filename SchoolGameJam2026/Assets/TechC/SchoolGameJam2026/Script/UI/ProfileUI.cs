@@ -40,6 +40,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 Debug.LogWarning("[ProfileUI] RefreshProfileDisplay: targetChar または ProfileData が null のため更新をスキップしました。");
                 return;
             }
+
             // 名前・アイコンの表示更新
             if (profileNameText != null)
             {
@@ -120,7 +121,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (gameUIController != null)
             {
-                gameUIController.SelectCharacter(characterId);
+                // 画面遷移を行わずにプロフィール情報のみを更新するメソッドを呼ぶ
+                gameUIController.SelectCharacterForProfile(characterId);
             }
         }
 
