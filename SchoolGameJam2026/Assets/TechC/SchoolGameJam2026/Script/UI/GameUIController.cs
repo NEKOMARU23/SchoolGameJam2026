@@ -31,7 +31,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         [SerializeField] private string gameOverSceneName = "GameOverScene";
 
         // 内部状態管理
-        private string currentSelectedCharacterId = "A";
+        private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
         private string currentHearingTargetId = "B";
         private bool hasEscapedAI = false;
         private bool isAiIdentified = false;
@@ -136,19 +136,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         /// </summary>
         public void SelectCharacter(string characterId)
         {
-            SelectCharacterForProfile(characterId);
-
-            if (navigationUI != null)
-            {
-                navigationUI.ShowInterrogationPanel();
-            }
-        }
-
-        /// <summary>
-        /// 【プロフィールパネル用】画面遷移を行わずにプロフィール表示情報のみを更新します。
-        /// </summary>
-        public void SelectCharacterForProfile(string characterId)
-        {
             currentSelectedCharacterId = characterId;
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
 
@@ -158,6 +145,23 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
             if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
 
             UpdateInterrogationState();
+
+            if (navigationUI != null)
+            {
+                navigationUI.ShowInterrogationPanel();
+            }
+        }
+
+        /// <summary>
+        /// 【プロフィール画面専用】拷問対象を変更せずに、プロフィール表示のみを特定キャラに更新します。
+        /// </summary>
+        public void ShowProfileOnly(string characterId)
+        {
+            CharacterInstance targetChar = GetCharacter(characterId);
+            if (profileUI != null && targetChar != null)
+            {
+                profileUI.RefreshProfileDisplay(targetChar);
+            }
         }
 
         /// <summary>
@@ -262,49 +266,57 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         /// <summary>
-        /// 基本プロフィールの解放を試みる（ロジック）
+        /// 現在選択中の拷問キャラの基本プロフィール解放（旧版互換）
         /// </summary>
         public void TryUnlockBasicProfile()
         {
-            CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            if (targetChar == null || targetChar.ProfileData == null) return;
+            TryUnlockBasicProfileForCharacter(currentSelectedCharacterId);
+        }
 
+        /// <summary>
+        /// 特定キャラの基本プロフィール解放（プロフィール画面対応版）
+        /// </summary>
+        public void TryUnlockBasicProfileForCharacter(string characterId)
+        {
+            CharacterInstance targetChar = GetCharacter(characterId);
+            if (targetChar == null || targetChar.ProfileData == null) return;
             if (targetChar.IsBasicInfoUnlocked) return;
 
             int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
 
-            if (InterrogationManager.Instance != null)
+            if (InterrogationManager.Instance != null && InterrogationManager.Instance.CurrentPoints >= cost)
             {
-                if (InterrogationManager.Instance.CurrentPoints >= cost)
-                {
-                    InterrogationManager.Instance.ConsumePoints(cost);
-                    targetChar.SetBasicInfoUnlocked(true);
-                    if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
-                }
+                InterrogationManager.Instance.ConsumePoints(cost);
+                targetChar.SetBasicInfoUnlocked(true);
+                if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
             }
         }
 
         /// <summary>
-        /// 特定プロフィールの解放を試みる（ロジック）
+        /// 現在選択中の拷問キャラの個別プロフィール解放（旧版互換）
         /// </summary>
         public void TryUnlockProfileItem(string itemKey)
         {
-            CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            if (targetChar == null || targetChar.ProfileData == null) return;
+            TryUnlockProfileItemForCharacter(currentSelectedCharacterId, itemKey);
+        }
 
+        /// <summary>
+        /// 特定キャラの個別プロフィール解放（プロフィール画面対応版）
+        /// </summary>
+        public void TryUnlockProfileItemForCharacter(string characterId, string itemKey)
+        {
+            CharacterInstance targetChar = GetCharacter(characterId);
+            if (targetChar == null || targetChar.ProfileData == null) return;
             if (targetChar.IsHistoryUnlocked(itemKey)) return;
 
             var item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
             if (item == null) return;
 
-            if (InterrogationManager.Instance != null)
+            if (InterrogationManager.Instance != null && InterrogationManager.Instance.CurrentPoints >= item.unlockCost)
             {
-                if (InterrogationManager.Instance.CurrentPoints >= item.unlockCost)
-                {
-                    InterrogationManager.Instance.ConsumePoints(item.unlockCost);
-                    targetChar.UnlockHistoryItem(itemKey);
-                    if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
-                }
+                InterrogationManager.Instance.ConsumePoints(item.unlockCost);
+                targetChar.UnlockHistoryItem(itemKey);
+                if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
             }
         }
 

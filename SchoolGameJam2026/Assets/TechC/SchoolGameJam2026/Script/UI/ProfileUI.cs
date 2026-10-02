@@ -30,6 +30,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- プロフィール（資料）UI登録リスト ---")]
         [SerializeField] private List<ProfileUIBinding> profileUIBindings = new List<ProfileUIBinding>();
 
+        // プロフィール画面独自で表示中のキャラIDを保持（拷問対象と連動させない）
+        private string currentViewingCharacterId;
+
         /// <summary>
         /// 選択されているキャラクターのプロフィール画面描画を更新（描画専用）
         /// </summary>
@@ -40,6 +43,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 Debug.LogWarning("[ProfileUI] RefreshProfileDisplay: targetChar または ProfileData が null のため更新をスキップしました。");
                 return;
             }
+
+            currentViewingCharacterId = targetChar.CharacterId;
 
             // 名前・アイコンの表示更新
             if (profileNameText != null)
@@ -66,7 +71,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
                 if (binding.key.Equals("BASIC", StringComparison.OrdinalIgnoreCase))
                 {
-                    // CharacterInstance 側の解放フラグを参照
                     isUnlocked = targetChar.IsBasicInfoUnlocked;
 
                     BasicProfileGroup basic = targetChar.ProfileData.basicInfo;
@@ -80,7 +84,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 }
                 else
                 {
-                    // CharacterInstance 側の解放フラグを参照
                     isUnlocked = targetChar.IsHistoryUnlocked(binding.key);
 
                     ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == binding.key);
@@ -115,20 +118,18 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         /// <summary>
         /// キャラクター選択切り替えボタン用 (OnClick)
-        /// Inspectorの Button -> OnClick で引数文字列 (例: "A", "B", "C", "D") を指定して呼び出します。
+        /// プロフィール表示のみを切り替え、拷問パネルの選択キャラは変更しません。
         /// </summary>
         public void OnClickSelectCharacter(string characterId)
         {
             if (gameUIController != null)
             {
-                // 画面遷移を行わずにプロフィール情報のみを更新するメソッドを呼ぶ
-                gameUIController.SelectCharacterForProfile(characterId);
+                gameUIController.ShowProfileOnly(characterId);
             }
         }
 
         /// <summary>
         /// ナビゲーションバー等の「戻る」ボタン用 (OnClick)
-        /// 1つ前のパネルへ直接戻します。
         /// </summary>
         public void OnClickBack()
         {
@@ -138,7 +139,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
             else if (gameUIController != null)
             {
-                // フォールバック: navigationUIが設定されていない場合
                 gameUIController.OnClickReturnToInterrogationOrMonitor();
             }
         }
@@ -147,7 +147,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (gameUIController != null)
             {
-                gameUIController.TryUnlockBasicProfile();
+                gameUIController.TryUnlockBasicProfileForCharacter(currentViewingCharacterId);
             }
         }
 
@@ -155,7 +155,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (gameUIController != null)
             {
-                gameUIController.TryUnlockProfileItem(itemKey);
+                gameUIController.TryUnlockProfileItemForCharacter(currentViewingCharacterId, itemKey);
             }
         }
 
