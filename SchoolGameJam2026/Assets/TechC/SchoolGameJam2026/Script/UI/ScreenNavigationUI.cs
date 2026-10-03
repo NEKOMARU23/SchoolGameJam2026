@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.Core;
 
@@ -22,7 +23,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private GameObject dayEndConfirmModal;
 
         private GameObject currentActivePanel;
-        private GameObject previousPanel;
+        
+        // 遷移履歴を積むスタック構造
+        private readonly Stack<GameObject> historyStack = new Stack<GameObject>();
 
         private void Start()
         {
@@ -39,15 +42,16 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         #region パネル表示切り替え（描画専用）
 
         /// <summary>
-        /// モニターパネルを表示する
+        /// モニターパネルを表示する（通常遷移）
         /// </summary>
         public void ShowMonitorPanel()
         {
+            // モニター画面（トップ画面など）に戻る際は履歴をクリアしたい場合、必要に応じて ClearHistory() できます
             SwitchPanel(monitorPanel);
         }
 
         /// <summary>
-        /// 質問パネルを表示する
+        /// 質問パネルを表示する（通常遷移）
         /// </summary>
         public void ShowInterrogationPanel()
         {
@@ -55,7 +59,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// プロファイルパネルを表示する
+        /// プロファイルパネルを表示する（通常遷移）
         /// </summary>
         public void ShowProfilePanel()
         {
@@ -63,7 +67,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// 結果パネルを表示する
+        /// 結果パネルを表示する（通常遷移）
         /// </summary>  
         public void ShowResultPanel()
         {
@@ -71,16 +75,30 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// 1つ前の画面に戻る
+        /// 1つ前の画面に戻る（バック処理専用）
         /// </summary>
         public void BackToPreviousPanel()
         {
-            if (previousPanel != null)
+            if (historyStack.Count == 0) return;
+
+            // スタックから1つ前のパネルを取り出す
+            GameObject previousPanel = historyStack.Pop();
+            if (previousPanel == null) return;
+
+            // 現在のパネルを非表示にする
+            if (currentActivePanel != null)
             {
-                SwitchPanel(previousPanel);
+                currentActivePanel.SetActive(false);
             }
+
+            // 取り出したパネルを表示し、現在地にセット（履歴追加は行わない）
+            previousPanel.SetActive(true);
+            currentActivePanel = previousPanel;
         }
 
+        /// <summary>
+        /// 通常の画面遷移（履歴をPushする）
+        /// </summary>
         private void SwitchPanel(GameObject targetPanel)
         {
             if (targetPanel == null) return;
@@ -90,12 +108,21 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (currentActivePanel != null)
             {
-                previousPanel = currentActivePanel;
+                // 現在のパネルを履歴スタックに保存
+                historyStack.Push(currentActivePanel);
                 currentActivePanel.SetActive(false);
             }
 
             targetPanel.SetActive(true);
             currentActivePanel = targetPanel;
+        }
+
+        /// <summary>
+        /// 必要に応じて画面履歴をリセットする処理
+        /// </summary>
+        public void ClearHistory()
+        {
+            historyStack.Clear();
         }
 
         #endregion
@@ -105,7 +132,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary>
         /// リセット確認モーダルの表示切り替え
         /// </summary>
-        /// <param name="isShow"></param>
         public void ShowResetConfirmModal(bool isShow)
         {
             if (resetConfirmModal != null)
@@ -117,7 +143,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary>
         /// 1日の終了確認モーダルの表示切り替え
         /// </summary>
-        /// <param name="isShow"></param>
         public void ShowDayEndConfirmModal(bool isShow)
         {
             if (dayEndConfirmModal != null)
