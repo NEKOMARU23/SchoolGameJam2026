@@ -270,26 +270,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         /// </summary>
         public void TryUnlockBasicProfile()
         {
-            TryUnlockBasicProfileForCharacter(currentSelectedCharacterId);
-        }
-
-        /// <summary>
-        /// 特定キャラの基本プロフィール解放（プロフィール画面対応版）
-        /// </summary>
-        public void TryUnlockBasicProfileForCharacter(string characterId)
-        {
-            CharacterInstance targetChar = GetCharacter(characterId);
-            if (targetChar == null || targetChar.ProfileData == null) return;
-            if (targetChar.IsBasicInfoUnlocked) return;
-
-            int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
-
-            if (InterrogationManager.Instance != null && InterrogationManager.Instance.CurrentPoints >= cost)
-            {
-                InterrogationManager.Instance.ConsumePoints(cost);
-                targetChar.SetBasicInfoUnlocked(true);
-                if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
-            }
+            TryUnlockProfileItemForCharacter(currentSelectedCharacterId, "BASIC");
         }
 
         /// <summary>
@@ -301,18 +282,36 @@ namespace TechC.SchoolGameJam2026.Scripts.Core
         }
 
         /// <summary>
-        /// 特定キャラの個別プロフィール解放（プロフィール画面対応版）
+        /// 特定キャラのプロフィール解放（"BASIC" または 個別itemKey に対応）
         /// </summary>
         public void TryUnlockProfileItemForCharacter(string characterId, string itemKey)
         {
             CharacterInstance targetChar = GetCharacter(characterId);
             if (targetChar == null || targetChar.ProfileData == null) return;
+            if (InterrogationManager.Instance == null) return;
+
+            // --- 1. 基本情報の解放処理 ("BASIC") ---
+            if (itemKey.Equals("BASIC", StringComparison.OrdinalIgnoreCase))
+            {
+                if (targetChar.IsBasicInfoUnlocked) return;
+
+                int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
+                if (InterrogationManager.Instance.CurrentPoints >= cost)
+                {
+                    InterrogationManager.Instance.ConsumePoints(cost);
+                    targetChar.SetBasicInfoUnlocked(true);
+                    if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
+                }
+                return;
+            }
+
+            // --- 2. 個別履歴・詳細項目の解放処理 (その他のキー) ---
             if (targetChar.IsHistoryUnlocked(itemKey)) return;
 
             var item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
             if (item == null) return;
 
-            if (InterrogationManager.Instance != null && InterrogationManager.Instance.CurrentPoints >= item.unlockCost)
+            if (InterrogationManager.Instance.CurrentPoints >= item.unlockCost)
             {
                 InterrogationManager.Instance.ConsumePoints(item.unlockCost);
                 targetChar.UnlockHistoryItem(itemKey);
