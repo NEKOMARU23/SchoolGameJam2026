@@ -253,10 +253,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickUnlockProfileItemByKey
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickUnlockProfileItem
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -370,7 +369,13 @@ MonoBehaviour:
   - key: BASIC
     unlockButton: {fileID: 2830899922753476232}
     contentObject: {fileID: 8774561696355986965}
-  - key: ITEM_1
+  - key: PAST_1
+    unlockButton: {fileID: 125618222101488216}
+    contentObject: {fileID: 3961631342469467511}
+  - key: PAST_2
+    unlockButton: {fileID: 5208250134803253858}
+    contentObject: {fileID: 4580303988824721330}
+  - key: PAST_3
     unlockButton: {fileID: 2733638220046034514}
     contentObject: {fileID: 5954410478911155912}
 --- !u!1 &418791949512613749
@@ -657,33 +662,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6563598597846159159}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickOpenInterrogationPanel
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OpenInterrogationForCharacter
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: B
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &639784700931640107
 GameObject:
   m_ObjectHideFlags: 0
@@ -1056,33 +1035,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1289789066829185993}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickOpenInterrogationPanel
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OpenInterrogationForCharacter
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: D
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &1103283038435243770
 GameObject:
   m_ObjectHideFlags: 0
@@ -2439,33 +2392,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 594028959311478261}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 8762172388528793037}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: 
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OpenInterrogationForCharacter
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: A
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &2158532912989646826
 GameObject:
   m_ObjectHideFlags: 0
@@ -3412,7 +3339,15 @@ MonoBehaviour:
   releaseButton: {fileID: 9146334093034893467}
   confirmAiButtonObject: {fileID: 1284965853859860451}
   hearingPanel: {fileID: 6686112911502857869}
-  characterButtonContainer: {fileID: 1261719406611552576}
+  hearingButtonBindings:
+  - characterId: A
+    button: {fileID: 8428502002906319699}
+  - characterId: B
+    button: {fileID: 1599836313628404053}
+  - characterId: C
+    button: {fileID: 2712800503536672506}
+  - characterId: D
+    button: {fileID: 6857101618537202559}
   closeHearingPanelButton: {fileID: 2583247250338569987}
 --- !u!1 &2667292228955453730
 GameObject:
@@ -3858,10 +3793,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickUnlockProfileItemByKey
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickUnlockProfileItem
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4131,17 +4065,16 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickUnlockBasicProfile
-        m_Mode: 1
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickUnlockProfileItem
+        m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: 
+          m_StringArgument: BASIC
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!1 &2852791201714974052
@@ -4569,10 +4502,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickAdvanceDialogue
+      - m_Target: {fileID: 4815162342108123457}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.DialogueUI, Assembly-CSharp
+        m_MethodName: OnClickDialogueArea
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5036,20 +4968,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6776849998177291818}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickCloseResultAndAdvanceDay
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &3362899173520172698
 GameObject:
   m_ObjectHideFlags: 0
@@ -5307,10 +5226,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickOpenLogPanel
+      - m_Target: {fileID: 1035069311232201608}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.LogUI, Assembly-CSharp
+        m_MethodName: Show
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5888,20 +5806,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3507375626647967823}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickConfirmAdvanceNextDay
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &3672503933149692004
 GameObject:
   m_ObjectHideFlags: 0
@@ -6553,20 +6458,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3730124679813424074}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickConfirmResetDay
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &4479263006429413852
 GameObject:
   m_ObjectHideFlags: 0
@@ -6958,33 +6850,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 3879645414756518005}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickOpenInterrogationPanel
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OpenInterrogationForCharacter
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: C
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &4576345698188276762
 GameObject:
   m_ObjectHideFlags: 0
@@ -7479,20 +7345,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 376507446744296652}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickCancelResetDay
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &5182389197922258221
 GameObject:
   m_ObjectHideFlags: 0
@@ -7746,10 +7599,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickUnlockProfileItemByKey
+      - m_Target: {fileID: 1421899173729478357}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.ProfileUI, Assembly-CSharp
+        m_MethodName: OnClickUnlockProfileItem
         m_Mode: 5
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -7916,10 +7768,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickOpenLogPanel
+      - m_Target: {fileID: 1035069311232201608}
+        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.UI.LogUI, Assembly-CSharp
+        m_MethodName: Show
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -8282,6 +8133,7 @@ GameObject:
   - component: {fileID: 7380303475778419528}
   - component: {fileID: 4699050313504877746}
   - component: {fileID: 583370929412449972}
+  - component: {fileID: 4815162342108123457}
   m_Layer: 5
   m_Name: Interrogation_Chatbox
   m_TagString: Untagged
@@ -9185,20 +9037,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6795453899409957816}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickCancelEndDay
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &6239239259917439654
 GameObject:
   m_ObjectHideFlags: 0
@@ -10520,20 +10359,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6370452853723142065}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: TechC.SchoolGameJam2026.Scripts.Core.UIManagerBridge,
-          Assembly-CSharp
-        m_MethodName: OnClickReturnToPreviousPanel
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!1 &7343441858481847351
 GameObject:
   m_ObjectHideFlags: 0
@@ -10666,7 +10492,6 @@ GameObject:
   - component: {fileID: 1652477925629231766}
   - component: {fileID: 2558648699027140237}
   - component: {fileID: 1888819867081016523}
-  - component: {fileID: 2716585215424753737}
   - component: {fileID: 6042100579899794112}
   m_Layer: 5
   m_Name: Canvas
@@ -10767,25 +10592,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &2716585215424753737
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7364358246981998045}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 712e5af45777cd84facfa267d164405f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.ScreenNavigationUI
-  gameUIController: {fileID: 8892950995207965899}
-  monitorPanel: {fileID: 6056070719320347505}
-  interrogationPanel: {fileID: 2665764251540451085}
-  profilePanel: {fileID: 295335291814423814}
-  resultPanel: {fileID: 5463884281378699312}
-  resetConfirmModal: {fileID: 2200037891999105558}
-  dayEndConfirmModal: {fileID: 2158532912989646826}
 --- !u!114 &6042100579899794112
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12921,17 +12727,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.Core.GameUIController
   navigationUI: {fileID: 6042100579899794112}
   interrogationUI: {fileID: 735181164149097286}
-  dialogueUI: {fileID: 0}
+  dialogueUI: {fileID: 4815162342108123457}
   profileUI: {fileID: 1421899173729478357}
   monitorUI: {fileID: 1762519590160357425}
   resultUI: {fileID: 1650681480082467782}
+  logUI: {fileID: 1035069311232201608}
   dayTexts:
   - {fileID: 1152734100104709572}
   pointTexts:
   - {fileID: 1504265931900211246}
   actionTexts:
   - {fileID: 3662870891335644812}
-  finalDayNumber: 7
   clearSceneName: ClearScene
   gameOverSceneName: GameOverScene
 --- !u!1 &8774561696355986965
@@ -13495,3 +13301,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4815162342108123457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5644676219536722176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09e0d483ed6341f4f9ce917a1e7f717e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.DialogueUI
+  speakerNameText: {fileID: 7554667793994012341}
+  dialogueText: {fileID: 5144542750675371459}
+  characterIllustration: {fileID: 4932351316243448555}
+  textSpeed: 0.05
