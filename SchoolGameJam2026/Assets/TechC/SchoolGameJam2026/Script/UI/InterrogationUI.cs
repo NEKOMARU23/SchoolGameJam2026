@@ -103,10 +103,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 confirmAiButtonObject.SetActive(isFinalDay && !isReleased);
 
+                // AI確定は最終判定のため、行動回数の上限や当日の取り調べ済みに関係なく押せる
                 Button confirmBtn = confirmAiButtonObject.GetComponent<Button>();
                 if (confirmBtn != null)
                 {
-                    confirmBtn.interactable = canInteract;
+                    confirmBtn.interactable = !isReleased && !isDialoguePlaying;
                 }
             }
         }

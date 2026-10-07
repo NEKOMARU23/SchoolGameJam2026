@@ -33,7 +33,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [SerializeField] private int currentDay = 1;
 
         [Tooltip("最大日数")]
-        [SerializeField] private int maxDays = 5;
+        [SerializeField] private int maxDays = 7;
 
         [Header("キャラクター一覧 (A, B, C, D)")]
         [SerializeField] private List<CharacterInstance> allCharacters = new List<CharacterInstance>();
@@ -45,7 +45,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         private int backupPoints;
         private int backupDailyActions;
         private List<string> backupInterrogatedCharacterIds = new List<string>();
+        private Dictionary<string, Dictionary<InterrogationActionType, int>> backupActionCounts = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
         private readonly Dictionary<string, int> backupAffections = new Dictionary<string, int>();
+        private readonly Dictionary<string, bool> backupReleased = new Dictionary<string, bool>();
         private readonly Dictionary<string, ProfileUnlockStateBackup> backupProfileStates = new Dictionary<string, ProfileUnlockStateBackup>();
         #endregion
 
@@ -123,9 +125,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 InterrogationManager.Instance.SetPoints(backupPoints);
                 InterrogationManager.Instance.ResetDailyActions(backupDailyActions);
                 InterrogationManager.Instance.RestoreInterrogatedCharacterIdsToday(backupInterrogatedCharacterIds);
+                InterrogationManager.Instance.RestoreCharacterActionCounts(backupActionCounts);
             }
 
-            // 2. キャラクター状態（好感度・プロフィール）の復元
+            // 2. キャラクター状態（好感度・解放状態・プロフィール）の復元
             foreach (var character in allCharacters)
             {
                 if (character == null || string.IsNullOrEmpty(character.CharacterId)) continue;
@@ -133,6 +136,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 if (backupAffections.TryGetValue(character.CharacterId, out int restoredAffection))
                 {
                     character.SetAffection(restoredAffection);
+                }
+
+                if (backupReleased.TryGetValue(character.CharacterId, out bool restoredReleased))
+                {
+                    character.SetReleaseFlag(restoredReleased);
                 }
 
                 if (backupProfileStates.TryGetValue(character.CharacterId, out var backupState))
@@ -152,17 +160,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 backupPoints = InterrogationManager.Instance.CurrentPoints;
                 backupDailyActions = InterrogationManager.Instance.CurrentDailyActions;
                 backupInterrogatedCharacterIds = InterrogationManager.Instance.GetInterrogatedCharacterIdsToday();
+                backupActionCounts = InterrogationManager.Instance.GetCharacterActionCounts();
             }
 
             backupAffections.Clear();
+            backupReleased.Clear();
             backupProfileStates.Clear();
 
             foreach (var character in allCharacters)
             {
                 if (character == null || string.IsNullOrEmpty(character.CharacterId)) continue;
 
-                // 好感度バックアップ
+                // 好感度・解放状態バックアップ
                 backupAffections[character.CharacterId] = character.CurrentAffection;
+                backupReleased[character.CharacterId] = character.IsReleased;
 
                 // プロフィール状態バックアップ
                 var (basicUnlocked, historyKeys) = character.GetUnlockStates();
@@ -180,21 +191,26 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary> 現在の日を終了し、次の日（朝）へ移行する </summary>
         public void AdvanceToNextDay()
         {
-            currentDay++;
+            int nextDay = currentDay + 1;
 
-            if (currentDay > maxDays)
+            if (nextDay > maxDays)
             {
-                Debug.Log("<color=gold>全日程が終了しました！ゲームクリア画面へ移行します。</color>");
+                Debug.LogWarning($"最終日（{maxDays}日目）を超えて日付を進めることはできません。");
                 return;
             }
 
-            if (GetTodayScenario() == null)
+            // 日付を進める前に確認し、シナリオ欠落時に行動回数が未リセットのまま進むのを防ぐ
+            if (dayScenarios.Find(s => s != null && s.dayNumber == nextDay) == null)
             {
-                Debug.LogWarning($"Day {currentDay} のシナリオが見つかりません。");
+                Debug.LogError($"Day {nextDay} のシナリオが見つかりません。");
                 return;
             }
 
+            currentDay = nextDay;
             StartNewDay();
         }
+
+        /// <summary> 現在が最終日かどうか </summary>
+        public bool IsFinalDay => currentDay >= maxDays;
     }
 }

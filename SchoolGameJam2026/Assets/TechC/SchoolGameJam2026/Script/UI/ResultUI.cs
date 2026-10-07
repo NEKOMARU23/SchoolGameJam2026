@@ -37,7 +37,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (pointText != null)
             {
-                pointText.text = $"獲得ポイント: +{earnedPoints} pt";
+                string sign = earnedPoints >= 0 ? "+" : "";
+                pointText.text = $"獲得ポイント: {sign}{earnedPoints} pt";
             }
 
             gameObject.SetActive(true);

@@ -74,25 +74,43 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
+        /// 指定キャラに対して本日アクション可能か判定する
+        /// </summary>
+        /// <param name="rejectReason">不可の場合にプレイヤーへ表示する理由</param>
+        public bool CanExecuteAction(string characterId, out string rejectReason)
+        {
+            if (IsActionLimitReached)
+            {
+                rejectReason = "（本日の取り調べ可能回数を消化しました）";
+                return false;
+            }
+
+            if (HasInterrogatedToday(characterId))
+            {
+                rejectReason = "（このキャラクターへの本日の取り調べは既に終了しています）";
+                return false;
+            }
+
+            rejectReason = null;
+            return true;
+        }
+
+        /// <summary>
         /// 取り調べアクションを実行する
+        /// AI確定は行動回数を消費しないため <see cref="GetConfirmAIDialogue"/> を使う
         /// </summary>
         public string ExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, string hearingTargetId = "")
         {
             // 1. ガード節（事前チェック）
-            if (IsActionLimitReached)
+            if (targetChar == null) return "";
+
+            if (!CanExecuteAction(targetChar.CharacterId, out string rejectReason))
             {
-                Debug.LogWarning("[InterrogationManager] 本日の行動上限に達しています。");
-                return "（本日の取り調べ可能回数を消化しました）";
+                Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} へのアクションは実行できません: {rejectReason}");
+                return rejectReason;
             }
 
-            if (HasInterrogatedToday(targetChar.CharacterId))
-            {
-                Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} には本日すでに取り調べを行っています。");
-                return "（このキャラクターへの本日の取り調べは既に終了しています）";
-            }
-
-            DayScenarioSO todayScenario = GameManager.Instance != null ? GameManager.Instance.GetTodayScenario() : null;
-            CharacterDailySetting dailySetting = todayScenario?.GetCharacterSetting(targetChar.CharacterId);
+            CharacterDailySetting dailySetting = GetTodaySetting(targetChar.CharacterId);
             if (dailySetting == null)
             {
                 Debug.LogError($"[InterrogationManager] シナリオ設定が見つかりません。 (ID: {targetChar.CharacterId})");
@@ -121,6 +139,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             return responseDialogue;
+        }
+
+        /// <summary>
+        /// AI確定時のセリフを取得する（最終判定のため行動回数・当日の取り調べ済みに関係なく実行できる）
+        /// </summary>
+        public string GetConfirmAIDialogue(CharacterInstance targetChar)
+        {
+            if (targetChar == null) return "";
+
+            CharacterDailySetting dailySetting = GetTodaySetting(targetChar.CharacterId);
+            if (dailySetting == null) return "";
+
+            Dictionary<string, int> otherAffections = GameManager.Instance?.GetAllCharacterAffections() ?? new Dictionary<string, int>();
+            int actionCount = GetCharacterActionCount(targetChar.CharacterId, InterrogationActionType.ConfirmAI);
+            return dailySetting.GetResponse(InterrogationActionType.ConfirmAI, targetChar.CurrentAffection, otherAffections, actionCount);
+        }
+
+        private CharacterDailySetting GetTodaySetting(string characterId)
+        {
+            DayScenarioSO todayScenario = GameManager.Instance != null ? GameManager.Instance.GetTodayScenario() : null;
+            return todayScenario?.GetCharacterSetting(characterId);
         }
 
         /// <summary>
@@ -160,8 +199,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
             else
             {
-                ConsumePoints(failPointPenalty);
-                TodayEarnedPoints -= failPointPenalty;
+                // 所持ポイントは0未満にならないため、実際に減った分だけを計上する
+                TodayEarnedPoints -= ConsumePoints(failPointPenalty);
                 if (isPenaltyAction && failAffectionPenalty != 0) targetChar.AddAffection(-failAffectionPenalty);
             }
 
@@ -183,7 +222,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             characterActionCounts[characterId][actionType]++;
         }
 
-        #region ポイント操作（バグ修正済み）
+        #region ポイント操作
         public void AddPoints(int amount)
         {
             if (amount <= 0) return;
@@ -191,12 +230,17 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             OnPointsChanged?.Invoke(currentPoints);
         }
 
-        public void ConsumePoints(int amount)
+        /// <summary>
+        /// ポイントを消費する（0未満にはならない）
+        /// </summary>
+        /// <returns>実際に減少したポイント</returns>
+        public int ConsumePoints(int amount)
         {
-            if (amount <= 0) return;
-            // 修正：代入ではなく減算を行う
-            currentPoints = Mathf.Max(0, currentPoints - amount);
+            if (amount <= 0) return 0;
+            int consumed = Mathf.Min(amount, currentPoints);
+            currentPoints -= consumed;
             OnPointsChanged?.Invoke(currentPoints);
+            return consumed;
         }
 
         public void SetPoints(int value)
@@ -227,11 +271,24 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
         }
 
-        public Dictionary<string, Dictionary<InterrogationActionType, int>> GetCharacterActionCounts() => characterActionCounts;
+        /// <summary> キャラ別アクション通算回数のコピーを取得する（バックアップ用） </summary>
+        public Dictionary<string, Dictionary<InterrogationActionType, int>> GetCharacterActionCounts() => CopyActionCounts(characterActionCounts);
 
         public void RestoreCharacterActionCounts(Dictionary<string, Dictionary<InterrogationActionType, int>> backupData)
         {
-            characterActionCounts = backupData ?? new Dictionary<string, Dictionary<InterrogationActionType, int>>();
+            characterActionCounts = CopyActionCounts(backupData);
+        }
+
+        private static Dictionary<string, Dictionary<InterrogationActionType, int>> CopyActionCounts(Dictionary<string, Dictionary<InterrogationActionType, int>> source)
+        {
+            var copy = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
+            if (source == null) return copy;
+
+            foreach (var pair in source)
+            {
+                copy[pair.Key] = new Dictionary<InterrogationActionType, int>(pair.Value);
+            }
+            return copy;
         }
 
         public List<string> GetInterrogatedCharacterIdsToday() => new List<string>(interrogatedCharacterIdsToday);
