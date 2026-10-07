@@ -1,14 +1,21 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
+    /// <summary>
+    /// 会話テキストの表示（ページ送り・文字送り・演出タグ）を担当するビュー
+    /// 書式: ページ区切りは '|'、ページ先頭の [SYS] で話者名なし、[IMG:OFF] / [IMG:ON] で立ち絵の表示切替
+    /// </summary>
     public class DialogueUI : MonoBehaviour
     {
-        [Header("--- 司令塔コントローラー ---")]
-        [SerializeField] private GameUIController gameUIController;
+        public const string SystemTag = "[SYS]";
+        private const char PageSeparator = '|';
 
         [Header("--- ダイアログ表示パーツ ---")]
         [SerializeField] private TextMeshProUGUI speakerNameText;
@@ -18,50 +25,62 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- 文字送り設定 ---")]
         [SerializeField] private float textSpeed = 0.05f;
 
-        // 内部状態
+        /// <summary> 全ページの表示が完了したときに通知 </summary>
+        public event Action OnDialogueFinished;
+
+        /// <summary> 文字送り中、または未表示のページが残っているか </summary>
         public bool IsDialoguePlaying { get; private set; } = false;
+
+        private readonly Queue<string> pages = new Queue<string>();
+        private string currentSpeakerName = "";
         private Coroutine typingCoroutine;
-        private string currentFullText = "";
+        private bool isTyping = false;
 
         /// <summary>
-        /// 会話テキストの再生を開始（表示専用）
+        /// 会話テキストの再生を開始
         /// </summary>
         public void StartDialogueSequence(string speakerName, string rawText)
         {
-            if (speakerNameText != null)
+            StopTyping();
+            pages.Clear();
+            currentSpeakerName = speakerName;
+
+            if (!string.IsNullOrEmpty(rawText))
             {
-                speakerNameText.text = speakerName;
+                foreach (string page in rawText.Split(PageSeparator))
+                {
+                    string trimmed = page.Trim();
+                    if (!string.IsNullOrEmpty(trimmed)) pages.Enqueue(trimmed);
+                }
             }
 
-            // 特殊タグ除去などのパースが必要な場合はここで文字列だけを整形
-            currentFullText = rawText;
-
-            if (typingCoroutine != null)
+            if (pages.Count == 0)
             {
-                StopCoroutine(typingCoroutine);
+                FinishDialogue();
+                return;
             }
 
-            typingCoroutine = StartCoroutine(TypeTextCoroutine(currentFullText));
-        }
-
-        /// <summary>
-        /// タイピング演出コルーチン
-        /// </summary>
-        private IEnumerator TypeTextCoroutine(string fullText)
-        {
-            IsDialoguePlaying = true;
-            if (dialogueText != null) dialogueText.text = "";
-
-            foreach (char c in fullText.ToCharArray())
+            // 非アクティブ時はコルーチンもクリックも使えないため、全ページをまとめて即時表示する
+            if (!isActiveAndEnabled)
             {
+                var sb = new StringBuilder();
+                while (pages.Count > 0)
+                {
+                    string body = ApplyPageTags(pages.Dequeue());
+                    if (sb.Length > 0) sb.Append('\n');
+                    sb.Append(body);
+                }
                 if (dialogueText != null)
                 {
-                    dialogueText.text += c;
+                    dialogueText.text = sb.ToString();
+                    dialogueText.maxVisibleCharacters = int.MaxValue;
                 }
-                yield return new WaitForSeconds(textSpeed);
+                FinishDialogue();
+                return;
             }
 
-            IsDialoguePlaying = false;
+            IsDialoguePlaying = true;
+            ShowNextPage();
         }
 
         /// <summary>
@@ -69,11 +88,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         public void ResetDialogueState()
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-            }
-
+            StopTyping();
+            pages.Clear();
             IsDialoguePlaying = false;
 
             if (speakerNameText != null) speakerNameText.text = "";
@@ -81,21 +97,159 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// クリック時のスキップ / 次へ送る（UIボタンやクリックイベント用）
+        /// クリック時のスキップ / 次ページへ送る（TextSkipButton 用）
         /// </summary>
         public void OnClickDialogueArea()
         {
-            if (IsDialoguePlaying)
+            if (!IsDialoguePlaying) return;
+
+            if (isTyping)
             {
-                // タイピング中の場合は全文字を一括表示して演出スキップ
-                if (typingCoroutine != null) StopCoroutine(typingCoroutine);
-                if (dialogueText != null) dialogueText.text = currentFullText;
-                IsDialoguePlaying = false;
+                // タイピング中の場合は現在ページを一括表示して演出スキップ
+                StopTyping();
+                if (dialogueText != null) dialogueText.maxVisibleCharacters = int.MaxValue;
+                OnPageCompleted();
             }
             else
             {
-                // 会話終了後のクリック通知などがあればControllerへ送る
+                ShowNextPage();
             }
+        }
+
+        private void OnDisable()
+        {
+            // 非アクティブになるとコルーチンは止まるため、表示途中のページは全文表示にして整合を取る
+            // （残りのページは再表示後のクリックで送る）
+            if (isTyping)
+            {
+                typingCoroutine = null;
+                if (dialogueText != null) dialogueText.maxVisibleCharacters = int.MaxValue;
+                OnPageCompleted();
+            }
+        }
+
+        private void ShowNextPage()
+        {
+            if (pages.Count == 0)
+            {
+                FinishDialogue();
+                return;
+            }
+
+            string body = ApplyPageTags(pages.Dequeue());
+            StopTyping();
+
+            // 非アクティブ時はコルーチンを開始できないため即時表示する
+            if (!isActiveAndEnabled)
+            {
+                if (dialogueText != null)
+                {
+                    dialogueText.text = body;
+                    dialogueText.maxVisibleCharacters = int.MaxValue;
+                }
+                OnPageCompleted();
+                return;
+            }
+
+            typingCoroutine = StartCoroutine(TypeTextCoroutine(body));
+        }
+
+        /// <summary>
+        /// ページ先頭の演出タグを解釈して適用し、本文を返す
+        /// </summary>
+        private string ApplyPageTags(string page)
+        {
+            bool isSystem = false;
+            bool parsed = true;
+
+            while (parsed)
+            {
+                parsed = false;
+
+                if (page.StartsWith(SystemTag, StringComparison.Ordinal))
+                {
+                    isSystem = true;
+                    page = page.Substring(SystemTag.Length);
+                    parsed = true;
+                }
+                else if (page.StartsWith("[IMG:", StringComparison.Ordinal))
+                {
+                    int closeIndex = page.IndexOf(']');
+                    if (closeIndex < 0) break;
+
+                    string key = page.Substring(5, closeIndex - 5);
+                    page = page.Substring(closeIndex + 1);
+                    parsed = true;
+
+                    if (characterIllustration != null)
+                    {
+                        bool hide = key.Equals("OFF", StringComparison.OrdinalIgnoreCase) || key.Equals("HIDE", StringComparison.OrdinalIgnoreCase);
+                        characterIllustration.gameObject.SetActive(!hide);
+                    }
+                }
+            }
+
+            if (speakerNameText != null)
+            {
+                speakerNameText.text = isSystem ? "" : currentSpeakerName;
+            }
+
+            return page.Trim();
+        }
+
+        /// <summary>
+        /// タイピング演出コルーチン（maxVisibleCharacters でリッチテキストタグを崩さずに1文字ずつ表示）
+        /// </summary>
+        private IEnumerator TypeTextCoroutine(string pageText)
+        {
+            isTyping = true;
+
+            if (dialogueText != null)
+            {
+                dialogueText.text = pageText;
+                dialogueText.maxVisibleCharacters = 0;
+                dialogueText.ForceMeshUpdate();
+
+                int totalCharacters = dialogueText.textInfo.characterCount;
+                var wait = new WaitForSeconds(textSpeed);
+
+                for (int i = 1; i <= totalCharacters; i++)
+                {
+                    dialogueText.maxVisibleCharacters = i;
+                    yield return wait;
+                }
+            }
+
+            typingCoroutine = null;
+            OnPageCompleted();
+        }
+
+        private void OnPageCompleted()
+        {
+            isTyping = false;
+
+            // 最終ページを表示し終えたら会話終了
+            if (pages.Count == 0)
+            {
+                FinishDialogue();
+            }
+        }
+
+        private void FinishDialogue()
+        {
+            isTyping = false;
+            IsDialoguePlaying = false;
+            OnDialogueFinished?.Invoke();
+        }
+
+        private void StopTyping()
+        {
+            if (typingCoroutine != null)
+            {
+                StopCoroutine(typingCoroutine);
+                typingCoroutine = null;
+            }
+            isTyping = false;
         }
     }
 }
