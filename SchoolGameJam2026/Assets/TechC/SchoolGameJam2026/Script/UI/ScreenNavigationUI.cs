@@ -8,9 +8,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
     /// </summary>
     public class ScreenNavigationUI : MonoBehaviour
     {
-        [Header("--- 司令塔コントローラー ---")]
-        [SerializeField] private GameUIController gameUIController;
-
         [Header("--- 画面パネル登録 ---")]
         [SerializeField] private GameObject monitorPanel;
         [SerializeField] private GameObject interrogationPanel;
@@ -157,34 +154,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             ShowResetConfirmModal(false);
             ShowDayEndConfirmModal(false);
-        }
-
-        #endregion
-
-        #region UIボタンイベント通知
-
-        /// <summary>
-        /// リセット確認モーダルの「はい」ボタンが押されたときの処理
-        /// </summary>
-        public void OnClickConfirmReset()
-        {
-            ShowResetConfirmModal(false);
-            if (gameUIController != null)
-            {
-                gameUIController.OnConfirmResetDay();
-            }
-        }
-
-        /// <summary>
-        /// 1日の終了確認モーダルの「はい」ボタンが押されたときの処理
-        /// </summary>
-        public void OnClickConfirmDayEnd()
-        {
-            ShowDayEndConfirmModal(false);
-            if (gameUIController != null)
-            {
-                gameUIController.OnConfirmEndDay();
-            }
         }
 
         #endregion

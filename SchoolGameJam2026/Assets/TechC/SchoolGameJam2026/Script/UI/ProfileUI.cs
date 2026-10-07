@@ -92,7 +92,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         public void OnClickSelectCharacter(string characterId)
         {
-            gameUIController?.ShowProfileOnly(characterId);
+            if (gameUIController != null) gameUIController.ShowProfileOnly(characterId);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         public void OnClickUnlockProfileItem(string itemKey)
         {
-            gameUIController?.TryUnlockProfileItemForCharacter(currentViewingCharacterId, itemKey);
+            if (gameUIController != null) gameUIController.TryUnlockProfileItemForCharacter(currentViewingCharacterId, itemKey);
         }
 
         #endregion
