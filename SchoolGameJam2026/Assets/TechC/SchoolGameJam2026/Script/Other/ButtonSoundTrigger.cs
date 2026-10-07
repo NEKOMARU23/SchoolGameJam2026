@@ -5,30 +5,21 @@ using TechC.SchoolGameJam2026.Scripts.Core.Event;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
-    public struct PlaySEEvent
-    {
-        ///<summary>
-        ///Ä¶‚µ‚½‚¢SE‚ÌƒCƒ“ƒfƒbƒNƒX”Ô†
-        /// </summary>
-        public int SeIndex { get; set; }
-
-        public PlaySEEvent(int seIndex)
-        {
-            SeIndex = seIndex;
-        }
-    }
+    /// <summary>
+    /// ã‚¯ãƒªãƒƒã‚¯æ™‚ã« PlaySEEvent ã‚’ç™ºè¡Œã—ã¦ SE ã‚’é³´ã‚‰ã™ãƒˆãƒªã‚¬ãƒ¼
+    /// </summary>
     public class ButtonSoundTrigger : MonoBehaviour, IPointerDownHandler
     {
-        [Header("--Ä¶İ’è--")]
-        [Tooltip("AudioManager ‚Ì seClips ”z—ñ‚Ì—v‘f”Ô†i0, 1, 2...j")]
+        [Header("--å†ç”Ÿè¨­å®š--")]
+        [Tooltip("AudioManager ã® seClips é…åˆ—ã®è¦ç´ ç•ªå·ï¼ˆ0, 1, 2...ï¼‰")]
         [SerializeField] private int seIndex = 0;
 
-        [Tooltip("Update() ‚É‚æ‚é‰æ–Ê‘S‘Ì‚ÌƒNƒŠƒbƒNŒŸ’m‚ğs‚¤‚©iUIƒ{ƒ^ƒ“’P‘Ì‚É•t‚¯‚éê‡‚Í falsej")]
+        [Tooltip("Update() ã§ç”»é¢å…¨ä½“ã®ã‚¯ãƒªãƒƒã‚¯ã‚’æ¤œçŸ¥ã™ã‚‹ã‹ï¼ˆUIãƒœã‚¿ãƒ³å˜ä½“ã«ä»˜ã‘ã‚‹å ´åˆã¯ falseï¼‰")]
         [SerializeField] private bool triggerOnAnyScreenClick = false;
 
         private void Update()
         {
-            // ‰æ–Ê‘S‘ÌŒŸ’mƒ‚[ƒh‚Ìê‡‚Ì‚İ“®ì
+            // ç”»é¢å…¨ä½“æ¤œçŸ¥ãƒ¢ãƒ¼ãƒ‰ã®å ´åˆã®ã¿å‹•ä½œ
             if (triggerOnAnyScreenClick)
             {
                 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
@@ -38,7 +29,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
         }
 
-        // UIƒ{ƒ^ƒ“‰Ÿ‚µ‚İ‚ÉÀs‚³‚ê‚éitriggerOnAnyScreenClick ‚ª false ‚Ìê‡j
+        // UIãƒœã‚¿ãƒ³æŠ¼ä¸‹æ™‚ã«å®Ÿè¡Œã•ã‚Œã‚‹ï¼ˆtriggerOnAnyScreenClick ãŒ false ã®å ´åˆï¼‰
         public void OnPointerDown(PointerEventData eventData)
         {
             if (!triggerOnAnyScreenClick)
@@ -47,7 +38,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
         }
 
-        // SEÄ¶ƒCƒxƒ“ƒg‚ğ”­‰Î‚·‚éƒƒ\ƒbƒh
+        // SEå†ç”Ÿã‚¤ãƒ™ãƒ³ãƒˆã‚’ç™ºç«ã™ã‚‹
         private void PlaySE()
         {
             EventManager.Publish(new PlaySEEvent(seIndex));
