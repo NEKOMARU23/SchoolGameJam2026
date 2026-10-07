@@ -6,7 +6,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Other
 {
 
     /// <summary>
-    /// Result Scene�ɕΈڂ���B
+    /// InGame シーンに遷移する（タイトル画面のスタートボタン用）。
     /// </summary>
     public class ResultSceneChange : MonoBehaviour
     {

@@ -7,6 +7,6 @@ public class IngameSceneChange : MonoBehaviour
 {
     public void OnStartButton()
     {
-        SceneManager.LoadScene("mainscene");
+        SceneManager.LoadScene("InGame");
     }
 }

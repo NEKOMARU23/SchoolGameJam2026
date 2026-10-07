@@ -6,7 +6,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Other
 {
 
     /// <summary>
-    /// Title SceneɕΈڂB
+    /// Title シーンに遷移する。
     /// </summary>
     public class TitleSceneChange : MonoBehaviour
     {

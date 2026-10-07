@@ -7,7 +7,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Other
     {
         public void OnClickToNextScene()
         {
-            SceneManager.LoadScene("GAMECLEAR");
+            SceneManager.LoadScene("ClearScene");
         }
     }
 }

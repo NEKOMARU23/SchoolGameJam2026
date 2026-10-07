@@ -58,14 +58,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             SceneManager.sceneLoaded -= OnSceneLoaded;
         }
 
+        private void Start()
+        {
+            // Manager シーンは最初のシーンより後に Additive ロードされるため、
+            // 起動時のシーンの sceneLoaded は受け取れない。ここで初回分を再生する。
+            OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+        }
+
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             switch (scene.name)
             {
-                case "TitleScene":
+                case "Title":
                     PlayBGMClip(titleBGM);
                     break;
-                case "GameScene":
+                case "InGame":
                     PlayBGMClip(gameBGM);
                     break;
                 case "Result":
@@ -87,7 +94,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         public void PlayBGMClip(AudioClip clip)
         {
-            if (clip == null || (bgmSource.isPlaying && bgmSource.clip == clip)) return;
+            if (clip == null || bgmSource == null || (bgmSource.isPlaying && bgmSource.clip == clip)) return;
 
             bgmSource.Stop();
             bgmSource.clip = clip;
@@ -105,7 +112,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         public void PlaySE(int index)
         {
-            if (seClips == null || index < 0 || index >= seClips.Length) return;
+            if (seSource == null || seClips == null || index < 0 || index >= seClips.Length) return;
             seSource.PlayOneShot(seClips[index]);
         }
 
