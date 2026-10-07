@@ -1,4 +1,4 @@
-using TechC.SchoolGameJam2026.Script.Core.Manager;
+using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using UnityEngine;
 using UnityEngine.UI;
 

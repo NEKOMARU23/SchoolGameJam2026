@@ -1,4 +1,4 @@
-namespace TechC.SchoolGameJam2026.Core.Event
+namespace TechC.SchoolGameJam2026.Scripts.Core.Event
 {
     /// <summary>
     /// SE（効果音）の再生を要求するイベントデータ

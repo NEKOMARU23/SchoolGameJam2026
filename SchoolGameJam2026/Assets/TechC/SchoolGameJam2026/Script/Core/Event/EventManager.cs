@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TechC.SchoolGameJam2026.Core.Event
+namespace TechC.SchoolGameJam2026.Scripts.Core.Event
 {
     /// <summary>
     /// 型ベースのイベント送信・受信を仲介する静的管理クラス (Pub/Subパターン)

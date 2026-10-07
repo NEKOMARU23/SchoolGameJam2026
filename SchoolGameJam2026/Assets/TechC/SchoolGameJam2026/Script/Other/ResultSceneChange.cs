@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 
-namespace TechC.SchoolGameJam2026.Script.Other
+namespace TechC.SchoolGameJam2026.Scripts.Other
 {
 
     /// <summary>

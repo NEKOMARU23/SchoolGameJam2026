@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace TechC.SchoolGameJam2026.Core.Manager
+namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
     /// <summary>
     /// ゲームの起動時に、Managerシーンを自動的にロードするためのクラスです。

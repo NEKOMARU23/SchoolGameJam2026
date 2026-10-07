@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class ChangeScene : MonoBehaviour
+namespace TechC.SchoolGameJam2026.Scripts.Other
 {
-    public void OnClickToNextScene()
+    public class ChangeScene : MonoBehaviour
     {
-        SceneManager.LoadScene("GAMECLEAR");
+        public void OnClickToNextScene()
+        {
+            SceneManager.LoadScene("GAMECLEAR");
+        }
     }
 }

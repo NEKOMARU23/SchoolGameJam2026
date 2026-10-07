@@ -1,9 +1,9 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using TechC.SchoolGameJam2026.Core.Event;
+using TechC.SchoolGameJam2026.Scripts.Core.Event;
 
-namespace TechC.SchoolGameJam2026.Script.UI
+namespace TechC.SchoolGameJam2026.Scripts.UI
 {
     public struct PlaySEEvent
     {

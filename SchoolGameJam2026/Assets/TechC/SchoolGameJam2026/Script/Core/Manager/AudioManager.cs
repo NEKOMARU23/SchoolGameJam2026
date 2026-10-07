@@ -1,8 +1,8 @@
-using TechC.SchoolGameJam2026.Core.Event;
+using TechC.SchoolGameJam2026.Scripts.Core.Event;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace TechC.SchoolGameJam2026.Script.Core.Manager
+namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
     /// <summary>
     /// BGMおよびSEの再生・音量を一括管理するマネージャー

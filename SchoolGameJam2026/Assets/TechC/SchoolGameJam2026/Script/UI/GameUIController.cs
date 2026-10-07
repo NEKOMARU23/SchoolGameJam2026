@@ -4,12 +4,11 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using TechC.SchoolGameJam2026.Scripts.UI;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using TechC.SchoolGameJam2026.Scripts.SO;
 
-namespace TechC.SchoolGameJam2026.Scripts.Core
+namespace TechC.SchoolGameJam2026.Scripts.UI
 {
     public class GameUIController : MonoBehaviour
     {
