@@ -120,12 +120,17 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             Assert.AreEqual(pointsBefore - characterA.ProfileData.basicInfo.unlockCost, InterrogationManager.CurrentPoints, "解禁コスト分のポイントが減っていません");
             Assert.IsFalse(FindButton("Button_UnlockBasicInfo").gameObject.activeSelf, "解禁後も解禁ボタンが表示されたままです");
 
-            // 過去情報 1〜3
+            // 過去情報（パネルに置き場所がある項目のみ表示しているため、表示中の項目だけ確認する）
+            int checkedItemCount = 0;
             for (int i = 1; i <= 3; i++)
             {
+                if (!FindButton($"Button_UnlockItem_{i}").transform.parent.gameObject.activeInHierarchy) continue;
+
+                checkedItemCount++;
                 yield return Click($"Button_UnlockItem_{i}");
                 Assert.IsTrue(characterA.IsHistoryUnlocked($"PAST_{i}"), $"PAST_{i} が解禁されていません");
             }
+            Assert.Greater(checkedItemCount, 0, "表示中の過去情報の解禁ボタンが1つもありません");
 
             // 解禁状態はキャラごとに独立している
             yield return Click("BCharacterChange_Button");
