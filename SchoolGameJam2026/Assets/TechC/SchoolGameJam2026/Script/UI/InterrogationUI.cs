@@ -1,12 +1,19 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
-using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
+    [Serializable]
+    public struct HearingButtonBinding
+    {
+        public string characterId;
+        public Button button;
+    }
+
     public class InterrogationUI : MonoBehaviour
     {
         [Header("--- 司令塔コントローラー ---")]
@@ -23,8 +30,20 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         [Header("--- 聞き取り（他キャラ選択）パネルUI ---")]
         [SerializeField] private GameObject hearingPanel;
-        [SerializeField] private Transform characterButtonContainer;
+        [SerializeField] private List<HearingButtonBinding> hearingButtonBindings = new List<HearingButtonBinding>();
         [SerializeField] private Button closeHearingPanelButton;
+
+        private void Awake()
+        {
+            // 各聞き取りボタンに対象キャラIDをバインド
+            foreach (var binding in hearingButtonBindings)
+            {
+                if (binding.button == null) continue;
+
+                string targetId = binding.characterId;
+                binding.button.onClick.AddListener(() => OnClickHearingTarget(targetId));
+            }
+        }
 
         private void Start()
         {
@@ -98,38 +117,27 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         public void OnClickOpenHearingPanel()
         {
-            if (hearingPanel == null || characterButtonContainer == null) return;
-            if (GameManager.Instance == null || GameManager.Instance.AllCharacters == null) return;
+            if (hearingPanel == null) return;
 
-            Button[] existingButtons = characterButtonContainer.GetComponentsInChildren<Button>(true);
-
-            foreach (var btn in existingButtons)
+            // 取り調べ中の本人については聞けないため、本人のボタンは隠す
+            string selfId = gameUIController != null ? gameUIController.CurrentSelectedCharacterId : null;
+            foreach (var binding in hearingButtonBindings)
             {
-                TextMeshProUGUI btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
-                string btnTextName = btnText != null ? btnText.text : "";
-
-                // ボタンに登録されたキャラクターを特定してイベント登録
-                CharacterInstance targetChar = GameManager.Instance.AllCharacters.Find(c =>
-                    (c.ProfileData != null && c.ProfileData.basicInfo.characterName == btnTextName) ||
-                    btn.gameObject.name.EndsWith(c.CharacterId) ||
-                    btn.gameObject.name.Contains(c.CharacterId)
-                );
-
-                if (targetChar != null)
+                if (binding.button != null)
                 {
-                    string targetId = targetChar.CharacterId;
-                    btn.onClick.RemoveAllListeners();
-                    btn.onClick.AddListener(() =>
-                    {
-                        if (gameUIController != null)
-                        {
-                            gameUIController.OnSelectHearingTarget(targetId);
-                        }
-                    });
+                    binding.button.gameObject.SetActive(binding.characterId != selfId);
                 }
             }
 
             hearingPanel.SetActive(true);
+        }
+
+        private void OnClickHearingTarget(string targetId)
+        {
+            if (gameUIController != null)
+            {
+                gameUIController.OnSelectHearingTarget(targetId);
+            }
         }
 
         public void CloseHearingPanel()
