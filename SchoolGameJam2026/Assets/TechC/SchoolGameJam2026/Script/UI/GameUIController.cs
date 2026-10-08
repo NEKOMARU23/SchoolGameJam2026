@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using TechC.SchoolGameJam2026.Scripts.SO;
@@ -25,14 +23,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private List<TextMeshProUGUI> dayTexts = new List<TextMeshProUGUI>();       // 日数テキスト群
         [SerializeField] private List<TextMeshProUGUI> pointTexts = new List<TextMeshProUGUI>();     // ポイントテキスト群
         [SerializeField] private List<TextMeshProUGUI> actionTexts = new List<TextMeshProUGUI>();    // 行動回数テキスト群
-        [Header("--- ゲーム進行設定 ---")]
-        [SerializeField] private string clearSceneName = "ClearScene";
-        [SerializeField] private string gameOverSceneName = "GameOverScene";
 
-        // 内部状態管理
+        // 画面上の選択状態（ゲームの状態は各 Manager が持つ）
         private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
         private string currentHearingTargetId = "B";
-        private bool isAiIdentified = false;
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
 
@@ -206,16 +200,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
             if (targetChar == null || InterrogationInstance == null) return;
 
-            // 行動不可なら解放もしない（先にフラグを立てると拒否された場合も解放が確定してしまう）
             if (!TryValidateAction(targetChar)) return;
 
+            // 解放フラグの更新は InterrogationManager が行う
             string rawDialogue = InterrogationInstance.ExecuteAction(targetChar, InterrogationActionType.Release, currentHearingTargetId);
-            targetChar.SetReleaseFlag(true);
-
-            if (targetChar.IsAI)
-            {
-                Debug.LogWarning($"<color=red>【警告】AIである {currentSelectedCharacterId} が解放されました。</color>");
-            }
 
             if (string.IsNullOrEmpty(rawDialogue) || rawDialogue == "「……」")
             {
@@ -236,9 +224,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (dialogueUI != null && dialogueUI.IsDialoguePlaying) return;
 
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            if (targetChar == null || targetChar.IsReleased) return;
-
-            isAiIdentified = targetChar.IsAI;
+            if (GameManagerInstance == null || !GameManagerInstance.ConfirmAI(targetChar)) return;
 
             string rawDialogue = InterrogationInstance != null ? InterrogationInstance.GetConfirmAIDialogue(targetChar) : "";
             if (!string.IsNullOrEmpty(rawDialogue) && rawDialogue != "「……」")
@@ -257,36 +243,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public void TryUnlockProfileItemForCharacter(string characterId, string itemKey)
         {
             CharacterInstance targetChar = GetCharacter(characterId);
-            if (targetChar == null || targetChar.ProfileData == null) return;
-            if (InterrogationInstance == null || string.IsNullOrEmpty(itemKey)) return;
+            if (InterrogationInstance == null) return;
 
-            // --- 1. 基本情報の解放処理 ("BASIC") ---
-            if (itemKey.Equals("BASIC", StringComparison.OrdinalIgnoreCase))
+            if (InterrogationInstance.TryUnlockProfile(targetChar, itemKey))
             {
-                if (targetChar.IsBasicInfoUnlocked) return;
-
-                int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
-                if (InterrogationInstance.TrySpendPoints(cost))
-                {
-                    targetChar.SetBasicInfoUnlocked(true);
-                    if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
-                }
-                return;
-            }
-
-            // --- 2. 個別履歴・詳細項目の解放処理 (その他のキー) ---
-            if (targetChar.IsHistoryUnlocked(itemKey)) return;
-
-            var item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
-            if (item == null)
-            {
-                Debug.LogWarning($"[GameUIController] {characterId} のプロフィールに itemKey '{itemKey}' が存在しません。");
-                return;
-            }
-
-            if (InterrogationInstance.TrySpendPoints(item.unlockCost))
-            {
-                targetChar.UnlockHistoryItem(itemKey);
                 if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
             }
         }
@@ -324,21 +284,13 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (GameManagerInstance == null) return;
 
-            if (GameManagerInstance.IsFinalDay)
+            // 最終日ならエンディングへの遷移は GameManager が行う
+            bool advancedToNextDay = GameManagerInstance.AdvanceDayOrFinishGame();
+            if (advancedToNextDay && navigationUI != null)
             {
-                bool isClear = isAiIdentified && !HasAIEscaped();
-                string nextScene = isClear ? clearSceneName : gameOverSceneName;
-                if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene);
-            }
-            else
-            {
-                GameManagerInstance.AdvanceToNextDay();
-                if (navigationUI != null)
-                {
-                    // 新しい日はモニターを起点にするため、前日の画面履歴は破棄する
-                    navigationUI.ShowMonitorPanel();
-                    navigationUI.ClearHistory();
-                }
+                // 新しい日はモニターを起点にするため、前日の画面履歴は破棄する
+                navigationUI.ShowMonitorPanel();
+                navigationUI.ClearHistory();
             }
         }
 
@@ -404,13 +356,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         private bool TryValidateAction(CharacterInstance targetChar)
         {
-            if (targetChar.IsReleased)
-            {
-                ShowDialogue("システム", "（このキャラクターはすでに解放されているため、取り調べできません）");
-                return false;
-            }
-
-            if (!InterrogationInstance.CanExecuteAction(targetChar.CharacterId, out string rejectReason))
+            if (!InterrogationInstance.CanExecuteAction(targetChar, out string rejectReason))
             {
                 ShowDialogue("システム", rejectReason);
                 UpdateInterrogationState();
@@ -491,13 +437,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 || actionType == InterrogationActionType.Talk
                 || actionType == InterrogationActionType.Negotiate
                 || actionType == InterrogationActionType.HearAbout;
-        }
-
-        /// <summary> AIが解放されてしまったか（キャラ状態から導出するため、リセット時も自動で整合する） </summary>
-        private bool HasAIEscaped()
-        {
-            var characters = GameManagerInstance != null ? GameManagerInstance.AllCharacters : null;
-            return characters != null && characters.Exists(c => c != null && c.IsAI && c.IsReleased);
         }
 
         private CharacterInstance GetCharacter(string characterId)

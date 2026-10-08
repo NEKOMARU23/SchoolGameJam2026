@@ -63,6 +63,9 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
     [CreateAssetMenu(fileName = "NewProfileData", menuName = "Game/Profile Data")]
     public class ProfileDataSO : ScriptableObject
     {
+        /// <summary> 基礎情報の解禁・表示に使う項目キー </summary>
+        public const string BasicInfoKey = "BASIC";
+
         [Header("キャラクター基本識別情報")]
         public string characterId;       // ID (例: A, B, C, D)
         public Sprite characterIcon;     // 資料画面用アイコン画像
