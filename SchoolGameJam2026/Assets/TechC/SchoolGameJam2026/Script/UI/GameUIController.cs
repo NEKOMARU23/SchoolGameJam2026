@@ -233,7 +233,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             // パネル切替でセリフが見えなくなるため、判定結果はリザルトにも載せる
-            string verdict = $"<b>【最終判定】</b>\n{GetDisplayName(targetChar)} をAIと判定しました。\n{StripDialogueTags(rawDialogue)}\n";
+            string verdict = $"<b>【最終判定】</b>\n{GetDisplayName(targetChar)} をAIと判定しました。\n{DialogueTextFormat.ToPlainText(rawDialogue)}\n";
             ShowResultFlow(verdict);
         }
 
@@ -412,22 +412,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (logUI != null)
             {
-                foreach (string page in text.Split('|'))
+                foreach (DialoguePage page in DialogueTextFormat.Parse(text))
                 {
-                    string trimmed = page.Trim();
-                    if (string.IsNullOrEmpty(trimmed)) continue;
-
-                    string logSpeaker = trimmed.StartsWith(DialogueUI.SystemTag) ? "状況" : speakerName;
-                    logUI.AddLog(logSpeaker, StripDialogueTags(trimmed));
+                    logUI.AddLog(page.IsSystem ? "状況" : speakerName, page.Body);
                 }
             }
-        }
-
-        /// <summary> [SYS] や [IMG:xxx] などの演出タグとページ区切りを除去する </summary>
-        private static string StripDialogueTags(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return "";
-            return System.Text.RegularExpressions.Regex.Replace(text, @"\[(SYS|IMG:[^\]]*)\]", "").Replace('|', '\n');
         }
 
         /// <summary> 取調室ボタンから実行してよいアクションか </summary>

@@ -9,14 +9,11 @@ using TMPro;
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
     /// <summary>
-    /// 会話テキストの表示（ページ送り・文字送り・演出タグ）を担当するビュー
-    /// 書式: ページ区切りは '|'、ページ先頭の [SYS] で話者名なし、[IMG:OFF] / [IMG:ON] で立ち絵の表示切替
+    /// 会話テキストの表示（ページ送り・文字送り・演出タグの適用）を担当するビュー
+    /// 書式の解析は <see cref="DialogueTextFormat"/> が行う
     /// </summary>
     public class DialogueUI : MonoBehaviour
     {
-        public const string SystemTag = "[SYS]";
-        private const char PageSeparator = '|';
-
         [Header("--- ダイアログ表示パーツ ---")]
         [SerializeField] private TextMeshProUGUI speakerNameText;
         [SerializeField] private TextMeshProUGUI dialogueText;
@@ -31,7 +28,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary> 文字送り中、または未表示のページが残っているか </summary>
         public bool IsDialoguePlaying { get; private set; } = false;
 
-        private readonly Queue<string> pages = new Queue<string>();
+        private readonly Queue<DialoguePage> pages = new Queue<DialoguePage>();
         private string currentSpeakerName = "";
         private Coroutine typingCoroutine;
         private bool isTyping = false;
@@ -45,13 +42,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             pages.Clear();
             currentSpeakerName = speakerName;
 
-            if (!string.IsNullOrEmpty(rawText))
+            foreach (DialoguePage page in DialogueTextFormat.Parse(rawText))
             {
-                foreach (string page in rawText.Split(PageSeparator))
-                {
-                    string trimmed = page.Trim();
-                    if (!string.IsNullOrEmpty(trimmed)) pages.Enqueue(trimmed);
-                }
+                pages.Enqueue(page);
             }
 
             if (pages.Count == 0)
@@ -66,7 +59,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 var sb = new StringBuilder();
                 while (pages.Count > 0)
                 {
-                    string body = ApplyPageTags(pages.Dequeue());
+                    string body = ApplyPage(pages.Dequeue());
                     if (sb.Length > 0) sb.Append('\n');
                     sb.Append(body);
                 }
@@ -136,7 +129,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 return;
             }
 
-            string body = ApplyPageTags(pages.Dequeue());
+            string body = ApplyPage(pages.Dequeue());
             StopTyping();
 
             // 非アクティブ時はコルーチンを開始できないため即時表示する
@@ -155,46 +148,21 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// ページ先頭の演出タグを解釈して適用し、本文を返す
+        /// ページの演出指定（話者名・立ち絵）を画面に反映し、本文を返す
         /// </summary>
-        private string ApplyPageTags(string page)
+        private string ApplyPage(DialoguePage page)
         {
-            bool isSystem = false;
-            bool parsed = true;
-
-            while (parsed)
-            {
-                parsed = false;
-
-                if (page.StartsWith(SystemTag, StringComparison.Ordinal))
-                {
-                    isSystem = true;
-                    page = page.Substring(SystemTag.Length);
-                    parsed = true;
-                }
-                else if (page.StartsWith("[IMG:", StringComparison.Ordinal))
-                {
-                    int closeIndex = page.IndexOf(']');
-                    if (closeIndex < 0) break;
-
-                    string key = page.Substring(5, closeIndex - 5);
-                    page = page.Substring(closeIndex + 1);
-                    parsed = true;
-
-                    if (characterIllustration != null)
-                    {
-                        bool hide = key.Equals("OFF", StringComparison.OrdinalIgnoreCase) || key.Equals("HIDE", StringComparison.OrdinalIgnoreCase);
-                        characterIllustration.gameObject.SetActive(!hide);
-                    }
-                }
-            }
-
             if (speakerNameText != null)
             {
-                speakerNameText.text = isSystem ? "" : currentSpeakerName;
+                speakerNameText.text = page.IsSystem ? "" : currentSpeakerName;
             }
 
-            return page.Trim();
+            if (characterIllustration != null && page.ImageKey != null)
+            {
+                characterIllustration.gameObject.SetActive(!page.HidesImage);
+            }
+
+            return page.Body;
         }
 
         /// <summary>
