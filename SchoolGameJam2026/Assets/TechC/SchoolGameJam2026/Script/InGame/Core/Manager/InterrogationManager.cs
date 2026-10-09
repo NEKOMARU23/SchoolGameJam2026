@@ -179,6 +179,22 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
+        /// 聞き取りで話題にできるキャラのID一覧（取り調べ中の本人以外）
+        /// </summary>
+        public List<string> GetHearingTargetIds(CharacterInstance targetChar)
+        {
+            var ids = new List<string>();
+            if (GameManager.Instance == null) return ids;
+
+            foreach (CharacterInstance character in GameManager.Instance.AllCharacters)
+            {
+                if (character == null || character == targetChar) continue;
+                ids.Add(character.CharacterId);
+            }
+            return ids;
+        }
+
+        /// <summary>
         /// ポイントを消費してプロフィール項目を解禁する
         /// </summary>
         /// <param name="itemKey"><see cref="ProfileDataSO.BasicInfoKey"/>（基礎情報）または過去情報の itemKey</param>

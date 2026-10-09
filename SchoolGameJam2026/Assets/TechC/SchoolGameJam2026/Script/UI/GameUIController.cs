@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         // 画面上の選択状態（ゲームの状態は各 Manager が持つ）
         private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
+        private string currentProfileCharacterId = "A";  // プロフィール画面で表示中のキャラクターID
         private string currentHearingTargetId = "B";
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
@@ -130,8 +132,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             CharacterInstance targetChar = GetCharacter(characterId);
 
-            if (interrogationUI != null) interrogationUI.UpdateCharacterRoomDisplay(targetChar);
-            if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
+            if (interrogationUI != null && targetChar != null && targetChar.ProfileData != null)
+            {
+                interrogationUI.UpdateCharacterRoomDisplay(GetDisplayName(targetChar), targetChar.ProfileData.characterIcon);
+            }
+            RefreshProfileView(characterId);
 
             UpdateInterrogationState();
 
@@ -146,11 +151,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         public void ShowProfileOnly(string characterId)
         {
-            CharacterInstance targetChar = GetCharacter(characterId);
-            if (profileUI != null && targetChar != null)
-            {
-                profileUI.RefreshProfileDisplay(targetChar);
-            }
+            RefreshProfileView(characterId);
         }
 
         /// <summary>
@@ -236,8 +237,27 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (InterrogationInstance.TryUnlockProfile(targetChar, itemKey))
             {
-                if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
+                RefreshProfileView(characterId);
             }
+        }
+
+        /// <summary>
+        /// プロフィール画面で表示中のキャラのプロフィール解放（解放ボタン用）
+        /// </summary>
+        public void TryUnlockProfileItemForViewingCharacter(string itemKey)
+        {
+            TryUnlockProfileItemForCharacter(currentProfileCharacterId, itemKey);
+        }
+
+        /// <summary>
+        /// 聞き取りパネルを開く（話題にできるキャラだけを選択肢に出す）
+        /// </summary>
+        public void OpenHearingPanel()
+        {
+            if (interrogationUI == null || InterrogationInstance == null) return;
+
+            CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
+            interrogationUI.ShowHearingPanel(InterrogationInstance.GetHearingTargetIds(targetChar));
         }
 
         /// <summary>
@@ -289,10 +309,51 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void RefreshAllViews()
         {
-            CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            if (profileUI != null) profileUI.RefreshProfileDisplay(targetChar);
+            RefreshProfileView(currentSelectedCharacterId);
             RefreshMonitorView();
             UpdateInterrogationState();
+        }
+
+        /// <summary>
+        /// プロフィール画面を指定キャラの内容で更新する
+        /// </summary>
+        private void RefreshProfileView(string characterId)
+        {
+            CharacterInstance targetChar = GetCharacter(characterId);
+            if (targetChar == null || targetChar.ProfileData == null) return;
+
+            currentProfileCharacterId = characterId;
+            if (profileUI != null) profileUI.RefreshProfileDisplay(BuildProfileViewData(targetChar));
+        }
+
+        /// <summary>
+        /// キャラの解禁状態から、プロフィール画面の表示データを組み立てる
+        /// </summary>
+        private static ProfileViewData BuildProfileViewData(CharacterInstance targetChar)
+        {
+            ProfileDataSO profile = targetChar.ProfileData;
+            var items = new Dictionary<string, ProfileItemViewData>(StringComparer.OrdinalIgnoreCase);
+
+            BasicProfileGroup basic = profile.basicInfo;
+            string basicText = $"年齢：{basic.age}\n" +
+                               $"職業：{basic.occupation}\n" +
+                               $"誕生日：{basic.birthday}\n" +
+                               $"身長：{basic.height}\n" +
+                               $"体重：{basic.weight}\n" +
+                               $"特技：{basic.skills}\n" +
+                               $"好きなこと：{basic.likes}";
+            items[ProfileDataSO.BasicInfoKey] = new ProfileItemViewData(targetChar.IsBasicInfoUnlocked, basicText);
+
+            if (profile.historyInfoList != null)
+            {
+                foreach (ProfileItem item in profile.historyInfoList)
+                {
+                    if (item == null || string.IsNullOrEmpty(item.itemKey)) continue;
+                    items[item.itemKey] = new ProfileItemViewData(targetChar.IsHistoryUnlocked(item.itemKey), item.valueContent);
+                }
+            }
+
+            return new ProfileViewData(GetDisplayName(targetChar), profile.characterIcon, items);
         }
 
         private void RefreshMonitorView()
@@ -313,23 +374,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void UpdateInterrogationState()
         {
+            if (interrogationUI == null) return;
+
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            bool isReleased = targetChar != null && targetChar.IsReleased;
-            bool isInterrogated = InterrogationInstance != null && InterrogationInstance.HasInterrogatedToday(currentSelectedCharacterId);
-            bool isLimitReached = InterrogationInstance != null && InterrogationInstance.IsActionLimitReached;
-            bool isFinalDay = GameManagerInstance != null && GameManagerInstance.IsFinalDay;
             bool isPlaying = dialogueUI != null && dialogueUI.IsDialoguePlaying;
 
-            if (interrogationUI != null)
-            {
-                interrogationUI.UpdateButtonsInteractable(
-                    isReleased,
-                    isInterrogated,
-                    isLimitReached,
-                    isPlaying,
-                    isFinalDay
-                );
-            }
+            // 判定は各 Manager に問い合わせ、ビューには結果だけを渡す
+            bool canAct = !isPlaying && InterrogationInstance != null && InterrogationInstance.CanExecuteAction(targetChar, out _);
+            bool showConfirmAI = GameManagerInstance != null && GameManagerInstance.CanConfirmAI(targetChar);
+            bool canConfirmAI = showConfirmAI && !isPlaying;
+
+            interrogationUI.UpdateActionButtons(canAct, showConfirmAI, canConfirmAI);
         }
 
         /// <summary>

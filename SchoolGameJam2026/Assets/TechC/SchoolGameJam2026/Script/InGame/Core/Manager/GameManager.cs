@@ -228,12 +228,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public bool IsFinalDay => currentDay >= maxDays;
 
         /// <summary>
+        /// 対象キャラを AI と判定できるか（最終日のみ・解放済みのキャラは不可。行動回数には関係しない）
+        /// </summary>
+        public bool CanConfirmAI(CharacterInstance targetChar)
+        {
+            return targetChar != null && !targetChar.IsReleased && IsFinalDay;
+        }
+
+        /// <summary>
         /// 最終日に対象キャラを AI と判定する（行動回数は消費しない）
         /// </summary>
         /// <returns>判定を受け付けた場合 true（最終日以外・解放済みのキャラは不可）</returns>
         public bool ConfirmAI(CharacterInstance targetChar)
         {
-            if (targetChar == null || targetChar.IsReleased || !IsFinalDay) return false;
+            if (!CanConfirmAI(targetChar)) return false;
 
             confirmedAICharacter = targetChar;
             Debug.Log($"[GameManager] {targetChar.CharacterId} を AI と判定しました。（正解: {targetChar.IsAI}）");
