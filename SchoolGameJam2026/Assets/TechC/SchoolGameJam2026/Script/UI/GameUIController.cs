@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Text;
-using TMPro;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
@@ -18,11 +17,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private MonitorUI monitorUI;
         [SerializeField] private ResultUI resultUI;
         [SerializeField] private LogUI logUI;
-
-        [Header("--- 共通ステータス表示（TMP） ---")]
-        [SerializeField] private List<TextMeshProUGUI> dayTexts = new List<TextMeshProUGUI>();       // 日数テキスト群
-        [SerializeField] private List<TextMeshProUGUI> pointTexts = new List<TextMeshProUGUI>();     // ポイントテキスト群
-        [SerializeField] private List<TextMeshProUGUI> actionTexts = new List<TextMeshProUGUI>();    // 行動回数テキスト群
+        [SerializeField] private StatusHeaderUI statusHeaderUI;
 
         // 画面上の選択状態（ゲームの状態は各 Manager が持つ）
         private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
@@ -44,9 +39,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 HandleActionCountChanged(InterrogationInstance.CurrentDailyActions, InterrogationInstance.DailyActionLimit);
             }
 
-            if (GameManagerInstance != null)
+            if (GameManagerInstance != null && statusHeaderUI != null)
             {
-                UpdateDayTexts(GameManagerInstance.CurrentDay);
+                statusHeaderUI.UpdateDayDisplay(GameManagerInstance.CurrentDay);
             }
 
             RefreshAllViews();
@@ -101,23 +96,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void HandlePointsChanged(int points)
         {
-            foreach (var text in pointTexts)
-            {
-                if (text != null) text.text = $"PT: {points}";
-            }
+            if (statusHeaderUI != null) statusHeaderUI.UpdatePointDisplay(points);
         }
 
         private void HandleActionCountChanged(int currentActions, int maxLimit)
         {
-            foreach (var text in actionTexts)
-            {
-                if (text != null) text.text = $"行動回数: {currentActions} / {maxLimit}";
-            }
+            if (statusHeaderUI != null) statusHeaderUI.UpdateActionCountDisplay(currentActions, maxLimit);
         }
 
         private void HandleDayStarted(int day)
         {
-            UpdateDayTexts(day);
+            if (statusHeaderUI != null) statusHeaderUI.UpdateDayDisplay(day);
             RefreshAllViews();
         }
 
@@ -297,14 +286,6 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         #endregion
 
         #region プライベートロジックメソッド
-
-        private void UpdateDayTexts(int day)
-        {
-            foreach (var text in dayTexts)
-            {
-                if (text != null) text.text = $"{day}日目";
-            }
-        }
 
         private void RefreshAllViews()
         {

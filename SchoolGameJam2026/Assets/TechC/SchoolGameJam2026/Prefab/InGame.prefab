@@ -10493,6 +10493,7 @@ GameObject:
   - component: {fileID: 2558648699027140237}
   - component: {fileID: 1888819867081016523}
   - component: {fileID: 6042100579899794112}
+  - component: {fileID: 5173942068317205519}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -12732,14 +12733,7 @@ MonoBehaviour:
   monitorUI: {fileID: 1762519590160357425}
   resultUI: {fileID: 1650681480082467782}
   logUI: {fileID: 1035069311232201608}
-  dayTexts:
-  - {fileID: 1152734100104709572}
-  pointTexts:
-  - {fileID: 1504265931900211246}
-  actionTexts:
-  - {fileID: 3662870891335644812}
-  clearSceneName: ClearScene
-  gameOverSceneName: GameOverScene
+  statusHeaderUI: {fileID: 5173942068317205519}
 --- !u!1 &8774561696355986965
 GameObject:
   m_ObjectHideFlags: 0
@@ -13317,3 +13311,21 @@ MonoBehaviour:
   dialogueText: {fileID: 5144542750675371459}
   characterIllustration: {fileID: 4932351316243448555}
   textSpeed: 0.05
+--- !u!114 &5173942068317205519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7364358246981998045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05afc6b96bd71c644abccd2cc59dea15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TechC.SchoolGameJam2026.Scripts.UI.StatusHeaderUI
+  dayTexts:
+  - {fileID: 1152734100104709572}
+  pointTexts:
+  - {fileID: 1504265931900211246}
+  actionTexts:
+  - {fileID: 3662870891335644812}
