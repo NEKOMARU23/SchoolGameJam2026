@@ -118,6 +118,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             // 基礎情報
             int pointsBefore = InterrogationManager.CurrentPoints;
             yield return Click("Button_UnlockBasicInfo");
+            yield return ClickConfirmYes();
             Assert.IsTrue(characterA.IsBasicInfoUnlocked, "基礎情報が解禁されていません");
             Assert.AreEqual(pointsBefore - characterA.ProfileData.basicInfo.unlockCost, InterrogationManager.CurrentPoints, "解禁コスト分のポイントが減っていません");
             Assert.IsFalse(FindButton("Button_UnlockBasicInfo").gameObject.activeSelf, "解禁後も解禁ボタンが表示されたままです");
@@ -130,6 +131,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
 
                 checkedItemCount++;
                 yield return Click($"Button_UnlockItem_{i}");
+                yield return ClickConfirmYes();
                 Assert.IsTrue(characterA.IsHistoryUnlocked($"PAST_{i}"), $"PAST_{i} が解禁されていません");
             }
             Assert.Greater(checkedItemCount, 0, "表示中の過去情報の解禁ボタンが1つもありません");
@@ -150,19 +152,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             CharacterInstance characterA = GetCharacter("A");
             int morningAffection = characterA.CurrentAffection;
 
-            // 行動・解禁・解放をしてから戻す
+            // 行動・解禁・フラグの獲得をしてから戻す（解放と AI確定は最終日のテストで確認する）
             InterrogationManager.SetPoints(1000);
             yield return Click("SelectRoomA_Button");
             yield return Click("Button_Talk");
             yield return SkipDialogueByButton();
 
-            yield return Click("Button_ToMonitor");
-            yield return Click("SelectRoomB_Button");
-            yield return Click("Button_Liberation");
-            yield return SkipDialogueByButton();
-            Assert.IsTrue(GetCharacter("B").IsReleased, "解放されていません");
-
             FindComponent<GameUIController>().TryUnlockProfileItemForCharacter("A", "BASIC");
+            yield return ClickConfirmYes();
             Assert.IsTrue(characterA.IsBasicInfoUnlocked);
 
             yield return Click("Button_ToMonitor");
@@ -175,9 +172,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             Assert.AreEqual(morningPoints, InterrogationManager.CurrentPoints, "ポイントが戻っていません");
             Assert.AreEqual(morningAffection, characterA.CurrentAffection, "好感度が戻っていません");
             Assert.IsFalse(characterA.IsBasicInfoUnlocked, "プロフィールの解禁が戻っていません");
-            Assert.IsFalse(GetCharacter("B").IsReleased, "解放が戻っていません");
             Assert.IsFalse(InterrogationManager.HasInterrogatedToday("A"), "取り調べ済みの記録が戻っていません");
-            Assert.IsTrue(FindButton("SelectRoomB_Button").interactable, "解放を戻したのに B の部屋に入れません");
         }
 
         [UnityTest]
@@ -326,11 +321,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             {
                 Assert.AreEqual(day, GameManager.CurrentDay, "日付がずれています");
 
-                // その日の行動（A と対話）→ 1日終了 → 次の日へ
-                yield return Click("SelectRoomA_Button");
-                yield return Click("Button_Talk");
-                yield return SkipDialogueByButton();
-                yield return Click("Button_ToMonitor");
+                // その日の行動（A と対話。最終日は全員を判定）→ 1日終了 → 次の日へ
+                if (GameManager.IsFinalDay)
+                {
+                    foreach (string id in new[] { "A", "B", "C", "D" }) yield return JudgeOnFinalDay(id, confirmAI: false);
+                    FindComponent<ScreenNavigationUI>().ShowMonitorPanel();
+                    yield return null;
+                }
+                else
+                {
+                    yield return Click("SelectRoomA_Button");
+                    yield return Click("Button_Talk");
+                    yield return SkipDialogueByButton();
+                    yield return Click("Button_ToMonitor");
+                }
                 yield return Click("Day_Button", "MonitorPanel");
                 yield return Click("YesButton", "DayEndConfirmDialog");
                 yield return Click("NextDay_Button", "ResultPanel");

@@ -10,13 +10,11 @@ using static TechC.SchoolGameJam2026.Scripts.Test.InGameTestUtility;
 namespace TechC.SchoolGameJam2026.Scripts.Test
 {
     /// <summary>
-    /// Day1〜7 を通しでプレイし、クリア / ゲームオーバーの判定が正しいかを確認する
+    /// Day1〜7 を通しでプレイし、最終日の判定でクリアになるかを確認する
     /// 毎日全員に「対話」を行うため、全日程のシナリオデータの読み込みエラーも検出できる
     /// </summary>
     public class InGameFullWeekTest
     {
-        private const string ConfirmAIButtonName = "Button_AI confirmed (1)";
-
         private GameUIController controller;
 
         [UnitySetUp]
@@ -27,63 +25,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
-        public IEnumerator 最終日にAIを当てるとクリア()
+        public IEnumerator 七日間を通して遊び最終日に全員を正しく判定するとクリア()
         {
-            CharacterInstance ai = GetAICharacter();
+            // ゲーム開始時は全員人間。テストでは A を AI にしておく
+            CollectionAssert.IsEmpty(GameManager.AllCharacters.FindAll(c => c.IsAI), "ゲーム開始時に AI のキャラがいます");
+            GetCharacter("A").SetAIFlag(true);
 
             yield return PlayUntilFinalDay();
 
-            // 最終日は行動回数を使い切っていても AI 確定できる
-            yield return TalkToEveryone();
-            Assert.IsTrue(InterrogationManager.IsActionLimitReached, "前提: 行動回数を使い切っている");
+            yield return JudgeOnFinalDay("A", confirmAI: true);
+            yield return JudgeOnFinalDay("B", confirmAI: false);
+            yield return JudgeOnFinalDay("C", confirmAI: false);
+            yield return JudgeOnFinalDay("D", confirmAI: false);
 
-            yield return ConfirmAI(ai.CharacterId);
-            yield return WaitForScene(ClearSceneName);
-        }
-
-        [UnityTest]
-        public IEnumerator 最終日に人間をAIと判定するとゲームオーバー()
-        {
-            CharacterInstance ai = GetAICharacter();
-            CharacterInstance human = GameManager.AllCharacters.Find(c => !c.IsAI);
-
-            yield return PlayUntilFinalDay();
-
-            yield return ConfirmAI(human.CharacterId);
-            yield return WaitForScene(GameOverSceneName);
-        }
-
-        [UnityTest]
-        public IEnumerator AIを解放するとゲームオーバー()
-        {
-            CharacterInstance ai = GetAICharacter();
-            CharacterInstance human = GameManager.AllCharacters.Find(c => !c.IsAI);
-
-            yield return Release(ai.CharacterId);
-            Assert.IsTrue(ai.IsReleased);
-
-            yield return PlayUntilFinalDay();
-
-            // 解放済みの AI は部屋に入れないので、他のキャラを判定しても助からない
-            yield return ConfirmAI(human.CharacterId);
-            yield return WaitForScene(GameOverSceneName);
-        }
-
-        [UnityTest]
-        public IEnumerator AIを解放してもその日をリセットすればクリアできる()
-        {
-            CharacterInstance ai = GetAICharacter();
-
-            yield return Release(ai.CharacterId);
-            Assert.IsTrue(ai.IsReleased);
-
-            controller.OnConfirmResetDay();
-            yield return null;
-            Assert.IsFalse(ai.IsReleased, "リセットで AI の解放が戻っていません");
-
-            yield return PlayUntilFinalDay();
-
-            yield return ConfirmAI(ai.CharacterId);
+            yield return EndDayByButton();
             yield return WaitForScene(ClearSceneName);
         }
 
@@ -98,13 +53,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             {
                 int day = GameManager.CurrentDay;
 
-                // 最終日以外は AI 確定ボタンが出ない
-                controller.SelectCharacter(GameManager.AllCharacters.Find(c => !c.IsReleased).CharacterId);
+                // 最終日以外は判定（解放・AI確定）のボタンが出ない
+                controller.SelectCharacter("A");
                 yield return null;
-                Assert.IsFalse(FindButton(ConfirmAIButtonName).gameObject.activeSelf, $"Day{day} なのに AI 確定ボタンが表示されています");
+                Assert.IsFalse(FindButton(ConfirmAIButtonName).gameObject.activeSelf, $"Day{day} なのに AI確定ボタンが表示されています");
+                Assert.IsFalse(FindButton(ReleaseButtonName).gameObject.activeSelf, $"Day{day} なのに解放ボタンが表示されています");
 
                 yield return TalkToEveryone();
-                yield return EndDay();
+                yield return EndDayByButton();
 
                 Assert.AreEqual(day + 1, GameManager.CurrentDay, $"Day{day} から翌日に進んでいません");
             }
@@ -113,14 +69,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         /// <summary>
-        /// 解放されていない全員に「対話」を行う（行動回数が尽きたら終了）
+        /// 全員に「対話」を行う
         /// </summary>
         private IEnumerator TalkToEveryone()
         {
             foreach (CharacterInstance character in GameManager.AllCharacters)
             {
-                if (character.IsReleased || InterrogationManager.IsActionLimitReached) continue;
-
                 controller.SelectCharacter(character.CharacterId);
                 yield return null;
 
@@ -131,42 +85,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 Assert.AreEqual(actionsBefore + 1, InterrogationManager.CurrentDailyActions,
                     $"Day{GameManager.CurrentDay} の {character.CharacterId} への対話が実行されていません");
             }
-        }
-
-        private IEnumerator Release(string characterId)
-        {
-            controller.SelectCharacter(characterId);
-            yield return null;
-            controller.ExecuteReleaseCharacter();
-            yield return SkipDialogue();
-        }
-
-        private IEnumerator EndDay()
-        {
-            controller.OnConfirmEndDay();
-            yield return null;
-            Assert.IsTrue(IsPanelActive("ResultPanel"), "リザルト画面が表示されません");
-
-            controller.OnClickCloseResultAndAdvanceDay();
-            yield return null;
-        }
-
-        /// <summary>
-        /// 最終日に対象キャラの部屋で AI 確定ボタンを押し、リザルトを閉じる
-        /// </summary>
-        private IEnumerator ConfirmAI(string characterId)
-        {
-            Assert.IsTrue(GameManager.IsFinalDay, "前提: 最終日である");
-
-            controller.SelectCharacter(characterId);
-            yield return null;
-
-            yield return Click(ConfirmAIButtonName);
-            Assert.IsTrue(IsPanelActive("ResultPanel"), "AI 確定後にリザルト画面が表示されません");
-
-            yield return SkipDialogue();
-            controller.OnClickCloseResultAndAdvanceDay();
-            yield return null;
         }
 
         #endregion

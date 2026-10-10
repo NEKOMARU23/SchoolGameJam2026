@@ -76,6 +76,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 $"「{expectedMessage}」のエラーがありません: {string.Join(" / ", report.Errors)}");
         }
 
+        [TestCase("6", false)]
+        [TestCase("7", true)]
+        public void AI判定の判定日に最終日は書けない(string day, bool expectError)
+        {
+            var sheets = CreateWorkbook();
+            sheets["AI判定"].Add(new List<string> { "B", day, "info_鍵" });
+
+            ScenarioDatabase db = Parse(sheets, out ImportReport report);
+
+            Assert.AreEqual(expectError, report.Errors.Exists(e => e.Sheet == "AI判定" && e.Text.Contains("最終日")),
+                string.Join(" / ", report.Errors));
+            if (!expectError) Assert.AreEqual(1, db.aiJudgements.Count);
+        }
+
         [Test]
         public void 素材がないと警告になり非表示は警告にならない()
         {

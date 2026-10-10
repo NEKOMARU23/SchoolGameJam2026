@@ -142,11 +142,51 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             return character;
         }
 
-        public static CharacterInstance GetAICharacter()
+        public const string ReleaseButtonName = "Button_Liberation";
+        public const string ConfirmAIButtonName = "Button_AI confirmed (1)";
+
+        /// <summary> 確認ダイアログ（AI確定・解放・プロフィール解禁）の親の階層 </summary>
+        public const string ConfirmDialogPath = "Canvas/ConfirmDialog";
+
+        /// <summary>
+        /// 確認ダイアログが出ていることを確かめて「はい」を押す
+        /// </summary>
+        public static IEnumerator ClickConfirmYes()
         {
-            CharacterInstance ai = GameManager.AllCharacters.Find(c => c.IsAI);
-            Assert.IsNotNull(ai, "AI（isAI = true）のキャラクターが設定されていません");
-            return ai;
+            Assert.IsTrue(IsPanelActive("ConfirmDialog"), "確認ダイアログが出ていません");
+            yield return Click("YesButton", ConfirmDialogPath);
+            Assert.IsFalse(IsPanelActive("ConfirmDialog"), "「はい」を押しても確認ダイアログが閉じません");
+        }
+
+        /// <summary>
+        /// 最終日に、対象キャラの部屋で解放か AI確定のボタンを押し、確認で「はい」を押して会話を最後まで送る
+        /// </summary>
+        public static IEnumerator JudgeOnFinalDay(string characterId, bool confirmAI)
+        {
+            Assert.IsTrue(GameManager.IsFinalDay, "前提: 最終日である");
+
+            FindComponent<GameUIController>().SelectCharacter(characterId);
+            yield return null;
+
+            yield return Click(confirmAI ? ConfirmAIButtonName : ReleaseButtonName);
+            yield return ClickConfirmYes();
+            yield return SkipDialogue();
+
+            CharacterInstance character = GetCharacter(characterId);
+            Assert.IsTrue(confirmAI ? character.IsConfirmedAI : character.IsReleased, $"{characterId} の判定が反映されていません");
+        }
+
+        /// <summary>
+        /// モニター画面の「1日を終える」→ 確認で「はい」→ リザルトの「次へ」を押す
+        /// </summary>
+        public static IEnumerator EndDayByButton()
+        {
+            FindComponent<ScreenNavigationUI>().ShowMonitorPanel();
+            yield return null;
+            yield return Click("Day_Button", "MonitorPanel");
+            yield return Click("YesButton", "DayEndConfirmDialog");
+            Assert.IsTrue(IsPanelActive("ResultPanel"), "リザルト画面が表示されません");
+            yield return Click("NextDay_Button", "ResultPanel");
         }
 
         private static string GetPath(Transform transform)
