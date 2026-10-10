@@ -50,6 +50,9 @@ namespace TechC.SchoolGameJam2026.Scripts.SO
         [Header("項目名 (例: 前職、アレルギー、過去の病歴)")]
         public string itemKey;
 
+        [Header("解禁の確認で表示する名前 (例: 過去の経歴)。空なら「過去の情報」")]
+        public string itemName;
+
         [Header("項目の内容 (例: エビ・カニ、〇〇高校中退)")]
         [TextArea(2, 4)] public string valueContent;
 

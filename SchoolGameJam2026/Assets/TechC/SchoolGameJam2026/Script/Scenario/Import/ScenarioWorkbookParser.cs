@@ -329,6 +329,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                 var j = new ScenarioAIJudgement();
                 bool ok = ctx.ReadCharacter(row, "キャラ", out j.characterId, required: true);
                 ok &= ctx.ReadDay(row, "判定日", out j.day);
+                if (ok && j.day >= ctx.MaxDays)
+                {
+                    // 判定は「1日を終えて翌日になるとき」なので、最終日には判定できない
+                    ctx.Error(row, $"判定日は1〜{ctx.MaxDays - 1}にしてください（最終日の{ctx.MaxDays}日目には判定できません）");
+                    ok = false;
+                }
                 j.avoidFlags = ctx.ReadFlags(row, "回避フラグ");
                 if (ok) db.aiJudgements.Add(j);
             }

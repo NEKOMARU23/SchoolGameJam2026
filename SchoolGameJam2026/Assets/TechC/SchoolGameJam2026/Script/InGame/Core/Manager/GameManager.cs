@@ -33,9 +33,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [SerializeField] private string clearSceneName = "ClearScene";
         [SerializeField] private string gameOverSceneName = "GameOverScene";
 
-        // 最終日に AI と判定したキャラ（未判定なら null）
-        private CharacterInstance confirmedAICharacter;
-
         // その日の朝の状態（「今日をやり直す」で戻す先）
         private GameStateSnapshot morningSnapshot;
 
@@ -53,8 +50,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary> AIが解放されてしまったか（キャラ状態から導出するため、リセット時も自動で整合する） </summary>
         public bool HasAIEscaped => allCharacters.Exists(c => c != null && c.IsAI && c.IsReleased);
 
-        /// <summary> クリア条件（AIを正しく判定し、かつAIを解放していない）を満たしているか </summary>
-        public bool IsGameCleared => confirmedAICharacter != null && confirmedAICharacter.IsAI && !HasAIEscaped;
+        /// <summary> 全員を判定（解放か AI確定）し終えたか。最終日はこれが true になるまで1日を終えられない </summary>
+        public bool AreAllJudged => allCharacters.TrueForAll(c => c == null || c.IsJudged);
         #endregion
 
         #region イベント
@@ -243,6 +240,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             OnNightPhaseStarted?.Invoke();
         }
 
+        /// <summary>
+        /// AI判定シートの判定: その日が判定日のキャラは、回避フラグがすべて ON でなければ AI になる
+        /// （1日を終えて翌日になるときに呼ぶ。一度 AI になったら戻らない）
+        /// </summary>
+        public void ApplyAIJudgements(int day)
+        {
+            if (scenarioDatabase == null) return;
+
+            foreach (ScenarioAIJudgement judgement in scenarioDatabase.aiJudgements)
+            {
+                if (judgement.day != day || Flags.AreAllOn(judgement.avoidFlags)) continue;
+
+                CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == judgement.characterId);
+                if (character != null && !character.IsAI)
+                {
+                    character.SetAIFlag(true);
+                    Debug.Log($"[GameManager] {day}日目の終わりに回避フラグがそろっていなかったため、{character.CharacterId} が AI になりました。");
+                }
+            }
+        }
+
         /// <summary> 現在の日を終了し、次の日（朝）へ移行する </summary>
         public void AdvanceToNextDay()
         {
@@ -261,6 +279,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 return;
             }
 
+            // 翌朝の状態を記録する前に判定し、「今日をやり直す」で戻らないようにする
+            ApplyAIJudgements(currentDay);
+
             currentDay = nextDay;
             StartNewDay();
         }
@@ -269,24 +290,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public bool IsFinalDay => currentDay >= maxDays;
 
         /// <summary>
-        /// 対象キャラを AI と判定できるか（最終日のみ・解放済みのキャラは不可。行動回数には関係しない）
+        /// 最終日の判定の結果（エンディングの分岐に使う）
+        /// AI を1人でも解放していれば「AIを解放した」、人間を AI確定していれば「人間をAI確定した」、それ以外は「全員正解」
         /// </summary>
-        public bool CanConfirmAI(CharacterInstance targetChar)
+        public EndingResult EvaluateFinalResult()
         {
-            return targetChar != null && !targetChar.IsReleased && IsFinalDay;
-        }
-
-        /// <summary>
-        /// 最終日に対象キャラを AI と判定する（行動回数は消費しない）
-        /// </summary>
-        /// <returns>判定を受け付けた場合 true（最終日以外・解放済みのキャラは不可）</returns>
-        public bool ConfirmAI(CharacterInstance targetChar)
-        {
-            if (!CanConfirmAI(targetChar)) return false;
-
-            confirmedAICharacter = targetChar;
-            Debug.Log($"[GameManager] {targetChar.CharacterId} を AI と判定しました。（正解: {targetChar.IsAI}）");
-            return true;
+            if (HasAIEscaped) return EndingResult.ReleasedAI;
+            if (allCharacters.Exists(c => c != null && c.IsConfirmedAI && !c.IsAI)) return EndingResult.ConfirmedHuman;
+            return EndingResult.AllCorrect;
         }
 
         /// <summary>
@@ -307,8 +318,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         private void FinishGame()
         {
-            string nextScene = IsGameCleared ? clearSceneName : gameOverSceneName;
-            Debug.Log($"<color=gold>全日程が終了しました。{(IsGameCleared ? "クリア" : "ゲームオーバー")}（{nextScene}）へ遷移します。</color>");
+            // エンディングシートでの分岐ができるまでは、AI を解放したらゲームオーバー、それ以外はクリア
+            EndingResult result = EvaluateFinalResult();
+            bool isGameOver = result == EndingResult.ReleasedAI;
+            string nextScene = isGameOver ? gameOverSceneName : clearSceneName;
+            Debug.Log($"<color=gold>全日程が終了しました。判定結果: {result}（{nextScene}）へ遷移します。</color>");
 
             if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene);
         }

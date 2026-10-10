@@ -66,8 +66,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         /// <summary>
         /// スマホの近くにお知らせを一定時間表示する（連続で呼ばれた場合は表示時間を延長）
+        /// 「今日はもう連絡ができない」「まだ判定していない人がいます」などに使う
         /// </summary>
-        public void ShowSmartphoneNotice(string message)
+        public void ShowNotice(string message)
         {
             if (smartphoneNoticeRoot == null) return;
 
@@ -107,16 +108,16 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// IDごとの解放状態を受け取り、ボタンの活性/非活性およびオーバーレイを表示（描画専用）
+        /// IDごとの「部屋に入れないか」（解放済み・判定済み）を受け取り、ボタンの活性/非活性およびオーバーレイを表示（描画専用）
         /// </summary>
-        public void UpdateRoomStatus(Dictionary<string, bool> releaseStatusMap)
+        public void UpdateRoomStatus(Dictionary<string, bool> closedRoomMap)
         {
             foreach (var binding in monitorRoomBindings)
             {
-                // 辞書から対象キャラの解放状態を取得（見つからなければ false）
-                bool isReleased = releaseStatusMap != null 
-                    && releaseStatusMap.TryGetValue(binding.characterId, out bool released) 
-                    && released;
+                // 辞書から対象キャラの状態を取得（見つからなければ入れる）
+                bool isReleased = closedRoomMap != null
+                    && closedRoomMap.TryGetValue(binding.characterId, out bool closed)
+                    && closed;
 
                 if (binding.roomButton != null)
                 {

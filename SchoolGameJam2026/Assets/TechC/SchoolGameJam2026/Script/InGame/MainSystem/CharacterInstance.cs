@@ -29,6 +29,9 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
         [Tooltip("このキャラクターが解放済みかどうか")]
         [SerializeField] private bool isReleased = false;
 
+        [Tooltip("最終日にプレイヤーが AI と判定（AI確定）したかどうか")]
+        [SerializeField] private bool isConfirmedAI = false;
+
         [Header("プロフィール解禁状態（ランタイム管理）")]
         [Tooltip("基礎情報（名前、年齢等）が解禁済みか")]
         [SerializeField] private bool isBasicInfoUnlocked = false;
@@ -52,6 +55,12 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
 
         /// <summary> 解放フラグ </summary>
         public bool IsReleased => isReleased;
+
+        /// <summary> 最終日にプレイヤーが AI と判定したか </summary>
+        public bool IsConfirmedAI => isConfirmedAI;
+
+        /// <summary> 解放か AI確定のどちらかで判定済みか（判定済みの人の部屋には入れない） </summary>
+        public bool IsJudged => isReleased || isConfirmedAI;
 
         /// <summary> 基礎情報が解禁済みか </summary>
         public bool IsBasicInfoUnlocked => isBasicInfoUnlocked;
@@ -109,6 +118,14 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
             isReleased = value;
         }
 
+        /// <summary>
+        /// AI確定（プレイヤーの判定）フラグを設定する
+        /// </summary>
+        public void SetConfirmedAIFlag(bool value)
+        {
+            isConfirmedAI = value;
+        }
+
         #endregion
 
         #region プロフィール解禁制御メソッド
@@ -155,6 +172,7 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
                 affection = currentAffection,
                 isReleased = isReleased,
                 isAI = isAI,
+                isConfirmedAI = isConfirmedAI,
                 isBasicInfoUnlocked = isBasicInfoUnlocked,
                 unlockedHistoryKeys = new List<string>(unlockedHistoryKeys),
             };
@@ -169,6 +187,7 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
             currentAffection = state.affection;
             isReleased = state.isReleased;
             isAI = state.isAI;
+            isConfirmedAI = state.isConfirmedAI;
             isBasicInfoUnlocked = state.isBasicInfoUnlocked;
             unlockedHistoryKeys = state.unlockedHistoryKeys != null ? new List<string>(state.unlockedHistoryKeys) : new List<string>();
         }

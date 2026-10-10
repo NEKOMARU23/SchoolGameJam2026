@@ -93,10 +93,19 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// 指定キャラに対して本日アクション可能か判定する
+        /// 解放・AI確定（最終日の判定）の行動か
+        /// </summary>
+        public static bool IsJudgementAction(InterrogationActionType actionType)
+        {
+            return actionType == InterrogationActionType.Release || actionType == InterrogationActionType.ConfirmAI;
+        }
+
+        /// <summary>
+        /// 指定キャラに対して本日その行動ができるか判定する
+        /// 最終日は判定（解放・AI確定）だけ、それ以外の日は取り調べ（拷問・対話・交渉・聞き取り）だけができる
         /// </summary>
         /// <param name="rejectReason">不可の場合にプレイヤーへ表示する理由</param>
-        public bool CanExecuteAction(CharacterInstance targetChar, out string rejectReason)
+        public bool CanExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, out string rejectReason)
         {
             if (targetChar == null)
             {
@@ -107,6 +116,24 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             if (targetChar.IsReleased)
             {
                 rejectReason = "（このキャラクターはすでに解放されているため、取り調べできません）";
+                return false;
+            }
+
+            if (targetChar.IsConfirmedAI)
+            {
+                rejectReason = "（このキャラクターはすでに AI と判定しています）";
+                return false;
+            }
+
+            bool isFinalDay = GameManager.Instance != null && GameManager.Instance.IsFinalDay;
+            if (isFinalDay && !IsJudgementAction(actionType))
+            {
+                rejectReason = "（最終日は取り調べできません。AI確定か解放で判定してください）";
+                return false;
+            }
+            if (!isFinalDay && IsJudgementAction(actionType))
+            {
+                rejectReason = "（解放と AI確定は最終日にだけできます）";
                 return false;
             }
 
@@ -127,16 +154,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// 取り調べアクションを実行する
+        /// 取り調べアクション（最終日は解放・AI確定）を実行する
         /// 条件シートから会話を選び、日別設定で正解を判定し、獲得フラグ・AI化を適用する
-        /// AI確定は行動回数を消費しないため <see cref="GetConfirmAIDialogue"/> を使う
         /// </summary>
         public ActionOutcome ExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, string hearingTargetId = "")
         {
             // 1. ガード節（事前チェック）
             if (targetChar == null) return ActionOutcome.FromText("");
 
-            if (!CanExecuteAction(targetChar, out string rejectReason))
+            if (!CanExecuteAction(targetChar, actionType, out string rejectReason))
             {
                 Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} へのアクションは実行できません: {rejectReason}");
                 return ActionOutcome.FromText(rejectReason);
@@ -173,7 +199,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             currentDailyActions++;
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
 
-            // 5. 解放は会話の選択・行動回数の計上が済んでから確定する
+            // 5. 判定（解放・AI確定）は会話の選択・行動回数の計上が済んでから確定する
             if (actionType == InterrogationActionType.Release)
             {
                 targetChar.SetReleaseFlag(true);
@@ -181,6 +207,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 {
                     Debug.LogWarning($"<color=red>【警告】AIである {targetChar.CharacterId} が解放されました。</color>");
                 }
+            }
+            else if (actionType == InterrogationActionType.ConfirmAI)
+            {
+                targetChar.SetConfirmedAIFlag(true);
+                Debug.Log($"[InterrogationManager] {targetChar.CharacterId} を AI と判定しました。（正解: {targetChar.IsAI}）");
             }
 
             // 6. 夜フェーズ移行チェック
@@ -192,25 +223,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
             ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
             return dialogue != null ? ActionOutcome.FromDialogue(dialogue) : ActionOutcome.FromText("「……」");
-        }
-
-        /// <summary>
-        /// AI確定時の会話を取得する（最終判定のため行動回数・当日の取り調べ済みに関係なく実行できる）
-        /// </summary>
-        public ActionOutcome GetConfirmAIDialogue(CharacterInstance targetChar)
-        {
-            GameManager game = GameManager.Instance;
-            ScenarioDatabase db = game != null ? game.Scenario : null;
-            if (targetChar == null || db == null) return ActionOutcome.FromText("");
-
-            int actionCount = GetCharacterActionCount(targetChar.CharacterId, InterrogationActionType.ConfirmAI);
-            ScenarioConditionRow row = ScenarioSelector.Select(
-                db.GetConditionRows(game.CurrentDay, targetChar.CharacterId, ScenarioAction.ConfirmAI),
-                game.CreateSelectorContext(targetChar, actionCount));
-            game.ApplyScenarioEffects(row);
-
-            ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
-            return dialogue != null ? ActionOutcome.FromDialogue(dialogue) : ActionOutcome.FromText("");
         }
 
         /// <summary>
@@ -227,6 +239,33 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 ids.Add(character.CharacterId);
             }
             return ids;
+        }
+
+        /// <summary>
+        /// プロフィール項目の解禁に必要なポイントと、今解禁できるかを調べる（確認ダイアログ用）
+        /// </summary>
+        /// <param name="cost">必要なポイント</param>
+        /// <param name="itemName">項目の名前（確認の文に使う）</param>
+        /// <returns>まだ解禁しておらず、ポイントが足りていれば true</returns>
+        public bool CanUnlockProfile(CharacterInstance targetChar, string itemKey, out int cost, out string itemName)
+        {
+            cost = 0;
+            itemName = "";
+            if (targetChar == null || targetChar.ProfileData == null || string.IsNullOrEmpty(itemKey)) return false;
+
+            if (itemKey.Equals(ProfileDataSO.BasicInfoKey, StringComparison.OrdinalIgnoreCase))
+            {
+                cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
+                itemName = "基礎情報";
+                return !targetChar.IsBasicInfoUnlocked && currentPoints >= cost;
+            }
+
+            ProfileItem item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
+            if (item == null) return false;
+
+            cost = item.unlockCost;
+            itemName = string.IsNullOrEmpty(item.itemName) ? "過去の情報" : item.itemName;
+            return !targetChar.IsHistoryUnlocked(itemKey) && currentPoints >= cost;
         }
 
         /// <summary>
@@ -279,7 +318,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 return;
             }
 
-            if (actionType == InterrogationActionType.Release || actionType == InterrogationActionType.ConfirmAI) return;
+            if (IsJudgementAction(actionType)) return;
 
             if (setting == null)
             {

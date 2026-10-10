@@ -57,6 +57,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.State
         public int affection;
         public bool isReleased;
         public bool isAI;
+        public bool isConfirmedAI;
         public bool isBasicInfoUnlocked;
         public List<string> unlockedHistoryKeys = new List<string>();
     }
