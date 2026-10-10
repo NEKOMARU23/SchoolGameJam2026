@@ -127,6 +127,46 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             Assert.AreEqual(0, GameManager.MorningSnapshot.smartphoneTalkCount, "翌日の朝の状態に前日の会話回数が残っています");
         }
 
+        [UnityTest]
+        public IEnumerator デバッグ用に指定した日の朝へ移動できる()
+        {
+            var controller = FindComponent<GameUIController>();
+            controller.SelectCharacter("A");
+            yield return null;
+            controller.ExecuteInterrogationAction((int)InterrogationActionType.Talk);
+            yield return SkipDialogue();
+            GameManager.Flags.TurnOn("info_移動前の情報");
+
+            Assert.IsTrue(GameManager.JumpToDay(5));
+            yield return null;
+
+            Assert.AreEqual(5, GameManager.CurrentDay);
+            Assert.AreEqual(0, InterrogationManager.CurrentDailyActions, "移動先の日の行動回数が 0 になっていません");
+            Assert.AreEqual(5, GameManager.MorningSnapshot.day, "移動先の日の朝の状態が記録されていません");
+            Assert.IsTrue(GameManager.Flags.IsOn("info_移動前の情報"), "移動前のフラグが消えています");
+            Assert.IsFalse(GameManager.JumpToDay(99), "存在しない日には移動できない");
+        }
+
+        [UnityTest]
+        public IEnumerator 状態をまとめて戻すと画面も描き直される()
+        {
+            Assert.IsTrue(FindButton("SelectRoomB_Button").interactable, "前提: B の部屋に入れる");
+
+            // 画面に知らせずに状態だけ変えてから、まとめて戻す（デバッグメニュー・ロードと同じ流れ）
+            GetCharacter("B").SetReleaseFlag(true);
+            GameManager.RestoreState(GameManager.CaptureState());
+            yield return null;
+
+            Assert.IsFalse(FindButton("SelectRoomB_Button").interactable, "解放したのにモニター画面が描き直されていません");
+        }
+
+        [Test]
+        public void デバッグメニューが起動時に用意されている()
+        {
+            Assert.IsNotNull(Object.FindAnyObjectByType<DebugTools.DebugMenu>(), "デバッグメニューが自動で作られていません");
+            Assert.IsFalse(DebugTools.DebugMenu.IsOpen, "最初から開いています");
+        }
+
         private static IEnumerator EndDayAndAdvance()
         {
             var controller = FindComponent<GameUIController>();
