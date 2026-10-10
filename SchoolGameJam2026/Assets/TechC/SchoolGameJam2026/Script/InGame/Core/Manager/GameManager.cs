@@ -4,24 +4,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
-    /// <summary>
-    /// バックアップ用のプロフィール解禁状態データ構造体
-    /// </summary>
-    public readonly struct ProfileUnlockStateBackup
-    {
-        public bool IsBasicUnlocked { get; }
-        public List<string> HistoryKeys { get; }
-
-        public ProfileUnlockStateBackup(bool isBasicUnlocked, List<string> historyKeys)
-        {
-            IsBasicUnlocked = isBasicUnlocked;
-            HistoryKeys = historyKeys != null ? new List<string>(historyKeys) : new List<string>();
-        }
-    }
-
     /// <summary>
     /// ゲーム全体の進行管理、日数、および「その日の朝に戻す」リセット機能を管理するマネージャー (Singleton)
     /// </summary>
@@ -39,41 +26,40 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [Header("キャラクター一覧 (A, B, C, D)")]
         [SerializeField] private List<CharacterInstance> allCharacters = new List<CharacterInstance>();
 
-        [Header("日別のシナリオデータリスト (Day1, Day2, ...)")]
-        [SerializeField] private List<DayScenarioSO> dayScenarios = new List<DayScenarioSO>();
+        [Header("シナリオ（Excel から取り込んだデータ。Tools ＞ シナリオExcelを取り込む で作る）")]
+        [SerializeField] private ScenarioDatabase scenarioDatabase;
 
         [Header("エンディング遷移先")]
         [SerializeField] private string clearSceneName = "ClearScene";
         [SerializeField] private string gameOverSceneName = "GameOverScene";
 
-        // 最終日に AI と判定したキャラ（未判定なら null）
-        private CharacterInstance confirmedAICharacter;
-
-        #region リセット用バックアップデータ
-        private int backupPoints;
-        private int backupDailyActions;
-        private List<string> backupInterrogatedCharacterIds = new List<string>();
-        private Dictionary<string, Dictionary<InterrogationActionType, int>> backupActionCounts = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
-        private readonly Dictionary<string, int> backupAffections = new Dictionary<string, int>();
-        private readonly Dictionary<string, bool> backupReleased = new Dictionary<string, bool>();
-        private readonly Dictionary<string, ProfileUnlockStateBackup> backupProfileStates = new Dictionary<string, ProfileUnlockStateBackup>();
-        #endregion
+        // その日の朝の状態（「今日をやり直す」で戻す先）
+        private GameStateSnapshot morningSnapshot;
 
         #region プロパティ
         public int CurrentDay => currentDay;
         public int MaxDays => maxDays;
         public List<CharacterInstance> AllCharacters => allCharacters;
 
+        /// <summary> キーアイテム・情報・進行フラグ（名前付きの ON / OFF） </summary>
+        public FlagStore Flags { get; } = new FlagStore();
+
+        /// <summary> その日の朝の状態のコピー（セーブで一緒に保存する） </summary>
+        public GameStateSnapshot MorningSnapshot => morningSnapshot != null ? CloneSnapshot(morningSnapshot) : null;
+
         /// <summary> AIが解放されてしまったか（キャラ状態から導出するため、リセット時も自動で整合する） </summary>
         public bool HasAIEscaped => allCharacters.Exists(c => c != null && c.IsAI && c.IsReleased);
 
-        /// <summary> クリア条件（AIを正しく判定し、かつAIを解放していない）を満たしているか </summary>
-        public bool IsGameCleared => confirmedAICharacter != null && confirmedAICharacter.IsAI && !HasAIEscaped;
+        /// <summary> 全員を判定（解放か AI確定）し終えたか。最終日はこれが true になるまで1日を終えられない </summary>
+        public bool AreAllJudged => allCharacters.TrueForAll(c => c == null || c.IsJudged);
         #endregion
 
         #region イベント
         public event Action<int> OnDayStarted;
         public event Action OnDayReset;
+
+        /// <summary> 状態をまとめて戻したとき（リセット・ロード・デバッグ）に通知。画面の更新に使う </summary>
+        public event Action OnStateRestored;
         public event Action OnNightPhaseStarted;
         #endregion
 
@@ -95,10 +81,48 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             StartNewDay();
         }
 
-        /// <summary> 今日のシナリオデータ(DayScenarioSO)を取得する </summary>
-        public DayScenarioSO GetTodayScenario()
+        /// <summary> シナリオのデータ（会話・条件・日別設定・フラグ一覧など） </summary>
+        public ScenarioDatabase Scenario => scenarioDatabase;
+
+        /// <summary>
+        /// 条件シートの判定に使う、今の状態をまとめる
+        /// </summary>
+        /// <param name="partner">会話の相手（スマホのときは null）</param>
+        /// <param name="actionCount">この行動をこのキャラにした通算回数（今回の分は含まない）</param>
+        public ScenarioSelector.Context CreateSelectorContext(CharacterInstance partner, int actionCount)
         {
-            return dayScenarios.Find(s => s != null && s.dayNumber == currentDay);
+            return new ScenarioSelector.Context
+            {
+                SelfAffection = partner != null ? partner.CurrentAffection : 0,
+                AffectionOf = id => allCharacters.Find(c => c != null && c.CharacterId == id)?.CurrentAffection ?? 0,
+                ActionCount = actionCount,
+                Flags = Flags,
+            };
+        }
+
+        /// <summary>
+        /// 会話を聞いたときの効果を適用する（獲得フラグを ON、AI化のキャラを AI にする）
+        /// </summary>
+        public void ApplyScenarioEffects(ScenarioConditionRow row)
+        {
+            if (row == null) return;
+
+            foreach (string flag in row.gainFlags) Flags.TurnOn(flag);
+
+            foreach (string id in row.aiTargets)
+            {
+                CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == id);
+                if (character != null && !character.IsAI)
+                {
+                    character.SetAIFlag(true);
+                    Debug.Log($"[GameManager] 会話（{row.dialogueId}）により {id} が AI になりました。");
+                }
+            }
+        }
+
+        private bool HasScenarioForDay(int day)
+        {
+            return scenarioDatabase != null && scenarioDatabase.HasDay(day);
         }
 
         /// <summary> 全キャラクターの好感度を辞書で取得する </summary>
@@ -120,86 +144,121 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             Debug.Log($"<color=cyan>=== {currentDay} 日目の朝が始まりました ===</color>");
 
+            // その日だけの状態（行動回数・スマホの会話回数など）を朝の状態にしてから、朝の状態を記録する
             InterrogationManager.Instance?.ResetDailyActions(0);
-
-            // 朝の時点の状態をバックアップ保存
-            SaveDayBackup();
+            SmartphoneTalkManager.Instance?.ResetForNewDay();
+            morningSnapshot = CaptureState();
 
             OnDayStarted?.Invoke(currentDay);
         }
 
-        /// <summary> 「今日を最初からやり直す」リセット機能 </summary>
+        /// <summary>
+        /// 「今日を最初からやり直す」: その日に行われたすべての行為を取り消し、朝の状態に戻す
+        /// </summary>
         public void ResetCurrentDay()
         {
+            if (morningSnapshot == null) return;
+
             Debug.Log($"<color=yellow>⚠️ {currentDay} 日目の朝の状態にリセットします。</color>");
-
-            // 1. ポイント・行動回数の復元
-            if (InterrogationManager.Instance != null)
-            {
-                InterrogationManager.Instance.SetPoints(backupPoints);
-                InterrogationManager.Instance.ResetDailyActions(backupDailyActions);
-                InterrogationManager.Instance.RestoreInterrogatedCharacterIdsToday(backupInterrogatedCharacterIds);
-                InterrogationManager.Instance.RestoreCharacterActionCounts(backupActionCounts);
-            }
-
-            // 2. キャラクター状態（好感度・解放状態・プロフィール）の復元
-            foreach (var character in allCharacters)
-            {
-                if (character == null || string.IsNullOrEmpty(character.CharacterId)) continue;
-
-                if (backupAffections.TryGetValue(character.CharacterId, out int restoredAffection))
-                {
-                    character.SetAffection(restoredAffection);
-                }
-
-                if (backupReleased.TryGetValue(character.CharacterId, out bool restoredReleased))
-                {
-                    character.SetReleaseFlag(restoredReleased);
-                }
-
-                if (backupProfileStates.TryGetValue(character.CharacterId, out var backupState))
-                {
-                    character.RestoreUnlockStates(backupState.IsBasicUnlocked, backupState.HistoryKeys);
-                }
-            }
-
+            RestoreState(morningSnapshot);
             OnDayReset?.Invoke();
         }
 
-        /// <summary> 朝の時点の状態を一時記憶する </summary>
-        private void SaveDayBackup()
-        {
-            if (InterrogationManager.Instance != null)
-            {
-                backupPoints = InterrogationManager.Instance.CurrentPoints;
-                backupDailyActions = InterrogationManager.Instance.CurrentDailyActions;
-                backupInterrogatedCharacterIds = InterrogationManager.Instance.GetInterrogatedCharacterIdsToday();
-                backupActionCounts = InterrogationManager.Instance.GetCharacterActionCounts();
-            }
+        #region 状態の書き出し・復元（今日をやり直す・セーブ・ロード用）
 
-            backupAffections.Clear();
-            backupReleased.Clear();
-            backupProfileStates.Clear();
+        /// <summary>
+        /// 今のゲームの状態をまとめて書き出す
+        /// 新しい状態を追加したら、ここと RestoreState の両方に追加する
+        /// </summary>
+        public GameStateSnapshot CaptureState()
+        {
+            var snapshot = new GameStateSnapshot { day = currentDay };
+
+            InterrogationManager.Instance?.CaptureState(snapshot);
+            SmartphoneTalkManager.Instance?.CaptureState(snapshot);
 
             foreach (var character in allCharacters)
             {
                 if (character == null || string.IsNullOrEmpty(character.CharacterId)) continue;
-
-                // 好感度・解放状態バックアップ
-                backupAffections[character.CharacterId] = character.CurrentAffection;
-                backupReleased[character.CharacterId] = character.IsReleased;
-
-                // プロフィール状態バックアップ
-                var (basicUnlocked, historyKeys) = character.GetUnlockStates();
-                backupProfileStates[character.CharacterId] = new ProfileUnlockStateBackup(basicUnlocked, historyKeys);
+                snapshot.characters.Add(character.CaptureState());
             }
+
+            snapshot.flags = Flags.ToList();
+            return snapshot;
         }
+
+        /// <summary>
+        /// 書き出した状態にまとめて戻す（日数も戻る）
+        /// </summary>
+        public void RestoreState(GameStateSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+
+            currentDay = snapshot.day;
+            InterrogationManager.Instance?.RestoreState(snapshot);
+            SmartphoneTalkManager.Instance?.RestoreState(snapshot);
+
+            foreach (var state in snapshot.characters)
+            {
+                CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == state.characterId);
+                if (character != null) character.RestoreState(state);
+            }
+
+            Flags.RestoreFrom(snapshot.flags);
+            OnStateRestored?.Invoke();
+        }
+
+        /// <summary>
+        /// 【デバッグ用】指定した日の朝から始め直す（ポイント・好感度・フラグなどは今のまま）
+        /// </summary>
+        /// <returns>移動できた場合 true（範囲外・シナリオがない日は false）</returns>
+        public bool JumpToDay(int day)
+        {
+            if (day < 1 || day > maxDays) return false;
+            if (!HasScenarioForDay(day))
+            {
+                Debug.LogWarning($"Day {day} のシナリオが見つからないため移動できません。");
+                return false;
+            }
+
+            currentDay = day;
+            StartNewDay();
+            return true;
+        }
+
+        private static GameStateSnapshot CloneSnapshot(GameStateSnapshot source)
+        {
+            return JsonUtility.FromJson<GameStateSnapshot>(JsonUtility.ToJson(source));
+        }
+
+        #endregion
 
         /// <summary> 夜フェーズ（1日の行動終了後）への移行処理 </summary>
         public void TransitionToNightPhase()
         {
             Debug.Log("<color=purple>--- 1日の取り調べが終了しました。夜フェーズへ移行します ---</color>");
             OnNightPhaseStarted?.Invoke();
+        }
+
+        /// <summary>
+        /// AI判定シートの判定: その日が判定日のキャラは、回避フラグがすべて ON でなければ AI になる
+        /// （1日を終えて翌日になるときに呼ぶ。一度 AI になったら戻らない）
+        /// </summary>
+        public void ApplyAIJudgements(int day)
+        {
+            if (scenarioDatabase == null) return;
+
+            foreach (ScenarioAIJudgement judgement in scenarioDatabase.aiJudgements)
+            {
+                if (judgement.day != day || Flags.AreAllOn(judgement.avoidFlags)) continue;
+
+                CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == judgement.characterId);
+                if (character != null && !character.IsAI)
+                {
+                    character.SetAIFlag(true);
+                    Debug.Log($"[GameManager] {day}日目の終わりに回避フラグがそろっていなかったため、{character.CharacterId} が AI になりました。");
+                }
+            }
         }
 
         /// <summary> 現在の日を終了し、次の日（朝）へ移行する </summary>
@@ -214,11 +273,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             // 日付を進める前に確認し、シナリオ欠落時に行動回数が未リセットのまま進むのを防ぐ
-            if (dayScenarios.Find(s => s != null && s.dayNumber == nextDay) == null)
+            if (!HasScenarioForDay(nextDay))
             {
                 Debug.LogError($"Day {nextDay} のシナリオが見つかりません。");
                 return;
             }
+
+            // 翌朝の状態を記録する前に判定し、「今日をやり直す」で戻らないようにする
+            ApplyAIJudgements(currentDay);
 
             currentDay = nextDay;
             StartNewDay();
@@ -228,24 +290,14 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public bool IsFinalDay => currentDay >= maxDays;
 
         /// <summary>
-        /// 対象キャラを AI と判定できるか（最終日のみ・解放済みのキャラは不可。行動回数には関係しない）
+        /// 最終日の判定の結果（エンディングの分岐に使う）
+        /// AI を1人でも解放していれば「AIを解放した」、人間を AI確定していれば「人間をAI確定した」、それ以外は「全員正解」
         /// </summary>
-        public bool CanConfirmAI(CharacterInstance targetChar)
+        public EndingResult EvaluateFinalResult()
         {
-            return targetChar != null && !targetChar.IsReleased && IsFinalDay;
-        }
-
-        /// <summary>
-        /// 最終日に対象キャラを AI と判定する（行動回数は消費しない）
-        /// </summary>
-        /// <returns>判定を受け付けた場合 true（最終日以外・解放済みのキャラは不可）</returns>
-        public bool ConfirmAI(CharacterInstance targetChar)
-        {
-            if (!CanConfirmAI(targetChar)) return false;
-
-            confirmedAICharacter = targetChar;
-            Debug.Log($"[GameManager] {targetChar.CharacterId} を AI と判定しました。（正解: {targetChar.IsAI}）");
-            return true;
+            if (HasAIEscaped) return EndingResult.ReleasedAI;
+            if (allCharacters.Exists(c => c != null && c.IsConfirmedAI && !c.IsAI)) return EndingResult.ConfirmedHuman;
+            return EndingResult.AllCorrect;
         }
 
         /// <summary>
@@ -266,8 +318,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         private void FinishGame()
         {
-            string nextScene = IsGameCleared ? clearSceneName : gameOverSceneName;
-            Debug.Log($"<color=gold>全日程が終了しました。{(IsGameCleared ? "クリア" : "ゲームオーバー")}（{nextScene}）へ遷移します。</color>");
+            // エンディングシートでの分岐ができるまでは、AI を解放したらゲームオーバー、それ以外はクリア
+            EndingResult result = EvaluateFinalResult();
+            bool isGameOver = result == EndingResult.ReleasedAI;
+            string nextScene = isGameOver ? gameOverSceneName : clearSceneName;
+            Debug.Log($"<color=gold>全日程が終了しました。判定結果: {result}（{nextScene}）へ遷移します。</color>");
 
             if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene);
         }

@@ -52,6 +52,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         /// <summary>会話ウィンドウが閉じられたとき（最後のページを読み終えた・閉じるボタン）に通知します。</summary>
         public event Action OnClosed;
 
+        /// <summary>ページを表示したときに通知します（引数は0始まりのページ番号）。</summary>
+        public event Action<int> OnPageShown;
+
         private void Reset()
         {
             // SpriteRendererを使うワールドオブジェクトだけ、クリック判定用Colliderを補います。
@@ -104,6 +107,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
                 return;
             }
 
+            // オプション画面を操作している間は、後ろの会話を進めない
+            if (OptionUI.IsOpen)
+            {
+                return;
+            }
+
             Vector2 pointerPosition = Mouse.current.position.ReadValue();
 
             // 会話中は、閉じるボタン以外の画面クリックですべてページを進めます。
@@ -142,6 +151,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
             {
                 OpenDialogue();
             }
+        }
+
+        /// <summary>1文字の表示間隔（秒）を変えます（オプションの「文字の速さ」）。</summary>
+        public void SetCharacterDisplayInterval(float seconds)
+        {
+            characterDisplayInterval = Mathf.Max(0f, seconds);
         }
 
         /// <summary>外部の日数管理から、日付が変わったときに呼び出します。</summary>
@@ -213,18 +228,30 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         private void ShowContent(DayDialogue dayDialogue, int displayClickCount)
         {
             DialogueContent content = dayDialogue.GetContent(displayClickCount);
+            ShowPages(content?.CreatePages(), content?.ImageOverride, displayClickCount);
+        }
 
+        /// <summary>
+        /// 外部から渡したページ（Excel の会話など）で会話を開きます。
+        /// </summary>
+        /// <param name="pageTexts">1ページずつの文</param>
+        /// <param name="imageOverride">表示する画像（null なら共通画像）</param>
+        public void OpenDialogueWithPages(IReadOnlyList<string> pageTexts, Sprite imageOverride = null)
+        {
+            lastInteractionFrame = Time.frameCount;
+            ShowPages(pageTexts != null ? new List<string>(pageTexts) : null, imageOverride, 0);
+        }
+
+        private void ShowPages(List<string> pages, Sprite imageOverride, int displayClickCount)
+        {
             activePages.Clear();
-            activePages.AddRange(content?.CreatePages() ?? new List<string> { string.Empty });
+            activePages.AddRange(pages != null && pages.Count > 0 ? pages : new List<string> { string.Empty });
             activePageIndex = 0;
             activeDisplayClickCount = displayClickCount;
 
             if (dialogueImage != null)
             {
-                Sprite image = content?.ImageOverride != null
-                    ? content.ImageOverride
-                    : ResolveDefaultImage();
-
+                Sprite image = imageOverride != null ? imageOverride : ResolveDefaultImage();
                 dialogueImage.sprite = image;
                 dialogueImage.enabled = image != null;
             }
@@ -330,6 +357,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
                 dayAndClickText.text =
                     $"{currentDay}日目・{activeDisplayClickCount}回目・{activePageIndex + 1}/{activePages.Count}";
             }
+
+            OnPageShown?.Invoke(activePageIndex);
         }
 
         private void StartTyping(string fullText)

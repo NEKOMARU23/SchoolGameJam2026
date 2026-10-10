@@ -82,34 +82,40 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary>
         /// 取調室のボタンの表示・押下可否を更新
         /// </summary>
-        /// <param name="canAct">拷問・対話・交渉・聞き取り・解放のボタンを押せるか</param>
-        /// <param name="showConfirmAI">AI確定ボタンを表示するか</param>
-        /// <param name="canConfirmAI">AI確定ボタンを押せるか</param>
-        public void UpdateActionButtons(bool canAct, bool showConfirmAI, bool canConfirmAI)
+        /// <param name="showInterrogation">拷問・対話・交渉・聞き取りのボタンを表示するか</param>
+        /// <param name="canInterrogate">拷問・対話・交渉・聞き取りのボタンを押せるか</param>
+        /// <param name="showJudgement">解放・AI確定のボタンを表示するか</param>
+        /// <param name="canJudge">解放・AI確定のボタンを押せるか</param>
+        public void UpdateActionButtons(bool showInterrogation, bool canInterrogate, bool showJudgement, bool canJudge)
         {
             if (interrogationButtons != null)
             {
                 foreach (var btn in interrogationButtons)
                 {
-                    if (btn != null) btn.interactable = canAct;
+                    if (btn == null) continue;
+                    btn.gameObject.SetActive(showInterrogation);
+                    btn.interactable = canInterrogate;
                 }
             }
 
             if (releaseButton != null)
             {
-                releaseButton.interactable = canAct;
+                releaseButton.gameObject.SetActive(showJudgement);
+                releaseButton.interactable = canJudge;
             }
 
             if (confirmAiButtonObject != null)
             {
-                confirmAiButtonObject.SetActive(showConfirmAI);
+                confirmAiButtonObject.SetActive(showJudgement);
 
                 Button confirmBtn = confirmAiButtonObject.GetComponent<Button>();
                 if (confirmBtn != null)
                 {
-                    confirmBtn.interactable = canConfirmAI;
+                    confirmBtn.interactable = canJudge;
                 }
             }
+
+            if (!showInterrogation) CloseHearingPanel();
         }
 
         #endregion

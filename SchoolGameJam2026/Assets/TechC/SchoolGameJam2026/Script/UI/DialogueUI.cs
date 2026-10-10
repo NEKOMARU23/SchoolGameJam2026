@@ -30,6 +30,19 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private readonly Queue<DialoguePage> pages = new Queue<DialoguePage>();
         private string currentSpeakerName = "";
+
+        // 素材を名前から探す処理（GameUIController から渡される）
+        private Func<string, Sprite> findCharacterSprite;
+        private Action<string> playSe;
+
+        /// <summary>
+        /// 立ち絵の画像と SE を名前から探す処理を設定する
+        /// </summary>
+        public void SetAssetResolvers(Func<string, Sprite> characterSpriteFinder, Action<string> sePlayer)
+        {
+            findCharacterSprite = characterSpriteFinder;
+            playSe = sePlayer;
+        }
         private Coroutine typingCoroutine;
         private bool isTyping = false;
 
@@ -38,13 +51,22 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         public void StartDialogueSequence(string speakerName, string rawText)
         {
+            StartDialogue(speakerName, DialogueTextFormat.Parse(rawText));
+        }
+
+        /// <summary>
+        /// ページの一覧（Excel の会話など）の再生を開始
+        /// </summary>
+        /// <param name="speakerName">話者の指定がないページで表示する名前（会話の相手）</param>
+        public void StartDialogue(string speakerName, IReadOnlyList<DialoguePage> dialoguePages)
+        {
             StopTyping();
             pages.Clear();
             currentSpeakerName = speakerName;
 
-            foreach (DialoguePage page in DialogueTextFormat.Parse(rawText))
+            if (dialoguePages != null)
             {
-                pages.Enqueue(page);
+                foreach (DialoguePage page in dialoguePages) pages.Enqueue(page);
             }
 
             if (pages.Count == 0)
@@ -59,7 +81,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 var sb = new StringBuilder();
                 while (pages.Count > 0)
                 {
-                    string body = ApplyPage(pages.Dequeue());
+                    string body = ApplyPage(pages.Dequeue(), playSound: false);
                     if (sb.Length > 0) sb.Append('\n');
                     sb.Append(body);
                 }
@@ -74,6 +96,14 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             IsDialoguePlaying = true;
             ShowNextPage();
+        }
+
+        /// <summary>
+        /// 1文字を表示する間隔（秒）を変える（オプションの「文字の速さ」）
+        /// </summary>
+        public void SetTextSpeed(float secondsPerCharacter)
+        {
+            textSpeed = Mathf.Max(0f, secondsPerCharacter);
         }
 
         /// <summary>
@@ -150,17 +180,33 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary>
         /// ページの演出指定（話者名・立ち絵）を画面に反映し、本文を返す
         /// </summary>
-        private string ApplyPage(DialoguePage page)
+        private string ApplyPage(DialoguePage page, bool playSound = true)
         {
             if (speakerNameText != null)
             {
-                speakerNameText.text = page.IsSystem ? "" : currentSpeakerName;
+                speakerNameText.text = page.IsSystem ? "" : (string.IsNullOrEmpty(page.Speaker) ? currentSpeakerName : page.Speaker);
             }
 
             if (characterIllustration != null && page.ImageKey != null)
             {
-                characterIllustration.gameObject.SetActive(!page.HidesImage);
+                if (page.HidesImage)
+                {
+                    characterIllustration.gameObject.SetActive(false);
+                }
+                else if (page.ShowsImage)
+                {
+                    characterIllustration.gameObject.SetActive(true);
+                }
+                else
+                {
+                    // 名前で指定された立ち絵に差し替える（素材がまだない場合は今の立ち絵のまま）
+                    Sprite sprite = findCharacterSprite?.Invoke(page.ImageKey);
+                    if (sprite != null) characterIllustration.sprite = sprite;
+                    characterIllustration.gameObject.SetActive(true);
+                }
             }
+
+            if (playSound && !string.IsNullOrEmpty(page.Se)) playSe?.Invoke(page.Se);
 
             return page.Body;
         }

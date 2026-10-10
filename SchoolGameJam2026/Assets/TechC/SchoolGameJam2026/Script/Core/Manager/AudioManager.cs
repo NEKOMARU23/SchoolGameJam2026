@@ -116,6 +116,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             seSource.PlayOneShot(seClips[index]);
         }
 
+        /// <summary>
+        /// 指定した音を SE として鳴らす（Excel の本文シートの SE 列など、名前から探した音を鳴らすとき）
+        /// </summary>
+        public void PlaySE(AudioClip clip)
+        {
+            if (seSource == null || clip == null) return;
+            seSource.PlayOneShot(clip);
+        }
+
         public void SetBGMVolume(float volume)
         {
             if (bgmSource != null)

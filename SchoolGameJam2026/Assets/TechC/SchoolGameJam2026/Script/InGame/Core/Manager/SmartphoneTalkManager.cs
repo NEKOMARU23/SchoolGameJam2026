@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
@@ -24,67 +26,61 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             Instance = this;
         }
 
-        private void Start()
-        {
-            // GameManager の Awake 完了後に購読する
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnDayStarted += HandleDayStarted;
-                GameManager.Instance.OnDayReset += ResetTalkCount;
-            }
-        }
-
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnDayStarted -= HandleDayStarted;
-                GameManager.Instance.OnDayReset -= ResetTalkCount;
-            }
-
             if (Instance == this) Instance = null;
         }
 
         /// <summary>
-        /// 今日まだ会話できるか
+        /// Excel の条件シート（行動「スマホ」）から次の会話を選び、会話を1回分消費する
+        /// その日に聞ける回数は、書かれた「回目」の最大の数
         /// </summary>
-        /// <param name="dailyLimit">その日に聞ける回数（用意されたセリフの数）</param>
-        public bool CanTalk(int dailyLimit)
+        /// <returns>会話を始められた場合 true。回数を使い切った・次の会話の条件を満たさない場合は false（回数は使わない）</returns>
+        public bool TryStartTalk(out ScenarioDialogue dialogue)
         {
-            return talkCountToday < dailyLimit;
-        }
+            dialogue = null;
+            GameManager game = GameManager.Instance;
+            ScenarioDatabase db = game != null ? game.Scenario : null;
+            if (db == null) return false;
 
-        /// <summary>
-        /// 会話を1回分消費する
-        /// </summary>
-        /// <param name="dailyLimit">その日に聞ける回数（用意されたセリフの数）</param>
-        /// <param name="talkNumber">今日何回目の会話か（1〜）</param>
-        /// <returns>回数が残っていて会話を始められた場合 true</returns>
-        public bool TryStartTalk(int dailyLimit, out int talkNumber)
-        {
-            if (!CanTalk(dailyLimit))
-            {
-                talkNumber = 0;
-                return false;
-            }
+            int day = game.CurrentDay;
+            int talkNumber = talkCountToday + 1;
+            if (talkNumber > db.GetSmartphoneTalkCount(day)) return false;
 
-            talkCountToday++;
-            talkNumber = talkCountToday;
-            OnTalkCountChanged?.Invoke(talkCountToday);
+            ScenarioConditionRow row = ScenarioSelector.Select(
+                db.GetConditionRows(day, "", ScenarioAction.Smartphone, "", talkNumber),
+                game.CreateSelectorContext(null, 0));
+            if (row == null) return false;
+
+            dialogue = db.FindDialogue(row.dialogueId);
+            game.ApplyScenarioEffects(row);
+            SetTalkCount(talkNumber);
             return true;
         }
 
-        private void HandleDayStarted(int day)
+        /// <summary>
+        /// 新しい日の朝に会話回数を0に戻す（GameManager が朝の状態を記録する前に呼ぶ）
+        /// </summary>
+        public void ResetForNewDay()
         {
-            ResetTalkCount();
+            SetTalkCount(0);
         }
 
-        /// <summary>
-        /// 会話回数を0に戻す（翌日・その日のリセット時。朝の時点では常に0回のため）
-        /// </summary>
-        private void ResetTalkCount()
+        /// <summary> 会話回数をスナップショットに書き出す </summary>
+        public void CaptureState(GameStateSnapshot snapshot)
         {
-            talkCountToday = 0;
+            snapshot.smartphoneTalkCount = talkCountToday;
+        }
+
+        /// <summary> スナップショットの会話回数に戻す（今日をやり直す・ロード用） </summary>
+        public void RestoreState(GameStateSnapshot snapshot)
+        {
+            SetTalkCount(snapshot.smartphoneTalkCount);
+        }
+
+        private void SetTalkCount(int count)
+        {
+            talkCountToday = Mathf.Max(0, count);
             OnTalkCountChanged?.Invoke(talkCountToday);
         }
     }
