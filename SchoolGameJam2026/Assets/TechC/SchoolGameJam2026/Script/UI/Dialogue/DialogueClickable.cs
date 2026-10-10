@@ -49,6 +49,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         public int CurrentDay => currentDay;
         public bool IsOpen { get; private set; }
 
+        /// <summary>会話ウィンドウが閉じられたとき（最後のページを読み終えた・閉じるボタン）に通知します。</summary>
+        public event Action OnClosed;
+
         private void Reset()
         {
             // SpriteRendererを使うワールドオブジェクトだけ、クリック判定用Colliderを補います。
@@ -63,6 +66,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         private void Awake()
         {
             ResolveCloseButton();
+            if (closeButton != null)
+            {
+                closeButton.onClick.AddListener(CloseDialogue);
+            }
 
             if (hideWindowsOnAwake)
             {
@@ -174,6 +181,37 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
 
             // 設定数を超えたクリックでは、その日の最後の内容を繰り返します。
             int displayClickCount = Mathf.Min(rawClickCount, dayDialogue.ClickCount);
+            ShowContent(dayDialogue, displayClickCount);
+        }
+
+        /// <summary>
+        /// 日数と「その日の何回目の会話か」を外部から指定して会話を開きます。
+        /// 回数の管理は呼び出し側で行い、このクラスのクリック回数は使いません。
+        /// </summary>
+        public void OpenDialogueForTalk(int day, int talkNumber)
+        {
+            lastInteractionFrame = Time.frameCount;
+            SetCurrentDay(day);
+
+            DayDialogue dayDialogue = GetDayDialogue(currentDay);
+            if (dayDialogue == null || dayDialogue.ClickCount == 0)
+            {
+                Debug.LogWarning($"{name}: {currentDay}日目のセリフが設定されていません。", this);
+                return;
+            }
+
+            ShowContent(dayDialogue, Mathf.Clamp(talkNumber, MinimumClickCount, dayDialogue.ClickCount));
+        }
+
+        /// <summary>指定した日に用意されている会話の数（その日に聞ける回数）を返します。</summary>
+        public int GetTalkCountForDay(int day)
+        {
+            DayDialogue dayDialogue = GetDayDialogue(Mathf.Max(day, MinimumDay));
+            return dayDialogue?.ClickCount ?? 0;
+        }
+
+        private void ShowContent(DayDialogue dayDialogue, int displayClickCount)
+        {
             DialogueContent content = dayDialogue.GetContent(displayClickCount);
 
             activePages.Clear();
@@ -227,6 +265,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         /// <summary>閉じるボタンのOnClickから呼び出します。</summary>
         public void CloseDialogue()
         {
+            bool wasOpen = IsOpen;
+
             StopTyping();
             SetWindowActive(imageWindow, false);
             SetWindowActive(textWindow, false);
@@ -234,6 +274,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
             activePages.Clear();
             activePageIndex = -1;
             activeDisplayClickCount = 0;
+
+            if (wasOpen)
+            {
+                OnClosed?.Invoke();
+            }
         }
 
         public void ResetCurrentDayClickCount()

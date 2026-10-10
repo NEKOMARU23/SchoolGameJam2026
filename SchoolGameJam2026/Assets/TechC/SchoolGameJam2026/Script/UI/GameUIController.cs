@@ -7,6 +7,7 @@ using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using TechC.SchoolGameJam2026.Scripts.SO;
+using TechC.SchoolGameJam2026.Scripts.UI.Dialogue;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -22,6 +23,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private LogUI logUI;
         [SerializeField] private StatusHeaderUI statusHeaderUI;
         [SerializeField] private DayTransitionUI dayTransitionUI;
+        [SerializeField] private DialogueClickable smartphoneTalk;   // スマホ（補助ちゃんとの会話）
+
+        private const string SmartphoneNoTalkMessage = "今日はもう連絡ができない";
 
         // 画面上の選択状態（ゲームの状態は各 Manager が持つ）
         private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
@@ -33,6 +37,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private static GameManager GameManagerInstance => GameManager.Instance != null ? GameManager.Instance : null;
         private static InterrogationManager InterrogationInstance => InterrogationManager.Instance != null ? InterrogationManager.Instance : null;
+        private static SmartphoneTalkManager SmartphoneInstance => SmartphoneTalkManager.Instance != null ? SmartphoneTalkManager.Instance : null;
 
         private void Start()
         {
@@ -76,6 +81,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 dialogueUI.OnDialogueFinished += UpdateInterrogationState;
             }
+
+            if (smartphoneTalk != null)
+            {
+                smartphoneTalk.OnClosed += HandleSmartphoneTalkClosed;
+            }
         }
 
         private void Unsubscribe()
@@ -95,6 +105,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (dialogueUI != null)
             {
                 dialogueUI.OnDialogueFinished -= UpdateInterrogationState;
+            }
+
+            if (smartphoneTalk != null)
+            {
+                smartphoneTalk.OnClosed -= HandleSmartphoneTalkClosed;
             }
         }
 
@@ -251,6 +266,33 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public void TryUnlockProfileItemForViewingCharacter(string itemKey)
         {
             TryUnlockProfileItemForCharacter(currentProfileCharacterId, itemKey);
+        }
+
+        /// <summary>
+        /// スマホ（補助ちゃん）との会話を開く。今日の回数が残っていなければ何もしない
+        /// </summary>
+        public void OpenSmartphoneTalk()
+        {
+            if (smartphoneTalk == null || SmartphoneInstance == null || GameManagerInstance == null) return;
+
+            int day = GameManagerInstance.CurrentDay;
+            if (!SmartphoneInstance.TryStartTalk(smartphoneTalk.GetTalkCountForDay(day), out int talkNumber))
+            {
+                // 今日の回数を使い切っている場合は会話画面を開かずにお知らせだけ出す
+                if (monitorUI != null) monitorUI.ShowSmartphoneNotice(SmartphoneNoTalkMessage);
+                return;
+            }
+
+            if (navigationUI != null) navigationUI.ShowSmartphoneTalkPanel();
+            smartphoneTalk.OpenDialogueForTalk(day, talkNumber);
+        }
+
+        /// <summary>
+        /// スマホの会話が終わったら元の画面（モニター）に戻る
+        /// </summary>
+        private void HandleSmartphoneTalkClosed()
+        {
+            if (navigationUI != null) navigationUI.BackToPreviousPanel();
         }
 
         /// <summary>
