@@ -86,6 +86,13 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 smartphoneTalk.OnClosed += HandleSmartphoneTalkClosed;
             }
+
+            // オプションの設定（文字の速さ）は Manager シーンの SettingsManager から受け取る
+            if (SettingsManager.Instance != null)
+            {
+                SettingsManager.Instance.OnSettingsChanged += HandleSettingsChanged;
+                HandleSettingsChanged(SettingsManager.Instance.Current);
+            }
         }
 
         private void Unsubscribe()
@@ -111,6 +118,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 smartphoneTalk.OnClosed -= HandleSmartphoneTalkClosed;
             }
+
+            if (SettingsManager.Instance != null)
+            {
+                SettingsManager.Instance.OnSettingsChanged -= HandleSettingsChanged;
+            }
+        }
+
+        private void HandleSettingsChanged(GameSettings settings)
+        {
+            if (dialogueUI != null) dialogueUI.SetTextSpeed(settings.TextIntervalSeconds);
+            if (smartphoneTalk != null) smartphoneTalk.SetCharacterDisplayInterval(settings.TextIntervalSeconds);
         }
 
         #region イベントハンドラ（Managerからの通知を受けてViewに描画指示）

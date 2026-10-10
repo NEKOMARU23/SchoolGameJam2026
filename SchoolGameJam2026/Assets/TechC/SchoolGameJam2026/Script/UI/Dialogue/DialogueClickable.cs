@@ -104,6 +104,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
                 return;
             }
 
+            // オプション画面を操作している間は、後ろの会話を進めない
+            if (OptionUI.IsOpen)
+            {
+                return;
+            }
+
             Vector2 pointerPosition = Mouse.current.position.ReadValue();
 
             // 会話中は、閉じるボタン以外の画面クリックですべてページを進めます。
@@ -142,6 +148,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
             {
                 OpenDialogue();
             }
+        }
+
+        /// <summary>1文字の表示間隔（秒）を変えます（オプションの「文字の速さ」）。</summary>
+        public void SetCharacterDisplayInterval(float seconds)
+        {
+            characterDisplayInterval = Mathf.Max(0f, seconds);
         }
 
         /// <summary>外部の日数管理から、日付が変わったときに呼び出します。</summary>
