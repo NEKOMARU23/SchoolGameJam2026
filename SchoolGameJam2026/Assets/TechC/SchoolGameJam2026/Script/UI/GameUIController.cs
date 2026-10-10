@@ -75,6 +75,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 GameManagerInstance.OnDayStarted += HandleDayStarted;
                 GameManagerInstance.OnDayReset += HandleDayReset;
+                GameManagerInstance.OnStateRestored += HandleStateRestored;
             }
 
             if (dialogueUI != null)
@@ -107,6 +108,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 GameManagerInstance.OnDayStarted -= HandleDayStarted;
                 GameManagerInstance.OnDayReset -= HandleDayReset;
+                GameManagerInstance.OnStateRestored -= HandleStateRestored;
             }
 
             if (dialogueUI != null)
@@ -146,6 +148,15 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private void HandleDayStarted(int day)
         {
             if (statusHeaderUI != null) statusHeaderUI.UpdateDayDisplay(day);
+            RefreshAllViews();
+        }
+
+        /// <summary>
+        /// 状態がまとめて戻ったとき（リセット・ロード・デバッグ）に、画面をすべて今の状態で描き直す
+        /// </summary>
+        private void HandleStateRestored()
+        {
+            if (statusHeaderUI != null && GameManagerInstance != null) statusHeaderUI.UpdateDayDisplay(GameManagerInstance.CurrentDay);
             RefreshAllViews();
         }
 

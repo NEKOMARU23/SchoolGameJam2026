@@ -59,6 +59,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         #region イベント
         public event Action<int> OnDayStarted;
         public event Action OnDayReset;
+
+        /// <summary> 状態をまとめて戻したとき（リセット・ロード・デバッグ）に通知。画面の更新に使う </summary>
+        public event Action OnStateRestored;
         public event Action OnNightPhaseStarted;
         #endregion
 
@@ -166,6 +169,25 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             Flags.RestoreFrom(snapshot.flags);
+            OnStateRestored?.Invoke();
+        }
+
+        /// <summary>
+        /// 【デバッグ用】指定した日の朝から始め直す（ポイント・好感度・フラグなどは今のまま）
+        /// </summary>
+        /// <returns>移動できた場合 true（範囲外・シナリオがない日は false）</returns>
+        public bool JumpToDay(int day)
+        {
+            if (day < 1 || day > maxDays) return false;
+            if (dayScenarios.Find(s => s != null && s.dayNumber == day) == null)
+            {
+                Debug.LogWarning($"Day {day} のシナリオが見つからないため移動できません。");
+                return false;
+            }
+
+            currentDay = day;
+            StartNewDay();
+            return true;
         }
 
         private static GameStateSnapshot CloneSnapshot(GameStateSnapshot source)
