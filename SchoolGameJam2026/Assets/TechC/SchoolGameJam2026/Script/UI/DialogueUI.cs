@@ -77,6 +77,14 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
+        /// 1文字を表示する間隔（秒）を変える（オプションの「文字の速さ」）
+        /// </summary>
+        public void SetTextSpeed(float secondsPerCharacter)
+        {
+            textSpeed = Mathf.Max(0f, secondsPerCharacter);
+        }
+
+        /// <summary>
         /// 会話状態のリセット
         /// </summary>
         public void ResetDialogueState()
