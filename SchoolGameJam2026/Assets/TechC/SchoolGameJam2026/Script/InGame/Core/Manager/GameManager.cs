@@ -4,24 +4,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
-    /// <summary>
-    /// バックアップ用のプロフィール解禁状態データ構造体
-    /// </summary>
-    public readonly struct ProfileUnlockStateBackup
-    {
-        public bool IsBasicUnlocked { get; }
-        public List<string> HistoryKeys { get; }
-
-        public ProfileUnlockStateBackup(bool isBasicUnlocked, List<string> historyKeys)
-        {
-            IsBasicUnlocked = isBasicUnlocked;
-            HistoryKeys = historyKeys != null ? new List<string>(historyKeys) : new List<string>();
-        }
-    }
-
     /// <summary>
     /// ゲーム全体の進行管理、日数、および「その日の朝に戻す」リセット機能を管理するマネージャー (Singleton)
     /// </summary>
@@ -49,20 +35,19 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         // 最終日に AI と判定したキャラ（未判定なら null）
         private CharacterInstance confirmedAICharacter;
 
-        #region リセット用バックアップデータ
-        private int backupPoints;
-        private int backupDailyActions;
-        private List<string> backupInterrogatedCharacterIds = new List<string>();
-        private Dictionary<string, Dictionary<InterrogationActionType, int>> backupActionCounts = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
-        private readonly Dictionary<string, int> backupAffections = new Dictionary<string, int>();
-        private readonly Dictionary<string, bool> backupReleased = new Dictionary<string, bool>();
-        private readonly Dictionary<string, ProfileUnlockStateBackup> backupProfileStates = new Dictionary<string, ProfileUnlockStateBackup>();
-        #endregion
+        // その日の朝の状態（「今日をやり直す」で戻す先）
+        private GameStateSnapshot morningSnapshot;
 
         #region プロパティ
         public int CurrentDay => currentDay;
         public int MaxDays => maxDays;
         public List<CharacterInstance> AllCharacters => allCharacters;
+
+        /// <summary> キーアイテム・情報・進行フラグ（名前付きの ON / OFF） </summary>
+        public FlagStore Flags { get; } = new FlagStore();
+
+        /// <summary> その日の朝の状態のコピー（セーブで一緒に保存する） </summary>
+        public GameStateSnapshot MorningSnapshot => morningSnapshot != null ? CloneSnapshot(morningSnapshot) : null;
 
         /// <summary> AIが解放されてしまったか（キャラ状態から導出するため、リセット時も自動で整合する） </summary>
         public bool HasAIEscaped => allCharacters.Exists(c => c != null && c.IsAI && c.IsReleased);
@@ -120,80 +105,75 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             Debug.Log($"<color=cyan>=== {currentDay} 日目の朝が始まりました ===</color>");
 
+            // その日だけの状態（行動回数・スマホの会話回数など）を朝の状態にしてから、朝の状態を記録する
             InterrogationManager.Instance?.ResetDailyActions(0);
-
-            // 朝の時点の状態をバックアップ保存
-            SaveDayBackup();
+            SmartphoneTalkManager.Instance?.ResetForNewDay();
+            morningSnapshot = CaptureState();
 
             OnDayStarted?.Invoke(currentDay);
         }
 
-        /// <summary> 「今日を最初からやり直す」リセット機能 </summary>
+        /// <summary>
+        /// 「今日を最初からやり直す」: その日に行われたすべての行為を取り消し、朝の状態に戻す
+        /// </summary>
         public void ResetCurrentDay()
         {
+            if (morningSnapshot == null) return;
+
             Debug.Log($"<color=yellow>⚠️ {currentDay} 日目の朝の状態にリセットします。</color>");
-
-            // 1. ポイント・行動回数の復元
-            if (InterrogationManager.Instance != null)
-            {
-                InterrogationManager.Instance.SetPoints(backupPoints);
-                InterrogationManager.Instance.ResetDailyActions(backupDailyActions);
-                InterrogationManager.Instance.RestoreInterrogatedCharacterIdsToday(backupInterrogatedCharacterIds);
-                InterrogationManager.Instance.RestoreCharacterActionCounts(backupActionCounts);
-            }
-
-            // 2. キャラクター状態（好感度・解放状態・プロフィール）の復元
-            foreach (var character in allCharacters)
-            {
-                if (character == null || string.IsNullOrEmpty(character.CharacterId)) continue;
-
-                if (backupAffections.TryGetValue(character.CharacterId, out int restoredAffection))
-                {
-                    character.SetAffection(restoredAffection);
-                }
-
-                if (backupReleased.TryGetValue(character.CharacterId, out bool restoredReleased))
-                {
-                    character.SetReleaseFlag(restoredReleased);
-                }
-
-                if (backupProfileStates.TryGetValue(character.CharacterId, out var backupState))
-                {
-                    character.RestoreUnlockStates(backupState.IsBasicUnlocked, backupState.HistoryKeys);
-                }
-            }
-
+            RestoreState(morningSnapshot);
             OnDayReset?.Invoke();
         }
 
-        /// <summary> 朝の時点の状態を一時記憶する </summary>
-        private void SaveDayBackup()
-        {
-            if (InterrogationManager.Instance != null)
-            {
-                backupPoints = InterrogationManager.Instance.CurrentPoints;
-                backupDailyActions = InterrogationManager.Instance.CurrentDailyActions;
-                backupInterrogatedCharacterIds = InterrogationManager.Instance.GetInterrogatedCharacterIdsToday();
-                backupActionCounts = InterrogationManager.Instance.GetCharacterActionCounts();
-            }
+        #region 状態の書き出し・復元（今日をやり直す・セーブ・ロード用）
 
-            backupAffections.Clear();
-            backupReleased.Clear();
-            backupProfileStates.Clear();
+        /// <summary>
+        /// 今のゲームの状態をまとめて書き出す
+        /// 新しい状態を追加したら、ここと RestoreState の両方に追加する
+        /// </summary>
+        public GameStateSnapshot CaptureState()
+        {
+            var snapshot = new GameStateSnapshot { day = currentDay };
+
+            InterrogationManager.Instance?.CaptureState(snapshot);
+            SmartphoneTalkManager.Instance?.CaptureState(snapshot);
 
             foreach (var character in allCharacters)
             {
                 if (character == null || string.IsNullOrEmpty(character.CharacterId)) continue;
-
-                // 好感度・解放状態バックアップ
-                backupAffections[character.CharacterId] = character.CurrentAffection;
-                backupReleased[character.CharacterId] = character.IsReleased;
-
-                // プロフィール状態バックアップ
-                var (basicUnlocked, historyKeys) = character.GetUnlockStates();
-                backupProfileStates[character.CharacterId] = new ProfileUnlockStateBackup(basicUnlocked, historyKeys);
+                snapshot.characters.Add(character.CaptureState());
             }
+
+            snapshot.flags = Flags.ToList();
+            return snapshot;
         }
+
+        /// <summary>
+        /// 書き出した状態にまとめて戻す（日数も戻る）
+        /// </summary>
+        public void RestoreState(GameStateSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+
+            currentDay = snapshot.day;
+            InterrogationManager.Instance?.RestoreState(snapshot);
+            SmartphoneTalkManager.Instance?.RestoreState(snapshot);
+
+            foreach (var state in snapshot.characters)
+            {
+                CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == state.characterId);
+                if (character != null) character.RestoreState(state);
+            }
+
+            Flags.RestoreFrom(snapshot.flags);
+        }
+
+        private static GameStateSnapshot CloneSnapshot(GameStateSnapshot source)
+        {
+            return JsonUtility.FromJson<GameStateSnapshot>(JsonUtility.ToJson(source));
+        }
+
+        #endregion
 
         /// <summary> 夜フェーズ（1日の行動終了後）への移行処理 </summary>
         public void TransitionToNightPhase()

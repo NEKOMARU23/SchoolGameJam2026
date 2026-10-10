@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
@@ -24,24 +25,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             Instance = this;
         }
 
-        private void Start()
-        {
-            // GameManager の Awake 完了後に購読する
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnDayStarted += HandleDayStarted;
-                GameManager.Instance.OnDayReset += ResetTalkCount;
-            }
-        }
-
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnDayStarted -= HandleDayStarted;
-                GameManager.Instance.OnDayReset -= ResetTalkCount;
-            }
-
             if (Instance == this) Instance = null;
         }
 
@@ -74,17 +59,29 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             return true;
         }
 
-        private void HandleDayStarted(int day)
+        /// <summary>
+        /// 新しい日の朝に会話回数を0に戻す（GameManager が朝の状態を記録する前に呼ぶ）
+        /// </summary>
+        public void ResetForNewDay()
         {
-            ResetTalkCount();
+            SetTalkCount(0);
         }
 
-        /// <summary>
-        /// 会話回数を0に戻す（翌日・その日のリセット時。朝の時点では常に0回のため）
-        /// </summary>
-        private void ResetTalkCount()
+        /// <summary> 会話回数をスナップショットに書き出す </summary>
+        public void CaptureState(GameStateSnapshot snapshot)
         {
-            talkCountToday = 0;
+            snapshot.smartphoneTalkCount = talkCountToday;
+        }
+
+        /// <summary> スナップショットの会話回数に戻す（今日をやり直す・ロード用） </summary>
+        public void RestoreState(GameStateSnapshot snapshot)
+        {
+            SetTalkCount(snapshot.smartphoneTalkCount);
+        }
+
+        private void SetTalkCount(int count)
+        {
+            talkCountToday = Mathf.Max(0, count);
             OnTalkCountChanged?.Invoke(talkCountToday);
         }
     }
