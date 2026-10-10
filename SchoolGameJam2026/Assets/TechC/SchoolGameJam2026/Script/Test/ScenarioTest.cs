@@ -1,0 +1,303 @@
+#if UNITY_EDITOR
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
+using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
+using TechC.SchoolGameJam2026.Scripts.Scenario.Import;
+using TechC.SchoolGameJam2026.Scripts.SO;
+using static TechC.SchoolGameJam2026.Scripts.Test.InGameTestUtility;
+
+namespace TechC.SchoolGameJam2026.Scripts.Test
+{
+    /// <summary>
+    /// Excel のシナリオ（取り込みのチェック・会話の選び方・会話の効果）のテスト
+    /// </summary>
+    public class ScenarioTest
+    {
+        private static readonly string[] CharacterIds = { "A", "B", "C", "D" };
+
+        private static readonly string[] ConditionHeaders =
+        {
+            "日", "キャラ", "行動", "聞き取り相手", "回目", "優先度", "本人の好感度", "他キャラの好感度",
+            "行動回数", "必要フラグ", "NGフラグ", "獲得フラグ", "AI化", "セリフID",
+        };
+
+        #region 取り込みのチェック
+
+        [Test]
+        public void 正しく書かれたシートを取り込める()
+        {
+            var sheets = CreateWorkbook();
+            ScenarioDatabase db = Parse(sheets, out ImportReport report);
+
+            CollectionAssert.IsEmpty(report.Errors.Select(e => e.ToString()));
+            CollectionAssert.IsEmpty(report.Warnings.Select(e => e.ToString()));
+
+            Assert.AreEqual(2, db.FindDialogue("A_D1_対話_1").pages.Count, "同じセリフIDの行は1つの会話のページになる");
+            Assert.AreEqual(PageKind.Narration, db.FindDialogue("A_D1_対話_1").pages[1].kind);
+
+            ScenarioConditionRow row = db.GetConditionRows(1, "A", ScenarioAction.Talk)[0];
+            Assert.AreEqual("A_D1_対話_2", row.dialogueId, "優先度の小さい行が先に並ぶ");
+            Assert.AreEqual("B", row.otherAffections[0].characterId);
+            Assert.AreEqual(2, row.otherAffections[0].minValue);
+            CollectionAssert.AreEqual(new[] { "info_鍵" }, row.gainFlags);
+            CollectionAssert.AreEqual(new[] { "C" }, row.aiTargets);
+
+            Assert.AreEqual(1, db.GetConditionRows(1, "A", ScenarioAction.HearAbout, "B").Count);
+            Assert.AreEqual(0, db.GetConditionRows(1, "A", ScenarioAction.HearAbout, "C").Count, "聞き取り相手が違う行は候補にならない");
+            Assert.AreEqual(2, db.GetSmartphoneTalkCount(1), "スマホの回数は回目の最大");
+            Assert.AreEqual(InterrogationActionType.Torture, db.GetDailySetting(1, "A").correctAction);
+            Assert.AreEqual(InterrogationActionType.Negotiate, db.GetDailySetting(1, "A").ngAction);
+        }
+
+        [TestCase(1, "必要フラグ", "info_鍵ｘ", "フラグ一覧にありません")]
+        [TestCase(1, "セリフID", "A_D1_存在しない", "本文シートにありません")]
+        [TestCase(1, "行動", "なぐる", "は使えません")]
+        [TestCase(1, "日", "8", "1〜7")]
+        [TestCase(1, "キャラ", "E", "は使えません")]
+        [TestCase(1, "他キャラの好感度", "B=2", "書き方が違います")]
+        [TestCase(1, "優先度", "3", "優先度が抜けています")]
+        [TestCase(2, "優先度", "1", "重複しています")]
+        public void 書き間違いはエラーになる(int dataRow, string header, string value, string expectedMessage)
+        {
+            var sheets = CreateWorkbook();
+            // 条件シートの行（1行目: A 1日目 対話 優先度1 / 2行目: 同じ場面の優先度2）を書き換える
+            SetCell(sheets["条件"], dataRow, header, value);
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsTrue(report.HasErrors, $"{header}「{value}」でエラーになりません");
+            Assert.IsTrue(report.Errors.Any(e => e.Text.Contains(expectedMessage) && e.Sheet == "条件"),
+                $"「{expectedMessage}」のエラーがありません: {string.Join(" / ", report.Errors)}");
+        }
+
+        [Test]
+        public void 素材がないと警告になり非表示は警告にならない()
+        {
+            var sheets = CreateWorkbook();
+            SetCell(sheets["本文"], 1, "SE", "ドア");
+            SetCell(sheets["本文"], 1, "立ち絵", "非表示");
+
+            Parse(sheets, out ImportReport report, assetExists: (kind, name) => false);
+
+            Assert.IsFalse(report.HasErrors, string.Join(" / ", report.Errors));
+            Assert.AreEqual(1, report.Warnings.Count, string.Join(" / ", report.Warnings));
+            StringAssert.Contains("ドア", report.Warnings[0].Text);
+        }
+
+        [Test]
+        public void シートや見出しがないとエラーになる()
+        {
+            var sheets = CreateWorkbook();
+            sheets.Remove("日別設定");
+            sheets["条件"][0][sheets["条件"][0].IndexOf("優先度")] = "ゆうせんど";
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsTrue(report.Errors.Any(e => e.Sheet == "日別設定" && e.Text.Contains("シートがありません")));
+            Assert.IsTrue(report.Errors.Any(e => e.Sheet == "条件" && e.Text.Contains("優先度")));
+        }
+
+        [Test]
+        public void コメント行と空の行は読み飛ばす()
+        {
+            var sheets = CreateWorkbook();
+            sheets["本文"].Add(new List<string> { "# メモ: ここは読まない", "会話じゃない" });
+            sheets["本文"].Add(new List<string> { "", "  " });
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsFalse(report.HasErrors, string.Join(" / ", report.Errors));
+        }
+
+        #endregion
+
+        #region 会話の選び方
+
+        [Test]
+        public void 条件を満たす優先度の一番小さい行が選ばれる()
+        {
+            var flags = new FlagStore();
+            var rows = new List<ScenarioConditionRow>
+            {
+                new ScenarioConditionRow { priority = 1, dialogueId = "好感度", hasSelfAffection = true, selfAffection = 3 },
+                new ScenarioConditionRow { priority = 2, dialogueId = "回数", hasActionCount = true, actionCount = 2 },
+                new ScenarioConditionRow { priority = 3, dialogueId = "フラグ", requiredFlags = { "info_鍵" }, ngFlags = { "flag_和解" } },
+                new ScenarioConditionRow { priority = 4, dialogueId = "他キャラ", otherAffections = { new AffectionCondition { characterId = "B", minValue = 2 } } },
+                new ScenarioConditionRow { priority = 5, dialogueId = "いつもの" },
+            };
+            var affections = new Dictionary<string, int> { { "B", 0 } };
+            var ctx = new ScenarioSelector.Context { Flags = flags, AffectionOf = id => affections[id] };
+
+            Assert.AreEqual("いつもの", ScenarioSelector.Select(rows, ctx).dialogueId, "どの条件も満たさなければ条件なしの行");
+
+            affections["B"] = 2;
+            Assert.AreEqual("他キャラ", ScenarioSelector.Select(rows, ctx).dialogueId);
+
+            flags.TurnOn("info_鍵");
+            Assert.AreEqual("フラグ", ScenarioSelector.Select(rows, ctx).dialogueId);
+            flags.TurnOn("flag_和解");
+            Assert.AreEqual("他キャラ", ScenarioSelector.Select(rows, ctx).dialogueId, "NGフラグが ON なら選ばれない");
+
+            ctx.ActionCount = 2;
+            Assert.AreEqual("回数", ScenarioSelector.Select(rows, ctx).dialogueId);
+
+            ctx.SelfAffection = 3;
+            Assert.AreEqual("好感度", ScenarioSelector.Select(rows, ctx).dialogueId);
+        }
+
+        [Test]
+        public void どの行も満たさなければ何も選ばれない()
+        {
+            var rows = new List<ScenarioConditionRow>
+            {
+                new ScenarioConditionRow { priority = 1, hasSelfAffection = true, selfAffection = 5 },
+            };
+            Assert.IsNull(ScenarioSelector.Select(rows, new ScenarioSelector.Context { Flags = new FlagStore() }));
+            Assert.IsNull(ScenarioSelector.Select(null, new ScenarioSelector.Context()));
+        }
+
+        #endregion
+
+        #region ゲーム中の動き
+
+        [UnityTest]
+        public IEnumerator 日別設定の正解行動を選ぶとポイントが増え違う行動では増えない()
+        {
+            yield return LoadInGameScene();
+            ScenarioDatabase db = GameManager.Scenario;
+            Assert.IsNotNull(db, "GameManager に ScenarioDatabase がつながっていません");
+
+            // 1人目には正解行動、2人目には正解以外の行動をする
+            CharacterInstance first = GetCharacter("A");
+            CharacterInstance second = GetCharacter("B");
+            InterrogationActionType correct = db.GetDailySetting(1, "A").correctAction;
+            InterrogationActionType wrong = WrongAction(db.GetDailySetting(1, "B").correctAction);
+
+            int before = InterrogationManager.TodayEarnedPoints;
+            Core.Manager.ActionOutcome outcome = InterrogationManager.ExecuteAction(first, correct);
+            Assert.Greater(InterrogationManager.TodayEarnedPoints, before, "正解行動でポイントが増えません");
+            Assert.IsTrue(outcome.HasDialogue, "Excel の会話が選ばれていません");
+
+            before = InterrogationManager.TodayEarnedPoints;
+            InterrogationManager.ExecuteAction(second, wrong);
+            Assert.LessOrEqual(InterrogationManager.TodayEarnedPoints, before, "正解でない行動でポイントが増えました");
+        }
+
+        [UnityTest]
+        public IEnumerator 会話の獲得フラグとAI化が反映される()
+        {
+            yield return LoadInGameScene();
+
+            CharacterInstance human = GameManager.AllCharacters.First(c => !c.IsAI);
+            var row = new ScenarioConditionRow
+            {
+                gainFlags = { "info_テスト用の情報" },
+                aiTargets = { human.CharacterId },
+            };
+
+            GameManager.ApplyScenarioEffects(row);
+
+            Assert.IsTrue(GameManager.Flags.IsOn("info_テスト用の情報"));
+            Assert.IsTrue(human.IsAI, "AI化に書いたキャラが AI になりません");
+        }
+
+        [UnityTest]
+        public IEnumerator スマホはその日の回目の数まで聞ける()
+        {
+            yield return LoadInGameScene();
+            var talk = Core.Manager.SmartphoneTalkManager.Instance;
+            int limit = GameManager.Scenario.GetSmartphoneTalkCount(1);
+            Assert.Greater(limit, 0, "1日目のスマホの会話がありません");
+
+            for (int i = 1; i <= limit; i++)
+            {
+                Assert.IsTrue(talk.TryStartTalk(out ScenarioDialogue dialogue), $"{i}回目の会話を始められません");
+                Assert.IsNotNull(dialogue);
+                Assert.AreEqual(i, talk.TalkCountToday);
+            }
+
+            Assert.IsFalse(talk.TryStartTalk(out _), "回数を使い切っても会話を始められました");
+            Assert.AreEqual(limit, talk.TalkCountToday, "始められなかった会話で回数が増えました");
+        }
+
+        #endregion
+
+        #region テスト用のデータ
+
+        private static ScenarioDatabase Parse(Dictionary<string, List<List<string>>> sheets, out ImportReport report,
+            System.Func<AssetKind, string, bool> assetExists = null)
+        {
+            var db = ScriptableObject.CreateInstance<ScenarioDatabase>();
+            report = ScenarioWorkbookParser.Parse(sheets, db, assetExists ?? ((kind, name) => true), CharacterIds, 7);
+            return db;
+        }
+
+        private static InterrogationActionType WrongAction(InterrogationActionType correct)
+        {
+            return correct == InterrogationActionType.Talk ? InterrogationActionType.Torture : InterrogationActionType.Talk;
+        }
+
+        /// <summary> 書き間違いのない最小のワークブック </summary>
+        private static Dictionary<string, List<List<string>>> CreateWorkbook()
+        {
+            return new Dictionary<string, List<List<string>>>
+            {
+                ["フラグ一覧"] = Table(
+                    new[] { "フラグ名", "種類", "表示先", "説明", "プロフィールに表示する文" },
+                    new[] { "info_鍵", "情報", "A", "鍵の話", "鍵を持っていた" },
+                    new[] { "flag_和解", "進行フラグ", "なし", "", "" }),
+                ["本文"] = Table(
+                    new[] { "セリフID", "種類", "話者", "本文", "SE", "立ち絵", "背景", "イベント絵", "エフェクト", "BGM" },
+                    new[] { "A_D1_対話_1", "会話", "", "こんにちは", "", "A_通常", "", "", "", "" },
+                    new[] { "A_D1_対話_1", "地の文", "", "（黙り込んだ）", "", "", "", "", "", "" },
+                    new[] { "A_D1_対話_2", "会話", "", "鍵の話をしよう", "", "", "", "", "", "" },
+                    new[] { "A_D1_聞き取り_B_1", "会話", "", "B のこと？", "", "", "", "", "", "" },
+                    new[] { "SP_D1_1", "会話", "補助ちゃん", "1回目", "", "", "", "", "", "" },
+                    new[] { "SP_D1_2", "会話", "補助ちゃん", "2回目", "", "", "", "", "", "" }),
+                ["条件"] = Table(
+                    ConditionHeaders,
+                    Condition("1", "A", "対話", "", "", "1", dialogueId: "A_D1_対話_2",
+                        otherAffection: "B>=2", required: "info_鍵", gain: "info_鍵", ai: "C"),
+                    Condition("1", "A", "対話", "", "", "2", dialogueId: "A_D1_対話_1"),
+                    Condition("1", "A", "聞き取り", "B", "", "1", dialogueId: "A_D1_聞き取り_B_1"),
+                    Condition("1", "", "スマホ", "", "1", "1", dialogueId: "SP_D1_1"),
+                    Condition("1", "", "スマホ", "", "2", "1", dialogueId: "SP_D1_2")),
+                ["日別設定"] = Table(
+                    new[] { "日", "キャラ", "正解行動", "NG行動" },
+                    new[] { "1", "A", "拷問", "交渉" }),
+                ["AI判定"] = Table(
+                    new[] { "キャラ", "判定日", "回避フラグ" }),
+                ["エンディング"] = Table(
+                    new[] { "優先度", "判定結果", "種類", "必要フラグ", "NGフラグ", "エンディングID", "一覧に表示する名前" }),
+            };
+        }
+
+        private static string[] Condition(string day, string character, string action, string hearingTarget, string talkNumber,
+            string priority, string dialogueId, string otherAffection = "", string required = "", string gain = "", string ai = "")
+        {
+            return new[] { day, character, action, hearingTarget, talkNumber, priority, "", otherAffection, "", required, "", gain, ai, dialogueId };
+        }
+
+        private static List<List<string>> Table(params string[][] rows)
+        {
+            return rows.Select(r => r.ToList()).ToList();
+        }
+
+        /// <summary> 見出しの名前で、指定したデータ行（1始まり）のセルを書き換える </summary>
+        private static void SetCell(List<List<string>> sheet, int dataRow, string header, string value)
+        {
+            int col = sheet[0].IndexOf(header);
+            Assert.GreaterOrEqual(col, 0, $"見出し「{header}」がありません");
+            sheet[dataRow][col] = value;
+        }
+
+        #endregion
+    }
+}
+#endif
