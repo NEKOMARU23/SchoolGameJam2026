@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
@@ -19,11 +21,13 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private ResultUI resultUI;
         [SerializeField] private LogUI logUI;
         [SerializeField] private StatusHeaderUI statusHeaderUI;
+        [SerializeField] private DayTransitionUI dayTransitionUI;
 
         // 画面上の選択状態（ゲームの状態は各 Manager が持つ）
         private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
         private string currentProfileCharacterId = "A";  // プロフィール画面で表示中のキャラクターID
         private string currentHearingTargetId = "B";
+        private bool isDayTransitioning = false;           // 日付切り替え演出中（連打で複数日進むのを防ぐ）
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
 
@@ -291,15 +295,38 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         public void OnClickCloseResultAndAdvanceDay()
         {
-            if (GameManagerInstance == null) return;
+            AdvanceDayWithTransitionAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
 
-            // 最終日ならエンディングへの遷移は GameManager が行う
-            bool advancedToNextDay = GameManagerInstance.AdvanceDayOrFinishGame();
-            if (advancedToNextDay && navigationUI != null)
+        /// <summary>
+        /// ロード画面で覆う → 日付を進めて画面を整える → 覆いを外す、の順で翌日へ進める
+        /// </summary>
+        private async UniTaskVoid AdvanceDayWithTransitionAsync(CancellationToken token)
+        {
+            if (isDayTransitioning || GameManagerInstance == null) return;
+            isDayTransitioning = true;
+
+            try
             {
-                // 新しい日はモニターを起点にするため、前日の画面履歴は破棄する
-                navigationUI.ShowMonitorPanel();
-                navigationUI.ClearHistory();
+                string label = GameManagerInstance.IsFinalDay ? "最終結果" : $"{GameManagerInstance.CurrentDay + 1}日目";
+                if (dayTransitionUI != null) await dayTransitionUI.CoverAsync(label, token);
+
+                // 最終日ならエンディングへの遷移は GameManager が行う（覆ったままシーンが切り替わる）
+                bool advancedToNextDay = GameManagerInstance.AdvanceDayOrFinishGame();
+                if (!advancedToNextDay) return;
+
+                if (navigationUI != null)
+                {
+                    // 新しい日はモニターを起点にするため、前日の画面履歴は破棄する
+                    navigationUI.ShowMonitorPanel();
+                    navigationUI.ClearHistory();
+                }
+
+                if (dayTransitionUI != null) await dayTransitionUI.RevealAsync(token);
+            }
+            finally
+            {
+                isDayTransitioning = false;
             }
         }
 

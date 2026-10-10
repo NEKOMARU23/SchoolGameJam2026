@@ -39,6 +39,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
 
             Assert.IsNotNull(GameManager.Instance, "GameManager が見つかりません");
             Assert.IsNotNull(InterrogationManager.Instance, "InterrogationManager が見つかりません");
+
+            // 日付切り替えの演出はテスト時間を延ばすだけなので省略する（演出自体は専用のテストで確認）
+            FindComponent<DayTransitionUI>().SetDurations(0f, 0f);
         }
 
         public static T FindComponent<T>() where T : Object

@@ -49,11 +49,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         private void OnClickNextDay()
         {
+            // パネルの切り替えはロード画面で覆った後に GameUIController が行う
+            // （ここで自分を閉じると、覆う前に一瞬何もない画面が見えてしまう）
             if (gameUIController != null)
             {
                 gameUIController.OnClickCloseResultAndAdvanceDay();
             }
-            gameObject.SetActive(false);
         }
     }
 }
