@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
@@ -346,32 +347,73 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
         }
 
-        /// <summary> キャラ別アクション通算回数のコピーを取得する（バックアップ用） </summary>
-        public Dictionary<string, Dictionary<InterrogationActionType, int>> GetCharacterActionCounts() => CopyActionCounts(characterActionCounts);
+        #endregion
 
-        public void RestoreCharacterActionCounts(Dictionary<string, Dictionary<InterrogationActionType, int>> backupData)
+        #region 状態の書き出し・復元（今日をやり直す・セーブ・ロード用）
+
+        /// <summary>
+        /// 取り調べに関する今の状態をスナップショットに書き出す
+        /// </summary>
+        public void CaptureState(GameStateSnapshot snapshot)
         {
-            characterActionCounts = CopyActionCounts(backupData);
-        }
+            snapshot.points = currentPoints;
+            snapshot.dailyActions = currentDailyActions;
+            snapshot.todayEarnedPoints = TodayEarnedPoints;
+            snapshot.interrogatedTodayIds = new List<string>(interrogatedCharacterIdsToday);
 
-        private static Dictionary<string, Dictionary<InterrogationActionType, int>> CopyActionCounts(Dictionary<string, Dictionary<InterrogationActionType, int>> source)
-        {
-            var copy = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
-            if (source == null) return copy;
-
-            foreach (var pair in source)
+            snapshot.todayActionHistory = new List<ActionHistoryEntry>();
+            foreach (var pair in TodayActionHistory)
             {
-                copy[pair.Key] = new Dictionary<InterrogationActionType, int>(pair.Value);
+                snapshot.todayActionHistory.Add(new ActionHistoryEntry { characterId = pair.Key, action = pair.Value });
             }
-            return copy;
+
+            snapshot.actionCounts = new List<ActionCountEntry>();
+            foreach (var character in characterActionCounts)
+            {
+                foreach (var action in character.Value)
+                {
+                    snapshot.actionCounts.Add(new ActionCountEntry { characterId = character.Key, action = action.Key, count = action.Value });
+                }
+            }
         }
 
-        public List<string> GetInterrogatedCharacterIdsToday() => new List<string>(interrogatedCharacterIdsToday);
-
-        public void RestoreInterrogatedCharacterIdsToday(List<string> backupList)
+        /// <summary>
+        /// スナップショットの状態に戻す
+        /// </summary>
+        public void RestoreState(GameStateSnapshot snapshot)
         {
-            interrogatedCharacterIdsToday = backupList != null ? new List<string>(backupList) : new List<string>();
+            currentPoints = Mathf.Max(0, snapshot.points);
+            currentDailyActions = snapshot.dailyActions;
+            TodayEarnedPoints = snapshot.todayEarnedPoints;
+            interrogatedCharacterIdsToday = new List<string>(snapshot.interrogatedTodayIds ?? new List<string>());
+
+            TodayActionHistory.Clear();
+            if (snapshot.todayActionHistory != null)
+            {
+                foreach (var entry in snapshot.todayActionHistory)
+                {
+                    TodayActionHistory[entry.characterId] = entry.action;
+                }
+            }
+
+            characterActionCounts = new Dictionary<string, Dictionary<InterrogationActionType, int>>();
+            if (snapshot.actionCounts != null)
+            {
+                foreach (var entry in snapshot.actionCounts)
+                {
+                    if (!characterActionCounts.TryGetValue(entry.characterId, out var map))
+                    {
+                        map = new Dictionary<InterrogationActionType, int>();
+                        characterActionCounts[entry.characterId] = map;
+                    }
+                    map[entry.action] = entry.count;
+                }
+            }
+
+            OnPointsChanged?.Invoke(currentPoints);
+            OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
         }
+
         #endregion
     }
 }

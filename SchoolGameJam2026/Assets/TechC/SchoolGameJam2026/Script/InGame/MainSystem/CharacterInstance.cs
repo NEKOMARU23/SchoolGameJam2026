@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.SO;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 
 namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
 {
@@ -139,21 +140,37 @@ namespace TechC.SchoolGameJam2026.Scripts.InGame.MainSystem
             }
         }
 
+        #endregion
+
+        #region 状態の書き出し・復元（今日をやり直す・セーブ・ロード用）
+
         /// <summary>
-        /// 解禁状態をリスト形式で取得（当日の朝へ戻すバックアップ用）
+        /// このキャラの今の状態を書き出す
         /// </summary>
-        public (bool basicUnlocked, List<string> historyKeys) GetUnlockStates()
+        public CharacterStateEntry CaptureState()
         {
-            return (isBasicInfoUnlocked, new List<string>(unlockedHistoryKeys));
+            return new CharacterStateEntry
+            {
+                characterId = characterId,
+                affection = currentAffection,
+                isReleased = isReleased,
+                isAI = isAI,
+                isBasicInfoUnlocked = isBasicInfoUnlocked,
+                unlockedHistoryKeys = new List<string>(unlockedHistoryKeys),
+            };
         }
 
         /// <summary>
-        /// バックアップから解禁状態を復元する（リセット用）
+        /// 書き出した状態に戻す
         /// </summary>
-        public void RestoreUnlockStates(bool basicUnlocked, List<string> historyKeys)
+        public void RestoreState(CharacterStateEntry state)
         {
-            isBasicInfoUnlocked = basicUnlocked;
-            unlockedHistoryKeys = historyKeys != null ? new List<string>(historyKeys) : new List<string>();
+            if (state == null) return;
+            currentAffection = state.affection;
+            isReleased = state.isReleased;
+            isAI = state.isAI;
+            isBasicInfoUnlocked = state.isBasicInfoUnlocked;
+            unlockedHistoryKeys = state.unlockedHistoryKeys != null ? new List<string>(state.unlockedHistoryKeys) : new List<string>();
         }
 
         #endregion
