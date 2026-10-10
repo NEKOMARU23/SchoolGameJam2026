@@ -4,9 +4,27 @@ using UnityEngine;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.State;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
+    /// <summary>
+    /// 取り調べの行動の結果として表示するもの（Excel の会話か、短い文のどちらか）
+    /// </summary>
+    public class ActionOutcome
+    {
+        /// <summary> Excel の本文シートの会話（なければ null） </summary>
+        public ScenarioDialogue Dialogue { get; private set; }
+
+        /// <summary> 会話がないときに表示する短い文（行動できない理由など） </summary>
+        public string Text { get; private set; } = "";
+
+        public bool HasDialogue => Dialogue != null && Dialogue.pages.Count > 0;
+
+        public static ActionOutcome FromDialogue(ScenarioDialogue dialogue) => new ActionOutcome { Dialogue = dialogue };
+        public static ActionOutcome FromText(string text) => new ActionOutcome { Text = text ?? "" };
+    }
+
     /// <summary>
     /// 取り調べの実行、判定、ポイント計算、行動制限を管理するマネージャー（Singleton）
     /// </summary>
@@ -110,33 +128,44 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         /// <summary>
         /// 取り調べアクションを実行する
+        /// 条件シートから会話を選び、日別設定で正解を判定し、獲得フラグ・AI化を適用する
         /// AI確定は行動回数を消費しないため <see cref="GetConfirmAIDialogue"/> を使う
         /// </summary>
-        public string ExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, string hearingTargetId = "")
+        public ActionOutcome ExecuteAction(CharacterInstance targetChar, InterrogationActionType actionType, string hearingTargetId = "")
         {
             // 1. ガード節（事前チェック）
-            if (targetChar == null) return "";
+            if (targetChar == null) return ActionOutcome.FromText("");
 
             if (!CanExecuteAction(targetChar, out string rejectReason))
             {
                 Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} へのアクションは実行できません: {rejectReason}");
-                return rejectReason;
+                return ActionOutcome.FromText(rejectReason);
             }
 
-            CharacterDailySetting dailySetting = GetTodaySetting(targetChar.CharacterId);
-            if (dailySetting == null)
+            GameManager game = GameManager.Instance;
+            ScenarioDatabase db = game != null ? game.Scenario : null;
+            if (db == null)
             {
-                Debug.LogError($"[InterrogationManager] シナリオ設定が見つかりません。 (ID: {targetChar.CharacterId})");
-                return "「……」";
+                Debug.LogError("[InterrogationManager] シナリオのデータ（ScenarioDatabase）が設定されていません。");
+                return ActionOutcome.FromText("「……」");
             }
 
-            // 2. 対話テキスト取得と報酬/ペナルティ処理
-            Dictionary<string, int> otherAffections = GameManager.Instance?.GetAllCharacterAffections() ?? new Dictionary<string, int>();
+            // 2. 会話を選ぶ（今回の行動による好感度の変化より前の状態で判定する）
+            int day = game.CurrentDay;
             int actionCount = GetCharacterActionCount(targetChar.CharacterId, actionType);
+            ScenarioConditionRow row = ScenarioSelector.Select(
+                db.GetConditionRows(day, targetChar.CharacterId, (ScenarioAction)(int)actionType, hearingTargetId),
+                game.CreateSelectorContext(targetChar, actionCount));
+            if (row == null)
+            {
+                Debug.LogWarning($"[InterrogationManager] {day}日目 {targetChar.CharacterId} の「{actionType}」で条件を満たす会話がありません。");
+            }
 
-            string responseDialogue = ProcessActionEffect(targetChar, actionType, dailySetting, otherAffections, actionCount, hearingTargetId);
+            // 3. 正解の判定・ポイント・好感度、会話の効果（獲得フラグ・AI化）
+            ApplyScoring(targetChar, actionType, db.GetDailySetting(day, targetChar.CharacterId));
+            game.ApplyScenarioEffects(row);
 
-            // 3. 状態更新（カウントアップ・履歴保持）
+            // 4. 状態更新（カウントアップ・履歴保持）
             IncrementActionCount(targetChar.CharacterId, actionType);
             interrogatedCharacterIdsToday.Add(targetChar.CharacterId);
             TodayActionHistory[targetChar.CharacterId] = actionType;
@@ -144,7 +173,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             currentDailyActions++;
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
 
-            // 4. 解放はセリフ取得・行動回数の計上が済んでから確定する
+            // 5. 解放は会話の選択・行動回数の計上が済んでから確定する
             if (actionType == InterrogationActionType.Release)
             {
                 targetChar.SetReleaseFlag(true);
@@ -154,29 +183,34 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 }
             }
 
-            // 5. 夜フェーズ移行チェック
+            // 6. 夜フェーズ移行チェック
             if (IsActionLimitReached)
             {
                 Debug.Log("[InterrogationManager] 行動制限到達。夜フェーズへ移行します。");
-                GameManager.Instance?.TransitionToNightPhase();
+                game.TransitionToNightPhase();
             }
 
-            return responseDialogue;
+            ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
+            return dialogue != null ? ActionOutcome.FromDialogue(dialogue) : ActionOutcome.FromText("「……」");
         }
 
         /// <summary>
-        /// AI確定時のセリフを取得する（最終判定のため行動回数・当日の取り調べ済みに関係なく実行できる）
+        /// AI確定時の会話を取得する（最終判定のため行動回数・当日の取り調べ済みに関係なく実行できる）
         /// </summary>
-        public string GetConfirmAIDialogue(CharacterInstance targetChar)
+        public ActionOutcome GetConfirmAIDialogue(CharacterInstance targetChar)
         {
-            if (targetChar == null) return "";
+            GameManager game = GameManager.Instance;
+            ScenarioDatabase db = game != null ? game.Scenario : null;
+            if (targetChar == null || db == null) return ActionOutcome.FromText("");
 
-            CharacterDailySetting dailySetting = GetTodaySetting(targetChar.CharacterId);
-            if (dailySetting == null) return "";
-
-            Dictionary<string, int> otherAffections = GameManager.Instance?.GetAllCharacterAffections() ?? new Dictionary<string, int>();
             int actionCount = GetCharacterActionCount(targetChar.CharacterId, InterrogationActionType.ConfirmAI);
-            return dailySetting.GetResponse(InterrogationActionType.ConfirmAI, targetChar.CurrentAffection, otherAffections, actionCount);
+            ScenarioConditionRow row = ScenarioSelector.Select(
+                db.GetConditionRows(game.CurrentDay, targetChar.CharacterId, ScenarioAction.ConfirmAI),
+                game.CreateSelectorContext(targetChar, actionCount));
+            game.ApplyScenarioEffects(row);
+
+            ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
+            return dialogue != null ? ActionOutcome.FromDialogue(dialogue) : ActionOutcome.FromText("");
         }
 
         /// <summary>
@@ -232,42 +266,28 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             return true;
         }
 
-        private CharacterDailySetting GetTodaySetting(string characterId)
-        {
-            DayScenarioSO todayScenario = GameManager.Instance != null ? GameManager.Instance.GetTodayScenario() : null;
-            return todayScenario?.GetCharacterSetting(characterId);
-        }
-
         /// <summary>
-        /// アクションごとの評価・ポイント/好感度の計算処理
+        /// 正解の判定とポイント・好感度の計算
+        /// 拷問・対話・交渉は、日別設定の「正解行動」を選べば正解（どの会話が出たかには関係しない）
         /// </summary>
-        private string ProcessActionEffect(
-            CharacterInstance targetChar, 
-            InterrogationActionType actionType, 
-            CharacterDailySetting dailySetting, 
-            Dictionary<string, int> otherAffections, 
-            int actionCount, 
-            string hearingTargetId)
+        private void ApplyScoring(CharacterInstance targetChar, InterrogationActionType actionType, ScenarioDailySetting setting)
         {
             if (actionType == InterrogationActionType.HearAbout)
             {
                 AddPoints(fixedHearAboutPoint);
                 TodayEarnedPoints += fixedHearAboutPoint;
-                return dailySetting.GetResponseWithIndex(actionType, targetChar.CurrentAffection, otherAffections, actionCount, hearingTargetId).dialogueText;
+                return;
             }
 
-            if (actionType == InterrogationActionType.Release || actionType == InterrogationActionType.ConfirmAI)
+            if (actionType == InterrogationActionType.Release || actionType == InterrogationActionType.ConfirmAI) return;
+
+            if (setting == null)
             {
-                return dailySetting.GetResponseWithIndex(actionType, targetChar.CurrentAffection, otherAffections, actionCount).dialogueText;
+                Debug.LogWarning($"[InterrogationManager] 日別設定がないため、{targetChar.CharacterId} への行動は正解判定をしません。");
+                return;
             }
 
-            // 通常取り調べ（正解/不正解判定）
-            var (dialogueText, elementIndex) = dailySetting.GetResponseWithIndex(actionType, targetChar.CurrentAffection, otherAffections, actionCount);
-            
-            bool isCorrect = (elementIndex == 0 && actionType == dailySetting.correctAction);
-            bool isPenaltyAction = (actionType == dailySetting.penaltyAction);
-
-            if (isCorrect)
+            if (actionType == setting.correctAction)
             {
                 AddPoints(successPointReward);
                 TodayEarnedPoints += successPointReward;
@@ -277,10 +297,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             {
                 // 所持ポイントは0未満にならないため、実際に減った分だけを計上する
                 TodayEarnedPoints -= ConsumePoints(failPointPenalty);
-                if (isPenaltyAction && failAffectionPenalty != 0) targetChar.AddAffection(-failAffectionPenalty);
+                if (setting.hasNgAction && actionType == setting.ngAction && failAffectionPenalty != 0)
+                {
+                    targetChar.AddAffection(-failAffectionPenalty);
+                }
             }
-
-            return dialogueText;
         }
 
         private void IncrementActionCount(string characterId, InterrogationActionType actionType)

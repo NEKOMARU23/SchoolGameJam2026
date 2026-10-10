@@ -14284,14 +14284,7 @@ MonoBehaviour:
     isReleased: 0
     isBasicInfoUnlocked: 0
     unlockedHistoryKeys: []
-  dayScenarios:
-  - {fileID: 11400000, guid: 395e95fa95dd0f14ca9bd5caae9974ff, type: 2}
-  - {fileID: 11400000, guid: fbb11d16b78b7964ea5121496db8cf1b, type: 2}
-  - {fileID: 11400000, guid: c1efafb08a459814d8d909336b5a1126, type: 2}
-  - {fileID: 11400000, guid: 9268234447a2b064ea3f055b63dfdf27, type: 2}
-  - {fileID: 11400000, guid: 8869f19d15eebfb4395449fbf10cd5e0, type: 2}
-  - {fileID: 11400000, guid: 6b991346968dde0419fa5650ca7e177e, type: 2}
-  - {fileID: 11400000, guid: 7ea9ab63e17d26f4d9fa78f414d58bab, type: 2}
+  scenarioDatabase: {fileID: 11400000, guid: 79601125e0e73a74bb85bf7d375f33cf, type: 2}
   clearSceneName: ClearScene
   gameOverSceneName: GameOverScene
 --- !u!114 &9060186676737419975

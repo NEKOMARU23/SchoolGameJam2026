@@ -114,8 +114,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         [UnityTest]
         public IEnumerator 翌日の朝の状態ではスマホの会話回数が0回になっている()
         {
-            var talk = FindComponent<UI.Dialogue.DialogueClickable>();
-            Assert.Greater(talk.GetTalkCountForDay(1), 0, "前提: 1日目のスマホのセリフがある");
+            Assert.Greater(GameManager.Scenario.GetSmartphoneTalkCount(1), 0, "前提: 1日目のスマホのセリフがある");
 
             yield return Click("Button_Help", "MonitorPanel");
             yield return Click("CloseButton", "SmartphoneTalkPanel");

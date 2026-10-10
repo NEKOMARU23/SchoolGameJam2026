@@ -8,6 +8,7 @@ using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.UI.Dialogue;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -31,7 +32,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private string currentSelectedCharacterId = "A"; // 拷問対象キャラクターID
         private string currentProfileCharacterId = "A";  // プロフィール画面で表示中のキャラクターID
         private string currentHearingTargetId = "B";
-        private bool isDayTransitioning = false;           // 日付切り替え演出中（連打で複数日進むのを防ぐ）
+        private bool isDayTransitioning = false;
+        private List<DialoguePage> currentSmartphonePages;   // 表示中のスマホ会話（ページごとの SE 用）           // 日付切り替え演出中（連打で複数日進むのを防ぐ）
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
 
@@ -86,7 +88,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (smartphoneTalk != null)
             {
                 smartphoneTalk.OnClosed += HandleSmartphoneTalkClosed;
+                smartphoneTalk.OnPageShown += HandleSmartphonePageShown;
             }
+
+            // 立ち絵と SE は、Excel の名前で Data フォルダの素材を探す
+            if (dialogueUI != null) dialogueUI.SetAssetResolvers(FindCharacterSprite, PlaySeByName);
 
             // オプションの設定（文字の速さ）は Manager シーンの SettingsManager から受け取る
             if (SettingsManager.Instance != null)
@@ -119,6 +125,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (smartphoneTalk != null)
             {
                 smartphoneTalk.OnClosed -= HandleSmartphoneTalkClosed;
+                smartphoneTalk.OnPageShown -= HandleSmartphonePageShown;
             }
 
             if (SettingsManager.Instance != null)
@@ -222,9 +229,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (!TryValidateAction(targetChar)) return;
 
-            string rawDialogue = InterrogationInstance.ExecuteAction(targetChar, actionType, currentHearingTargetId);
+            ActionOutcome outcome = InterrogationInstance.ExecuteAction(targetChar, actionType, currentHearingTargetId);
 
-            ShowDialogue(GetDisplayName(targetChar), rawDialogue);
+            ShowOutcome(GetDisplayName(targetChar), outcome);
             UpdateInterrogationState();
         }
 
@@ -241,14 +248,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (!TryValidateAction(targetChar)) return;
 
             // 解放フラグの更新は InterrogationManager が行う
-            string rawDialogue = InterrogationInstance.ExecuteAction(targetChar, InterrogationActionType.Release, currentHearingTargetId);
+            ActionOutcome outcome = InterrogationInstance.ExecuteAction(targetChar, InterrogationActionType.Release, currentHearingTargetId);
 
-            if (string.IsNullOrEmpty(rawDialogue) || rawDialogue == "「……」")
+            if (outcome.HasDialogue)
             {
-                rawDialogue = "解放される……ということですか。わかりました。|[SYS][IMG:OFF]（対象は部屋から退出しました）";
+                ShowOutcome(GetDisplayName(targetChar), outcome);
             }
-
-            ShowDialogue(GetDisplayName(targetChar), rawDialogue);
+            else
+            {
+                // Excel に解放の会話がないときの決まり文句
+                ShowDialogue(GetDisplayName(targetChar), "解放される……ということですか。わかりました。|[SYS][IMG:OFF]（対象は部屋から退出しました）");
+            }
 
             RefreshMonitorView();
             UpdateInterrogationState();
@@ -264,14 +274,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
             if (GameManagerInstance == null || !GameManagerInstance.ConfirmAI(targetChar)) return;
 
-            string rawDialogue = InterrogationInstance != null ? InterrogationInstance.GetConfirmAIDialogue(targetChar) : "";
-            if (!string.IsNullOrEmpty(rawDialogue) && rawDialogue != "「……」")
-            {
-                ShowDialogue(GetDisplayName(targetChar), rawDialogue);
-            }
+            ActionOutcome outcome = InterrogationInstance != null ? InterrogationInstance.GetConfirmAIDialogue(targetChar) : ActionOutcome.FromText("");
+            if (outcome.HasDialogue) ShowOutcome(GetDisplayName(targetChar), outcome);
 
             // パネル切替でセリフが見えなくなるため、判定結果はリザルトにも載せる
-            string verdict = $"<b>【最終判定】</b>\n{GetDisplayName(targetChar)} をAIと判定しました。\n{DialogueTextFormat.ToPlainText(rawDialogue)}\n";
+            string verdict = $"<b>【最終判定】</b>\n{GetDisplayName(targetChar)} をAIと判定しました。\n{ToPlainText(outcome)}\n";
             ShowResultFlow(verdict);
         }
 
@@ -304,8 +311,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (smartphoneTalk == null || SmartphoneInstance == null || GameManagerInstance == null) return;
 
-            int day = GameManagerInstance.CurrentDay;
-            if (!SmartphoneInstance.TryStartTalk(smartphoneTalk.GetTalkCountForDay(day), out int talkNumber))
+            if (!SmartphoneInstance.TryStartTalk(out ScenarioDialogue dialogue))
             {
                 // 今日の回数を使い切っている場合は会話画面を開かずにお知らせだけ出す
                 if (monitorUI != null) monitorUI.ShowSmartphoneNotice(SmartphoneNoTalkMessage);
@@ -313,7 +319,29 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             if (navigationUI != null) navigationUI.ShowSmartphoneTalkPanel();
-            smartphoneTalk.OpenDialogueForTalk(day, talkNumber);
+
+            // Excel の会話のページと、最初に指定された立ち絵で開く（ページごとの SE は OnPageShown で鳴らす）
+            currentSmartphonePages = DialogueTextFormat.FromScenario(dialogue);
+            var texts = new List<string>();
+            Sprite image = null;
+            foreach (DialoguePage page in currentSmartphonePages)
+            {
+                texts.Add(page.Body);
+                if (image == null && page.ImageKey != null && !page.HidesImage) image = FindCharacterSprite(page.ImageKey);
+            }
+            smartphoneTalk.OpenDialogueWithPages(texts, image);
+
+            if (logUI != null)
+            {
+                foreach (DialoguePage page in currentSmartphonePages) logUI.AddLog(GetSpeaker(page, "補助ちゃん"), page.Body);
+            }
+        }
+
+        private void HandleSmartphonePageShown(int pageIndex)
+        {
+            if (currentSmartphonePages == null || pageIndex < 0 || pageIndex >= currentSmartphonePages.Count) return;
+            string se = currentSmartphonePages[pageIndex].Se;
+            if (!string.IsNullOrEmpty(se)) PlaySeByName(se);
         }
 
         /// <summary>
@@ -541,16 +569,62 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private void ShowDialogue(string speakerName, string text)
         {
             if (string.IsNullOrEmpty(text)) return;
+            ShowPages(speakerName, DialogueTextFormat.Parse(text));
+        }
 
-            if (dialogueUI != null) dialogueUI.StartDialogueSequence(speakerName, text);
+        /// <summary>
+        /// 取り調べの結果（Excel の会話か短い文）を表示し、ログにも記録する
+        /// </summary>
+        private void ShowOutcome(string speakerName, ActionOutcome outcome)
+        {
+            if (outcome == null) return;
+            if (outcome.HasDialogue) ShowPages(speakerName, DialogueTextFormat.FromScenario(outcome.Dialogue));
+            else ShowDialogue(speakerName, outcome.Text);
+        }
+
+        private void ShowPages(string speakerName, List<DialoguePage> pages)
+        {
+            if (pages == null || pages.Count == 0) return;
+
+            if (dialogueUI != null) dialogueUI.StartDialogue(speakerName, pages);
 
             if (logUI != null)
             {
-                foreach (DialoguePage page in DialogueTextFormat.Parse(text))
-                {
-                    logUI.AddLog(page.IsSystem ? "状況" : speakerName, page.Body);
-                }
+                foreach (DialoguePage page in pages) logUI.AddLog(GetSpeaker(page, speakerName), page.Body);
             }
+        }
+
+        private static string GetSpeaker(DialoguePage page, string defaultSpeaker)
+        {
+            if (page.IsSystem) return "状況";
+            return string.IsNullOrEmpty(page.Speaker) ? defaultSpeaker : page.Speaker;
+        }
+
+        private static string ToPlainText(ActionOutcome outcome)
+        {
+            if (outcome == null) return "";
+            if (!outcome.HasDialogue) return DialogueTextFormat.ToPlainText(outcome.Text);
+
+            var sb = new StringBuilder();
+            foreach (ScenarioPage page in outcome.Dialogue.pages)
+            {
+                if (sb.Length > 0) sb.Append('\n');
+                sb.Append(page.text);
+            }
+            return sb.ToString();
+        }
+
+        private static Sprite FindCharacterSprite(string name)
+        {
+            ScenarioDatabase db = GameManagerInstance != null ? GameManagerInstance.Scenario : null;
+            return db != null ? db.FindCharacterSprite(name) : null;
+        }
+
+        private static void PlaySeByName(string name)
+        {
+            ScenarioDatabase db = GameManagerInstance != null ? GameManagerInstance.Scenario : null;
+            AudioClip clip = db != null ? db.FindSE(name) : null;
+            if (clip != null && AudioManager.Instance != null) AudioManager.Instance.PlaySE(clip);
         }
 
         /// <summary> 取調室ボタンから実行してよいアクションか </summary>

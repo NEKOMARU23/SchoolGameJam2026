@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -18,15 +19,27 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary> 演出タグを除いた本文 </summary>
         public string Body { get; }
 
-        /// <summary> 立ち絵を隠す指定（[IMG:OFF] / [IMG:HIDE]）か </summary>
-        public bool HidesImage => ImageKey != null
-            && (ImageKey.Equals("OFF", StringComparison.OrdinalIgnoreCase) || ImageKey.Equals("HIDE", StringComparison.OrdinalIgnoreCase));
+        /// <summary> 話者名（null や空なら会話の相手） </summary>
+        public string Speaker { get; }
 
-        public DialoguePage(bool isSystem, string imageKey, string body)
+        /// <summary> このページを表示したときに鳴らす SE の名前（なしは null） </summary>
+        public string Se { get; }
+
+        /// <summary> 立ち絵を隠す指定（[IMG:OFF] / [IMG:HIDE] / 本文シートの「非表示」）か </summary>
+        public bool HidesImage => ImageKey != null
+            && (ImageKey.Equals("OFF", StringComparison.OrdinalIgnoreCase) || ImageKey.Equals("HIDE", StringComparison.OrdinalIgnoreCase)
+                || ImageKey == DialogueTextFormat.HiddenImageKey);
+
+        /// <summary> 立ち絵を表示に戻すだけの指定（[IMG:ON]）か </summary>
+        public bool ShowsImage => ImageKey != null && ImageKey.Equals("ON", StringComparison.OrdinalIgnoreCase);
+
+        public DialoguePage(bool isSystem, string imageKey, string body, string speaker = null, string se = null)
         {
             IsSystem = isSystem;
             ImageKey = imageKey;
             Body = body;
+            Speaker = speaker;
+            Se = se;
         }
     }
 
@@ -38,6 +51,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
     {
         public const char PageSeparator = '|';
         public const string SystemTag = "[SYS]";
+
+        /// <summary> 本文シートの立ち絵の列で、立ち絵を消す指定 </summary>
+        public const string HiddenImageKey = "非表示";
         private const string ImageTagPrefix = "[IMG:";
 
         /// <summary>
@@ -56,6 +72,26 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 pages.Add(ParsePage(page));
             }
 
+            return pages;
+        }
+
+        /// <summary>
+        /// Excel の本文シートの会話を、表示用のページに変換する
+        /// </summary>
+        public static List<DialoguePage> FromScenario(ScenarioDialogue dialogue)
+        {
+            var pages = new List<DialoguePage>();
+            if (dialogue == null) return pages;
+
+            foreach (ScenarioPage page in dialogue.pages)
+            {
+                pages.Add(new DialoguePage(
+                    page.kind == PageKind.Narration,
+                    string.IsNullOrEmpty(page.character) ? null : page.character,
+                    page.text ?? "",
+                    string.IsNullOrEmpty(page.speaker) ? null : page.speaker,
+                    string.IsNullOrEmpty(page.se) ? null : page.se));
+            }
             return pages;
         }
 
