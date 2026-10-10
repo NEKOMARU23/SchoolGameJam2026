@@ -243,7 +243,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         public IEnumerator スマホで補助ちゃんと会話でき回数を使い切るとお知らせが出る()
         {
             var talk = FindComponent<DialogueClickable>();
-            int limit = talk.GetTalkCountForDay(1);
+            int limit = GameManager.Scenario.GetSmartphoneTalkCount(1);
             Assert.Greater(limit, 0, "前提: 1日目のセリフが1件以上用意されている");
 
             for (int i = 1; i <= limit; i++)
@@ -287,7 +287,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         public IEnumerator スマホの会話回数は翌日に戻り翌日のセリフになる()
         {
             var talk = FindComponent<DialogueClickable>();
-            for (int i = 0; i < talk.GetTalkCountForDay(1); i++)
+            for (int i = 0; i < GameManager.Scenario.GetSmartphoneTalkCount(1); i++)
             {
                 yield return Click("Button_Help", "MonitorPanel");
                 yield return Click("CloseButton", "SmartphoneTalkPanel");

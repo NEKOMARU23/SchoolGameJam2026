@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.State;
+using TechC.SchoolGameJam2026.Scripts.Scenario;
 
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
@@ -25,8 +26,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         [Header("キャラクター一覧 (A, B, C, D)")]
         [SerializeField] private List<CharacterInstance> allCharacters = new List<CharacterInstance>();
 
-        [Header("日別のシナリオデータリスト (Day1, Day2, ...)")]
-        [SerializeField] private List<DayScenarioSO> dayScenarios = new List<DayScenarioSO>();
+        [Header("シナリオ（Excel から取り込んだデータ。Tools ＞ シナリオExcelを取り込む で作る）")]
+        [SerializeField] private ScenarioDatabase scenarioDatabase;
 
         [Header("エンディング遷移先")]
         [SerializeField] private string clearSceneName = "ClearScene";
@@ -83,10 +84,48 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             StartNewDay();
         }
 
-        /// <summary> 今日のシナリオデータ(DayScenarioSO)を取得する </summary>
-        public DayScenarioSO GetTodayScenario()
+        /// <summary> シナリオのデータ（会話・条件・日別設定・フラグ一覧など） </summary>
+        public ScenarioDatabase Scenario => scenarioDatabase;
+
+        /// <summary>
+        /// 条件シートの判定に使う、今の状態をまとめる
+        /// </summary>
+        /// <param name="partner">会話の相手（スマホのときは null）</param>
+        /// <param name="actionCount">この行動をこのキャラにした通算回数（今回の分は含まない）</param>
+        public ScenarioSelector.Context CreateSelectorContext(CharacterInstance partner, int actionCount)
         {
-            return dayScenarios.Find(s => s != null && s.dayNumber == currentDay);
+            return new ScenarioSelector.Context
+            {
+                SelfAffection = partner != null ? partner.CurrentAffection : 0,
+                AffectionOf = id => allCharacters.Find(c => c != null && c.CharacterId == id)?.CurrentAffection ?? 0,
+                ActionCount = actionCount,
+                Flags = Flags,
+            };
+        }
+
+        /// <summary>
+        /// 会話を聞いたときの効果を適用する（獲得フラグを ON、AI化のキャラを AI にする）
+        /// </summary>
+        public void ApplyScenarioEffects(ScenarioConditionRow row)
+        {
+            if (row == null) return;
+
+            foreach (string flag in row.gainFlags) Flags.TurnOn(flag);
+
+            foreach (string id in row.aiTargets)
+            {
+                CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == id);
+                if (character != null && !character.IsAI)
+                {
+                    character.SetAIFlag(true);
+                    Debug.Log($"[GameManager] 会話（{row.dialogueId}）により {id} が AI になりました。");
+                }
+            }
+        }
+
+        private bool HasScenarioForDay(int day)
+        {
+            return scenarioDatabase != null && scenarioDatabase.HasDay(day);
         }
 
         /// <summary> 全キャラクターの好感度を辞書で取得する </summary>
@@ -179,7 +218,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public bool JumpToDay(int day)
         {
             if (day < 1 || day > maxDays) return false;
-            if (dayScenarios.Find(s => s != null && s.dayNumber == day) == null)
+            if (!HasScenarioForDay(day))
             {
                 Debug.LogWarning($"Day {day} のシナリオが見つからないため移動できません。");
                 return false;
@@ -216,7 +255,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             // 日付を進める前に確認し、シナリオ欠落時に行動回数が未リセットのまま進むのを防ぐ
-            if (dayScenarios.Find(s => s != null && s.dayNumber == nextDay) == null)
+            if (!HasScenarioForDay(nextDay))
             {
                 Debug.LogError($"Day {nextDay} のシナリオが見つかりません。");
                 return;
