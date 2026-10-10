@@ -13,6 +13,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private GameObject interrogationPanel;
         [SerializeField] private GameObject profilePanel;
         [SerializeField] private GameObject resultPanel;
+        [SerializeField] private GameObject smartphoneTalkPanel;
 
         [Header("--- ダイアログ・モーダル登録 ---")]
         [SerializeField] private GameObject resetConfirmModal;
@@ -68,6 +69,14 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public void ShowResultPanel()
         {
             SwitchPanel(resultPanel);
+        }
+
+        /// <summary>
+        /// スマホ（補助ちゃんとの会話）パネルを表示する（通常遷移）
+        /// </summary>
+        public void ShowSmartphoneTalkPanel()
+        {
+            SwitchPanel(smartphoneTalkPanel);
         }
 
         /// <summary>

@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,6 +25,16 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- モニター画面の部屋ボタン登録 ---")]
         [SerializeField] private List<MonitorRoomBinding> monitorRoomBindings = new List<MonitorRoomBinding>();
 
+        [Header("--- スマホ（補助ちゃんとの会話）ボタン ---")]
+        [SerializeField] private Button smartphoneButton;
+
+        [Header("--- スマホのお知らせ表示（今日はもう連絡できない等） ---")]
+        [SerializeField] private GameObject smartphoneNoticeRoot;
+        [SerializeField] private TextMeshProUGUI smartphoneNoticeText;
+        [SerializeField, Min(0f)] private float noticeDuration = 2f;
+
+        private CancellationTokenSource noticeCts;
+
         private void Awake()
         {
             // 各部屋ボタンの OnClick イベントを自動バインド
@@ -32,6 +45,64 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                     string charId = binding.characterId;
                     binding.roomButton.onClick.AddListener(() => OnClickRoomButton(charId));
                 }
+            }
+
+            if (smartphoneButton != null)
+            {
+                smartphoneButton.onClick.AddListener(OnClickSmartphoneButton);
+            }
+
+            if (smartphoneNoticeRoot != null)
+            {
+                smartphoneNoticeRoot.SetActive(false);
+            }
+        }
+
+        private void OnDisable()
+        {
+            // 画面を離れたらお知らせは消す
+            HideSmartphoneNotice();
+        }
+
+        /// <summary>
+        /// スマホの近くにお知らせを一定時間表示する（連続で呼ばれた場合は表示時間を延長）
+        /// </summary>
+        public void ShowSmartphoneNotice(string message)
+        {
+            if (smartphoneNoticeRoot == null) return;
+
+            if (smartphoneNoticeText != null) smartphoneNoticeText.text = message;
+            smartphoneNoticeRoot.SetActive(true);
+
+            noticeCts?.Cancel();
+            noticeCts?.Dispose();
+            noticeCts = new CancellationTokenSource();
+            HideNoticeAfterDelayAsync(noticeCts.Token).Forget();
+        }
+
+        private async UniTaskVoid HideNoticeAfterDelayAsync(CancellationToken token)
+        {
+            bool canceled = await UniTask.Delay(TimeSpan.FromSeconds(noticeDuration), ignoreTimeScale: true, cancellationToken: token)
+                .SuppressCancellationThrow();
+            if (!canceled && smartphoneNoticeRoot != null)
+            {
+                smartphoneNoticeRoot.SetActive(false);
+            }
+        }
+
+        private void HideSmartphoneNotice()
+        {
+            noticeCts?.Cancel();
+            noticeCts?.Dispose();
+            noticeCts = null;
+            if (smartphoneNoticeRoot != null) smartphoneNoticeRoot.SetActive(false);
+        }
+
+        private void OnClickSmartphoneButton()
+        {
+            if (gameUIController != null)
+            {
+                gameUIController.OpenSmartphoneTalk();
             }
         }
 

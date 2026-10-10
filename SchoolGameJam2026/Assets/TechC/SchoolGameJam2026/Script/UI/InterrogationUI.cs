@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -14,6 +13,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public Button button;
     }
 
+    /// <summary>
+    /// 取調室の表示を担当するビュー（判定は行わず、渡された結果を表示するだけ）
+    /// </summary>
     public class InterrogationUI : MonoBehaviour
     {
         [Header("--- 司令塔コントローラー ---")]
@@ -61,53 +63,51 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         #region 表示更新メソッド (GameUIControllerから呼ばれる)
 
         /// <summary>
-        /// 選択されているキャラクターの画像と名前を描画更新
+        /// 取り調べ中のキャラクターの名前と画像を表示
         /// </summary>
-        public void UpdateCharacterRoomDisplay(CharacterInstance targetChar)
+        public void UpdateCharacterRoomDisplay(string characterName, Sprite characterIcon)
         {
-            if (targetChar == null || targetChar.ProfileData == null) return;
-
             if (targetCharacterNameText != null)
             {
-                targetCharacterNameText.text = targetChar.ProfileData.basicInfo.characterName;
+                targetCharacterNameText.text = characterName;
             }
 
             if (targetCharacterImage != null)
             {
                 targetCharacterImage.gameObject.SetActive(true);
-                targetCharacterImage.sprite = targetChar.ProfileData.characterIcon;
+                targetCharacterImage.sprite = characterIcon;
             }
         }
 
         /// <summary>
-        /// 状態に応じて取調室のボタンの有効/無効を更新
+        /// 取調室のボタンの表示・押下可否を更新
         /// </summary>
-        public void UpdateButtonsInteractable(bool isReleased, bool isInterrogated, bool isLimitReached, bool isDialoguePlaying, bool isFinalDay)
+        /// <param name="canAct">拷問・対話・交渉・聞き取り・解放のボタンを押せるか</param>
+        /// <param name="showConfirmAI">AI確定ボタンを表示するか</param>
+        /// <param name="canConfirmAI">AI確定ボタンを押せるか</param>
+        public void UpdateActionButtons(bool canAct, bool showConfirmAI, bool canConfirmAI)
         {
-            bool canInteract = !isReleased && !isInterrogated && !isLimitReached && !isDialoguePlaying;
-
             if (interrogationButtons != null)
             {
                 foreach (var btn in interrogationButtons)
                 {
-                    if (btn != null) btn.interactable = canInteract;
+                    if (btn != null) btn.interactable = canAct;
                 }
             }
 
             if (releaseButton != null)
             {
-                releaseButton.interactable = canInteract;
+                releaseButton.interactable = canAct;
             }
 
             if (confirmAiButtonObject != null)
             {
-                confirmAiButtonObject.SetActive(isFinalDay && !isReleased);
+                confirmAiButtonObject.SetActive(showConfirmAI);
 
-                // AI確定は最終判定のため、行動回数の上限や当日の取り調べ済みに関係なく押せる
                 Button confirmBtn = confirmAiButtonObject.GetComponent<Button>();
                 if (confirmBtn != null)
                 {
-                    confirmBtn.interactable = !isReleased && !isDialoguePlaying;
+                    confirmBtn.interactable = canConfirmAI;
                 }
             }
         }
@@ -116,29 +116,22 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         #region 聞き取りパネル制御
 
-        public void OnClickOpenHearingPanel()
+        /// <summary>
+        /// 聞き取りパネルを開く（選べるキャラのボタンだけを表示）
+        /// </summary>
+        public void ShowHearingPanel(ICollection<string> selectableCharacterIds)
         {
             if (hearingPanel == null) return;
 
-            // 取り調べ中の本人については聞けないため、本人のボタンは隠す
-            string selfId = gameUIController != null ? gameUIController.CurrentSelectedCharacterId : null;
             foreach (var binding in hearingButtonBindings)
             {
                 if (binding.button != null)
                 {
-                    binding.button.gameObject.SetActive(binding.characterId != selfId);
+                    binding.button.gameObject.SetActive(selectableCharacterIds != null && selectableCharacterIds.Contains(binding.characterId));
                 }
             }
 
             hearingPanel.SetActive(true);
-        }
-
-        private void OnClickHearingTarget(string targetId)
-        {
-            if (gameUIController != null)
-            {
-                gameUIController.OnSelectHearingTarget(targetId);
-            }
         }
 
         public void CloseHearingPanel()
@@ -152,6 +145,16 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         #endregion
 
         #region UIボタンから呼び出すイベンター
+
+        public void OnClickOpenHearingPanel()
+        {
+            if (gameUIController != null) gameUIController.OpenHearingPanel();
+        }
+
+        private void OnClickHearingTarget(string targetId)
+        {
+            if (gameUIController != null) gameUIController.OnSelectHearingTarget(targetId);
+        }
 
         public void OnClickInterrogationButton(int actionIndex)
         {

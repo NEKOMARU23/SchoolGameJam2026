@@ -3,8 +3,10 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.UI;
+using TechC.SchoolGameJam2026.Scripts.UI.Dialogue;
 using static TechC.SchoolGameJam2026.Scripts.Test.InGameTestUtility;
 
 namespace TechC.SchoolGameJam2026.Scripts.Test
@@ -197,6 +199,166 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             Assert.AreEqual(0, InterrogationManager.CurrentDailyActions, "翌日に行動回数がリセットされていません");
             Assert.IsFalse(InterrogationManager.HasInterrogatedToday("A"), "翌日に取り調べ済みの記録がリセットされていません");
             Assert.IsTrue(IsPanelActive("MonitorPanel"), "翌日がモニター画面から始まりません");
+        }
+
+        [UnityTest]
+        public IEnumerator 日付切り替え時はロード画面で覆ってから翌日になる()
+        {
+            var transition = FindComponent<DayTransitionUI>();
+            var cover = transition.GetComponent<CanvasGroup>();
+
+            // 他のテストでは演出を省略しているので、ここだけ実際に再生する
+            transition.SetDurations(0.2f, 0.3f);
+            Assert.AreEqual(0f, cover.alpha, "最初からロード画面が見えています");
+            Assert.IsFalse(cover.blocksRaycasts, "最初からロード画面が操作を遮っています");
+
+            yield return Click("Day_Button", "MonitorPanel");
+            yield return Click("YesButton", "DayEndConfirmDialog");
+
+            // 連打しても1日しか進まない
+            Button nextDayButton = FindButton("NextDay_Button", "ResultPanel");
+            nextDayButton.onClick.Invoke();
+            nextDayButton.onClick.Invoke();
+            yield return null;
+
+            Assert.IsTrue(transition.IsPlaying, "ロード画面の演出が始まっていません");
+            Assert.IsTrue(cover.blocksRaycasts, "演出中に下の画面を操作できてしまいます");
+            Assert.AreEqual(1, GameManager.CurrentDay, "画面を覆い終わる前に日付が進んでいます");
+
+            float timeout = 5f;
+            while (transition.IsPlaying && timeout > 0f)
+            {
+                timeout -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.IsFalse(transition.IsPlaying, "ロード画面の演出が終わりません");
+            Assert.AreEqual(2, GameManager.CurrentDay, "連打で日付が進みすぎているか、翌日に進んでいません");
+            Assert.AreEqual(0f, cover.alpha, "演出後もロード画面が残っています");
+            Assert.IsFalse(cover.blocksRaycasts, "演出後も操作が遮られたままです");
+            Assert.IsTrue(IsPanelActive("MonitorPanel"), "演出後にモニター画面に戻っていません");
+        }
+
+        [UnityTest]
+        public IEnumerator スマホで補助ちゃんと会話でき回数を使い切るとお知らせが出る()
+        {
+            var talk = FindComponent<DialogueClickable>();
+            int limit = talk.GetTalkCountForDay(1);
+            Assert.Greater(limit, 0, "前提: 1日目のセリフが1件以上用意されている");
+
+            for (int i = 1; i <= limit; i++)
+            {
+                yield return Click("Button_Help", "MonitorPanel");
+                Assert.IsTrue(IsPanelActive("SmartphoneTalkPanel"), "スマホを押しても会話画面が開きません");
+                Assert.IsTrue(talk.IsOpen, "会話が始まっていません");
+                StringAssert.Contains("1日目", FindDialogueText().text, "1日目のセリフが表示されていません");
+
+                yield return Click("CloseButton", "SmartphoneTalkPanel");
+                Assert.IsFalse(talk.IsOpen, "閉じるボタンで会話が終わりません");
+                Assert.IsTrue(IsPanelActive("MonitorPanel"), "会話を閉じてもモニター画面に戻りません");
+            }
+
+            // 使い切った後に押すと、会話画面は開かずにお知らせが出る
+            yield return AssertSmartphoneNoTalkNotice();
+
+            // その日をやり直すと回数も朝の状態に戻る
+            yield return Click("Reset_Button", "MonitorPanel");
+            yield return Click("YesButton", "ResetConfirmDialog");
+            yield return Click("Button_Help", "MonitorPanel");
+            Assert.IsTrue(talk.IsOpen, "リセットしてもスマホの回数が戻りません");
+        }
+
+        /// <summary>
+        /// スマホを押しても会話画面が開かず、「今日はもう連絡ができない」が表示されることを確認する
+        /// </summary>
+        private static IEnumerator AssertSmartphoneNoTalkNotice()
+        {
+            yield return Click("Button_Help", "MonitorPanel");
+            Assert.IsFalse(IsPanelActive("SmartphoneTalkPanel"), "回数を使い切っても会話画面が開いてしまいます");
+            Assert.IsTrue(IsPanelActive("MonitorPanel"), "モニター画面から移動してしまいました");
+            Assert.IsTrue(IsPanelActive("SmartphoneNotice"), "「今日はもう連絡ができない」が表示されません");
+
+            Transform noticeText = FindComponent<MonitorUI>().transform.Find("SmartphoneNotice/SmartphoneNoticeText");
+            Assert.IsNotNull(noticeText, "お知らせの文字欄が見つかりません");
+            Assert.AreEqual("今日はもう連絡ができない", noticeText.GetComponent<TMPro.TextMeshProUGUI>().text);
+        }
+
+        [UnityTest]
+        public IEnumerator スマホの会話回数は翌日に戻り翌日のセリフになる()
+        {
+            var talk = FindComponent<DialogueClickable>();
+            for (int i = 0; i < talk.GetTalkCountForDay(1); i++)
+            {
+                yield return Click("Button_Help", "MonitorPanel");
+                yield return Click("CloseButton", "SmartphoneTalkPanel");
+            }
+            yield return AssertSmartphoneNoTalkNotice();
+
+            yield return Click("Day_Button", "MonitorPanel");
+            yield return Click("YesButton", "DayEndConfirmDialog");
+            yield return Click("NextDay_Button", "ResultPanel");
+            Assert.AreEqual(2, GameManager.CurrentDay);
+
+            yield return Click("Button_Help", "MonitorPanel");
+            Assert.IsTrue(talk.IsOpen, "翌日になってもスマホで会話できません");
+            StringAssert.Contains("2日目", FindDialogueText().text, "2日目のセリフが表示されていません");
+        }
+
+        private static TMPro.TextMeshProUGUI FindDialogueText()
+        {
+            Transform text = FindComponent<DialogueClickable>().transform.Find("SmartphoneTalk_Chatbox/DialogueText");
+            Assert.IsNotNull(text, "スマホ会話画面のセリフ欄が見つかりません");
+            return text.GetComponent<TMPro.TextMeshProUGUI>();
+        }
+
+        [UnityTest]
+        public IEnumerator 日付切り替えのロード画面に正しい日付が表示される()
+        {
+            var transition = FindComponent<DayTransitionUI>();
+            var cover = transition.GetComponent<CanvasGroup>();
+            TMPro.TextMeshProUGUI label = FindComponent<DayTransitionUI>().transform.Find("DayTransitionDayText").GetComponent<TMPro.TextMeshProUGUI>();
+
+            // 本番と同じ演出時間で確認する
+            transition.SetDurations(0.4f, 1.2f);
+            var shownLabels = new System.Collections.Generic.List<string>();
+
+            for (int day = 1; day <= GameManager.MaxDays; day++)
+            {
+                Assert.AreEqual(day, GameManager.CurrentDay, "日付がずれています");
+
+                // その日の行動（A と対話）→ 1日終了 → 次の日へ
+                yield return Click("SelectRoomA_Button");
+                yield return Click("Button_Talk");
+                yield return SkipDialogueByButton();
+                yield return Click("Button_ToMonitor");
+                yield return Click("Day_Button", "MonitorPanel");
+                yield return Click("YesButton", "DayEndConfirmDialog");
+                yield return Click("NextDay_Button", "ResultPanel");
+
+                // 画面が覆い終わった時点の表示を記録
+                float timeout = 5f;
+                while (cover.alpha < 1f && timeout > 0f)
+                {
+                    timeout -= Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                shownLabels.Add(label.text);
+                Debug.Log($"[日付切り替えテスト] {day}日目の終了時に表示された文字: {label.text}");
+
+                string expected = day < GameManager.MaxDays ? $"{day + 1}日目" : "最終結果";
+                Assert.AreEqual(expected, label.text, $"{day}日目の終了時の表示が違います（これまでの表示: {string.Join(", ", shownLabels)}）");
+
+                if (day == GameManager.MaxDays) break;
+
+                // 演出が終わるまで待つ
+                timeout = 5f;
+                while (transition.IsPlaying && timeout > 0f)
+                {
+                    timeout -= Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                Assert.IsFalse(transition.IsPlaying, $"{day}日目の終了時の演出が終わりません");
+            }
         }
     }
 }

@@ -77,15 +77,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// 指定キャラに対して本日アクション可能か判定する
         /// </summary>
         /// <param name="rejectReason">不可の場合にプレイヤーへ表示する理由</param>
-        public bool CanExecuteAction(string characterId, out string rejectReason)
+        public bool CanExecuteAction(CharacterInstance targetChar, out string rejectReason)
         {
+            if (targetChar == null)
+            {
+                rejectReason = null;
+                return false;
+            }
+
+            if (targetChar.IsReleased)
+            {
+                rejectReason = "（このキャラクターはすでに解放されているため、取り調べできません）";
+                return false;
+            }
+
             if (IsActionLimitReached)
             {
                 rejectReason = "（本日の取り調べ可能回数を消化しました）";
                 return false;
             }
 
-            if (HasInterrogatedToday(characterId))
+            if (HasInterrogatedToday(targetChar.CharacterId))
             {
                 rejectReason = "（このキャラクターへの本日の取り調べは既に終了しています）";
                 return false;
@@ -104,7 +116,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             // 1. ガード節（事前チェック）
             if (targetChar == null) return "";
 
-            if (!CanExecuteAction(targetChar.CharacterId, out string rejectReason))
+            if (!CanExecuteAction(targetChar, out string rejectReason))
             {
                 Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} へのアクションは実行できません: {rejectReason}");
                 return rejectReason;
@@ -131,7 +143,17 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             currentDailyActions++;
             OnActionCountChanged?.Invoke(currentDailyActions, dailyActionLimit);
 
-            // 4. 夜フェーズ移行チェック
+            // 4. 解放はセリフ取得・行動回数の計上が済んでから確定する
+            if (actionType == InterrogationActionType.Release)
+            {
+                targetChar.SetReleaseFlag(true);
+                if (targetChar.IsAI)
+                {
+                    Debug.LogWarning($"<color=red>【警告】AIである {targetChar.CharacterId} が解放されました。</color>");
+                }
+            }
+
+            // 5. 夜フェーズ移行チェック
             if (IsActionLimitReached)
             {
                 Debug.Log("[InterrogationManager] 行動制限到達。夜フェーズへ移行します。");
@@ -154,6 +176,59 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             Dictionary<string, int> otherAffections = GameManager.Instance?.GetAllCharacterAffections() ?? new Dictionary<string, int>();
             int actionCount = GetCharacterActionCount(targetChar.CharacterId, InterrogationActionType.ConfirmAI);
             return dailySetting.GetResponse(InterrogationActionType.ConfirmAI, targetChar.CurrentAffection, otherAffections, actionCount);
+        }
+
+        /// <summary>
+        /// 聞き取りで話題にできるキャラのID一覧（取り調べ中の本人以外）
+        /// </summary>
+        public List<string> GetHearingTargetIds(CharacterInstance targetChar)
+        {
+            var ids = new List<string>();
+            if (GameManager.Instance == null) return ids;
+
+            foreach (CharacterInstance character in GameManager.Instance.AllCharacters)
+            {
+                if (character == null || character == targetChar) continue;
+                ids.Add(character.CharacterId);
+            }
+            return ids;
+        }
+
+        /// <summary>
+        /// ポイントを消費してプロフィール項目を解禁する
+        /// </summary>
+        /// <param name="itemKey"><see cref="ProfileDataSO.BasicInfoKey"/>（基礎情報）または過去情報の itemKey</param>
+        /// <returns>解禁できた場合 true（解禁済み・ポイント不足・項目なしの場合は false）</returns>
+        public bool TryUnlockProfile(CharacterInstance targetChar, string itemKey)
+        {
+            if (targetChar == null || targetChar.ProfileData == null || string.IsNullOrEmpty(itemKey)) return false;
+
+            // --- 1. 基礎情報 ---
+            if (itemKey.Equals(ProfileDataSO.BasicInfoKey, StringComparison.OrdinalIgnoreCase))
+            {
+                if (targetChar.IsBasicInfoUnlocked) return false;
+
+                int cost = targetChar.ProfileData.basicInfo != null ? targetChar.ProfileData.basicInfo.unlockCost : 0;
+                if (!TrySpendPoints(cost)) return false;
+
+                targetChar.SetBasicInfoUnlocked(true);
+                return true;
+            }
+
+            // --- 2. 過去情報 ---
+            if (targetChar.IsHistoryUnlocked(itemKey)) return false;
+
+            ProfileItem item = targetChar.ProfileData.historyInfoList?.Find(i => i.itemKey == itemKey);
+            if (item == null)
+            {
+                Debug.LogWarning($"[InterrogationManager] {targetChar.CharacterId} のプロフィールに itemKey '{itemKey}' が存在しません。");
+                return false;
+            }
+
+            if (!TrySpendPoints(item.unlockCost)) return false;
+
+            targetChar.UnlockHistoryItem(itemKey);
+            return true;
         }
 
         private CharacterDailySetting GetTodaySetting(string characterId)

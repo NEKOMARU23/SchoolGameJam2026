@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
-using TechC.SchoolGameJam2026.Scripts.SO;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
@@ -16,6 +14,43 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public GameObject contentObject;
     }
 
+    /// <summary>
+    /// プロフィール1項目分の表示データ
+    /// </summary>
+    public readonly struct ProfileItemViewData
+    {
+        public bool IsUnlocked { get; }
+        public string Text { get; }
+
+        public ProfileItemViewData(bool isUnlocked, string text)
+        {
+            IsUnlocked = isUnlocked;
+            Text = text;
+        }
+    }
+
+    /// <summary>
+    /// プロフィール画面1キャラ分の表示データ
+    /// </summary>
+    public sealed class ProfileViewData
+    {
+        public string CharacterName { get; }
+        public Sprite CharacterIcon { get; }
+
+        /// <summary> 項目キー（"BASIC" や過去情報の itemKey）ごとの表示データ </summary>
+        public IReadOnlyDictionary<string, ProfileItemViewData> Items { get; }
+
+        public ProfileViewData(string characterName, Sprite characterIcon, IReadOnlyDictionary<string, ProfileItemViewData> items)
+        {
+            CharacterName = characterName;
+            CharacterIcon = characterIcon;
+            Items = items;
+        }
+    }
+
+    /// <summary>
+    /// プロフィール画面の表示を担当するビュー（解禁の判定は行わず、渡された結果を表示するだけ）
+    /// </summary>
     public class ProfileUI : MonoBehaviour
     {
         [Header("--- 司令塔コントローラー ---")]
@@ -28,61 +63,38 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- プロフィール（資料）UI登録リスト ---")]
         [SerializeField] private List<ProfileUIBinding> profileUIBindings = new List<ProfileUIBinding>();
 
-        private string currentViewingCharacterId;
-
-        public void RefreshProfileDisplay(CharacterInstance targetChar)
+        public void RefreshProfileDisplay(ProfileViewData data)
         {
-            if (targetChar == null || targetChar.ProfileData == null) return;
-
-            currentViewingCharacterId = targetChar.CharacterId;
+            if (data == null) return;
 
             if (profileNameText != null)
-                profileNameText.text = targetChar.ProfileData.basicInfo.characterName;
+                profileNameText.text = data.CharacterName;
 
             if (profileCharacterImage != null)
             {
                 profileCharacterImage.gameObject.SetActive(true);
-                if (targetChar.ProfileData.characterIcon != null)
-                    profileCharacterImage.sprite = targetChar.ProfileData.characterIcon;
+                if (data.CharacterIcon != null)
+                    profileCharacterImage.sprite = data.CharacterIcon;
             }
 
             foreach (var binding in profileUIBindings)
             {
                 if (string.IsNullOrEmpty(binding.key)) continue;
 
-                bool isUnlocked = false;
-                string displayText = "";
-
-                if (binding.key.Equals("BASIC", StringComparison.OrdinalIgnoreCase))
-                {
-                    isUnlocked = targetChar.IsBasicInfoUnlocked;
-                    BasicProfileGroup basic = targetChar.ProfileData.basicInfo;
-                    displayText = $"年齢：{basic.age}\n" +
-                                  $"職業：{basic.occupation}\n" +
-                                  $"誕生日：{basic.birthday}\n" +
-                                  $"身長：{basic.height}\n" +
-                                  $"体重：{basic.weight}\n" +
-                                  $"特技：{basic.skills}\n" +
-                                  $"好きなこと：{basic.likes}";
-                }
-                else
-                {
-                    isUnlocked = targetChar.IsHistoryUnlocked(binding.key);
-                    ProfileItem item = targetChar.ProfileData.historyInfoList.Find(i => i.itemKey == binding.key);
-                    if (item != null) displayText = item.valueContent;
-                }
+                // データに無い項目は未解禁として扱う
+                data.Items.TryGetValue(binding.key, out ProfileItemViewData item);
 
                 if (binding.unlockButton != null)
-                    binding.unlockButton.SetActive(!isUnlocked);
+                    binding.unlockButton.SetActive(!item.IsUnlocked);
 
                 if (binding.contentObject != null)
                 {
-                    binding.contentObject.SetActive(isUnlocked);
-                    if (isUnlocked)
+                    binding.contentObject.SetActive(item.IsUnlocked);
+                    if (item.IsUnlocked)
                     {
                         TextMeshProUGUI contentTmp = binding.contentObject.GetComponentInChildren<TextMeshProUGUI>();
-                        if (contentTmp != null && !string.IsNullOrEmpty(displayText))
-                            contentTmp.text = displayText;
+                        if (contentTmp != null && !string.IsNullOrEmpty(item.Text))
+                            contentTmp.text = item.Text;
                     }
                 }
             }
@@ -97,11 +109,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         /// <summary>
         /// プロフィール項目の解放ボタン用（OnClick）
-        /// 引数には Unity の Inspector 上で "BASIC" や "PAST_CRIME" などの itemKey を渡します。
+        /// 引数には Unity の Inspector 上で "BASIC" や "PAST_1" などの itemKey を渡します。
         /// </summary>
         public void OnClickUnlockProfileItem(string itemKey)
         {
-            if (gameUIController != null) gameUIController.TryUnlockProfileItemForCharacter(currentViewingCharacterId, itemKey);
+            if (gameUIController != null) gameUIController.TryUnlockProfileItemForViewingCharacter(itemKey);
         }
 
         #endregion
