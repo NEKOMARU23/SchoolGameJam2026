@@ -106,16 +106,54 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         public void ApplyScenarioEffects(ScenarioConditionRow row)
         {
             if (row == null) return;
+            ApplyEffects(row.gainFlags, row.aiTargets, $"会話（{row.dialogueId}）");
+        }
 
-            foreach (string flag in row.gainFlags) Flags.TurnOn(flag);
+        /// <summary>
+        /// 会話の後に出す選択肢のうち、今の状態で条件を満たすものを並べる順に返す
+        /// </summary>
+        /// <param name="partner">会話の相手（スマホのときは null）</param>
+        public List<ScenarioChoice> GetAvailableChoices(ScenarioDialogue dialogue, CharacterInstance partner)
+        {
+            var available = new List<ScenarioChoice>();
+            if (dialogue == null || scenarioDatabase == null) return available;
 
-            foreach (string id in row.aiTargets)
+            ScenarioSelector.Context context = CreateSelectorContext(partner, 0);
+            foreach (ScenarioChoice choice in scenarioDatabase.GetChoices(dialogue.id))
+            {
+                if (ScenarioSelector.IsSatisfied(choice, context)) available.Add(choice);
+            }
+            return available;
+        }
+
+        /// <summary>
+        /// 選択肢を選んだときの効果（好感度の変化・獲得フラグ・AI化）を適用し、次に出す会話を返す
+        /// 行動回数・スマホの回数は使わない（最初の行動・会話で1回分を使っている）
+        /// </summary>
+        /// <param name="partner">会話の相手（スマホのときは null。好感度の変化は起きない）</param>
+        /// <returns>次の会話（なければ null）</returns>
+        public ScenarioDialogue SelectChoice(ScenarioChoice choice, CharacterInstance partner)
+        {
+            if (choice == null) return null;
+
+            if (choice.affectionChange != 0 && partner != null) partner.AddAffection(choice.affectionChange);
+            ApplyEffects(choice.gainFlags, choice.aiTargets, $"選択肢（{choice.sourceLocation}「{choice.text}」）");
+
+            return scenarioDatabase != null ? scenarioDatabase.FindDialogue(choice.nextDialogueId) : null;
+        }
+
+        /// <summary> 獲得フラグを ON にし、AI化のキャラを AI にする </summary>
+        private void ApplyEffects(IEnumerable<string> gainFlags, IEnumerable<string> aiTargets, string source)
+        {
+            foreach (string flag in gainFlags) Flags.TurnOn(flag);
+
+            foreach (string id in aiTargets)
             {
                 CharacterInstance character = allCharacters.Find(c => c != null && c.CharacterId == id);
                 if (character != null && !character.IsAI)
                 {
                     character.SetAIFlag(true);
-                    Debug.Log($"[GameManager] 会話（{row.dialogueId}）により {id} が AI になりました。");
+                    Debug.Log($"[GameManager] {source}により {id} が AI になりました。");
                 }
             }
         }
