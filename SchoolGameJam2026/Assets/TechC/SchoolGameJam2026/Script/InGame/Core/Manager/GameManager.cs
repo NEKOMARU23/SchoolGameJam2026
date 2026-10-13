@@ -79,6 +79,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary> 状態をまとめて戻したとき（リセット・ロード・デバッグ）に通知。画面の更新に使う </summary>
         public event Action OnStateRestored;
         public event Action OnNightPhaseStarted;
+
+        /// <summary> セーブを読み込んだとき（状態を戻した後）に通知。ログなど画面側の情報を戻すのに使う </summary>
+        public event Action<SaveData> OnSaveLoaded;
+
+        /// <summary>
+        /// タイトル画面の「つづきから」で読み込んだセーブ（はじめからなら null）
+        /// 画面側の Start が GameManager の Start より後になると OnSaveLoaded を受け取れないので、ここからも受け取れるようにする
+        /// </summary>
+        public SaveData SaveLoadedAtStart { get; private set; }
         #endregion
 
         private void Awake()
@@ -96,6 +105,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         private void Start()
         {
+            // タイトル画面の「つづきから」で選んだセーブがあれば、その続きから始める
+            if (SaveStore.TakePendingLoad(out SaveData save))
+            {
+                SaveLoadedAtStart = save;
+                ApplySave(save);
+                return;
+            }
+
+            SaveStore.CurrentSlot = 0;   // はじめから
             StartNewDay();
         }
 
@@ -262,6 +280,35 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
             Flags.RestoreFrom(snapshot.flags);
             OnStateRestored?.Invoke();
+        }
+
+        /// <summary>
+        /// セーブするデータを作る（今の状態と、その日の朝の状態をまとめる）
+        /// </summary>
+        /// <param name="log">これまでのログ（画面の側が持っている）</param>
+        public SaveData CreateSaveData(List<LogEntry> log)
+        {
+            GameStateSnapshot current = CaptureState();
+            return new SaveData
+            {
+                day = currentDay,
+                remainingActions = InterrogationManager.Instance != null ? InterrogationManager.Instance.RemainingDailyActions : 0,
+                current = current,
+                morning = morningSnapshot != null ? CloneSnapshot(morningSnapshot) : CloneSnapshot(current),
+                log = log != null ? new List<LogEntry>(log) : new List<LogEntry>(),
+            };
+        }
+
+        /// <summary>
+        /// セーブした状態に戻す（朝の状態も戻すので、ロード後も「今日をやり直す」で朝に戻れる）
+        /// </summary>
+        public void ApplySave(SaveData save)
+        {
+            if (save == null || save.current == null) return;
+
+            morningSnapshot = CloneSnapshot(save.morning ?? save.current);
+            RestoreState(save.current);
+            OnSaveLoaded?.Invoke(save);
         }
 
         /// <summary>

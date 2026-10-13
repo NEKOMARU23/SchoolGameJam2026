@@ -168,9 +168,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         /// </summary>
         public static IEnumerator ClickConfirmYes()
         {
-            Assert.IsTrue(IsPanelActive("ConfirmDialog"), "確認ダイアログが出ていません");
+            Assert.IsTrue(IsConfirmDialogOpen(ConfirmDialogPath), "確認ダイアログが出ていません");
             yield return Click("YesButton", ConfirmDialogPath);
-            Assert.IsFalse(IsPanelActive("ConfirmDialog"), "「はい」を押しても確認ダイアログが閉じません");
+            Assert.IsFalse(IsConfirmDialogOpen(ConfirmDialogPath), "「はい」を押しても確認ダイアログが閉じません");
+        }
+
+        /// <summary>
+        /// 確認ダイアログを、置き場所（例: "Canvas/ConfirmDialog"）で探す
+        /// ゲーム中の確認とセーブ・ロードの確認は同じ名前なので、名前だけでは区別できない
+        /// </summary>
+        public static ConfirmDialogUI GetConfirmDialog(string pathContains)
+        {
+            ConfirmDialogUI[] found = Object.FindObjectsByType<ConfirmDialogUI>(FindObjectsInactive.Include)
+                .Where(d => GetPath(d.transform).Contains(pathContains))
+                .ToArray();
+            Assert.AreEqual(1, found.Length, $"確認ダイアログ（{pathContains}）が {found.Length} 個見つかりました");
+            return found[0];
+        }
+
+        public static bool IsConfirmDialogOpen(string pathContains)
+        {
+            return GetConfirmDialog(pathContains).gameObject.activeInHierarchy;
         }
 
         /// <summary>
