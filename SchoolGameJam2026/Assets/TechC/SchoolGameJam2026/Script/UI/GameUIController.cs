@@ -9,10 +9,11 @@ using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using TechC.SchoolGameJam2026.Scripts.SO;
 using TechC.SchoolGameJam2026.Scripts.UI.Dialogue;
 using TechC.SchoolGameJam2026.Scripts.Scenario;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
-    public class GameUIController : MonoBehaviour
+    public class GameUIController : MonoBehaviour, ISaveTarget
     {
         [Header("--- 各機能UI（ビュー）の参照 ---")]
         [SerializeField] private ScreenNavigationUI navigationUI;
@@ -41,6 +42,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private ScenarioDialogue currentSmartphoneDialogue;  // 表示中のスマホ会話（終わったら選択肢を調べる）
         private ScenarioDialogue interrogationDialogue;      // 取調室で表示中の Excel の会話（終わったら選択肢を調べる）
         private CharacterInstance interrogationPartner;      // その会話の相手
+        private readonly List<LogEntry> logHistory = new List<LogEntry>();   // ログの内容（セーブに入れる）
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
 
@@ -65,10 +67,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             RefreshAllViews();
+
+            // セーブ・ロード（Manager シーンのオプション画面）から操作できるようにする
+            SaveLoadController.Target = this;
+
+            // タイトルの「つづきから」で始めたときは、セーブのログも戻す（GameManager の Start が先に終わっていた場合）
+            if (GameManagerInstance != null && GameManagerInstance.SaveLoadedAtStart != null) RestoreLog(GameManagerInstance.SaveLoadedAtStart.log);
         }
 
         private void OnDestroy()
         {
+            if (ReferenceEquals(SaveLoadController.Target, this)) SaveLoadController.Target = null;
             Unsubscribe();
         }
 
@@ -85,6 +94,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 GameManagerInstance.OnDayStarted += HandleDayStarted;
                 GameManagerInstance.OnDayReset += HandleDayReset;
                 GameManagerInstance.OnStateRestored += HandleStateRestored;
+                GameManagerInstance.OnSaveLoaded += HandleSaveLoaded;
             }
 
             if (dialogueUI != null)
@@ -122,6 +132,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 GameManagerInstance.OnDayStarted -= HandleDayStarted;
                 GameManagerInstance.OnDayReset -= HandleDayReset;
                 GameManagerInstance.OnStateRestored -= HandleStateRestored;
+                GameManagerInstance.OnSaveLoaded -= HandleSaveLoaded;
             }
 
             if (dialogueUI != null)
@@ -176,10 +187,78 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             RefreshAllViews();
         }
 
+        /// <summary>
+        /// セーブを読み込んだとき: 会話を閉じてモニター画面から再開し、ログを戻す
+        /// </summary>
+        private void HandleSaveLoaded(SaveData save)
+        {
+            if (dialogueUI != null) dialogueUI.ResetDialogueState();
+            interrogationDialogue = null;
+            if (smartphoneTalk != null && smartphoneTalk.IsOpen)
+            {
+                currentSmartphoneDialogue = null;
+                smartphoneTalk.CloseDialogue();
+            }
+            if (navigationUI != null)
+            {
+                navigationUI.CloseAllModals();
+                navigationUI.ShowMonitorPanel();
+                navigationUI.ClearHistory();
+            }
+
+            RestoreLog(save.log);
+            RefreshAllViews();
+        }
+
         private void HandleDayReset()
         {
             ShowDialogue("システム", "（本日の朝の状態に巻き戻しました）");
             RefreshAllViews();
+        }
+
+        #endregion
+
+        #region セーブ・ロード（ISaveTarget）
+
+        /// <summary>
+        /// 今セーブしてよいか。会話の途中・選択肢を選んでいる途中・日付の切り替え中などはだめ
+        /// </summary>
+        public bool CanSave(out string reason)
+        {
+            bool busy = isDayTransitioning
+                || (dialogueUI != null && dialogueUI.IsDialoguePlaying)
+                || (choiceUI != null && choiceUI.IsOpen)
+                || (smartphoneTalk != null && smartphoneTalk.IsOpen)
+                || (confirmDialog != null && confirmDialog.IsOpen)
+                || (endingPlayer != null && endingPlayer.IsPlaying);
+
+            reason = busy ? "会話の途中はセーブできません。会話が終わってからセーブしてください" : null;
+            return !busy && GameManagerInstance != null;
+        }
+
+        public SaveData CreateSaveData()
+        {
+            return GameManagerInstance != null ? GameManagerInstance.CreateSaveData(logHistory) : null;
+        }
+
+        public void ApplySave(SaveData save)
+        {
+            if (GameManagerInstance != null) GameManagerInstance.ApplySave(save);
+        }
+
+        /// <summary> ログを1件足す（画面とセーブ用の記録の両方） </summary>
+        private void AddLog(string speaker, string text)
+        {
+            logHistory.Add(new LogEntry { speaker = speaker, text = text });
+            if (logUI != null) logUI.AddLog(speaker, text);
+        }
+
+        private void RestoreLog(List<LogEntry> entries)
+        {
+            logHistory.Clear();
+            if (logUI != null) logUI.ClearLog();
+            if (entries == null) return;
+            foreach (LogEntry entry in entries) AddLog(entry.speaker, entry.text);
         }
 
         #endregion
@@ -368,7 +447,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (logUI != null)
             {
-                foreach (DialoguePage page in currentSmartphonePages) logUI.AddLog(GetSpeaker(page, "補助ちゃん"), page.Body);
+                foreach (DialoguePage page in currentSmartphonePages) AddLog(GetSpeaker(page, "補助ちゃん"), page.Body);
             }
         }
 
@@ -426,7 +505,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         private void HandleChoiceSelected(ScenarioChoice choice, CharacterInstance partner, bool isSmartphone)
         {
-            if (logUI != null) logUI.AddLog("あなた", choice.text);
+            AddLog("あなた", choice.text);
             ScenarioDialogue next = GameManagerInstance.SelectChoice(choice, partner);
 
             if (isSmartphone)
@@ -756,7 +835,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (logUI != null)
             {
-                foreach (DialoguePage page in pages) logUI.AddLog(GetSpeaker(page, speakerName), page.Body);
+                foreach (DialoguePage page in pages) AddLog(GetSpeaker(page, speakerName), page.Body);
             }
         }
 

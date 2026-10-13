@@ -42,6 +42,10 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private Button backButton;
         [SerializeField] private Button quitButton;
 
+        [Header("--- セーブ・ロード（ゲーム中だけ表示） ---")]
+        [SerializeField] private Button saveButton;
+        [SerializeField] private Button loadButton;
+
         [Header("--- 選択中の見た目 ---")]
         [SerializeField] private Color selectedColor = new Color(0.95f, 0.75f, 0.3f, 1f);
         [SerializeField] private Color unselectedColor = new Color(0.35f, 0.35f, 0.4f, 1f);
@@ -67,10 +71,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void Update()
         {
-            // Esc でオプションを開閉
+            // Esc でオプションを開閉（セーブ・ロードの枠が開いていれば、先にそちらを閉じる）
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                if (IsOpen) Close();
+                if (SaveLoadController.Instance != null && SaveLoadController.Instance.IsOpen) SaveLoadController.Instance.Close();
+                else if (IsOpen) Close();
                 else Open();
             }
         }
@@ -82,6 +87,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (panelRoot == null) return;
             panelRoot.SetActive(true);
+
+            // タイトルから開いたときは、セーブ・ロードのボタンは出さない（ロードは「つづきから」で行う）
+            bool inGame = SaveLoadController.Target != null;
+            if (saveButton != null) saveButton.gameObject.SetActive(inGame);
+            if (loadButton != null) loadButton.gameObject.SetActive(inGame);
+
             Refresh();
         }
 
@@ -91,6 +102,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public void Close()
         {
             if (panelRoot == null) return;
+            if (SaveLoadController.Instance != null) SaveLoadController.Instance.Close();
             panelRoot.SetActive(false);
             if (settingsManager != null) settingsManager.Save();
         }
@@ -107,6 +119,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (backButton != null) backButton.onClick.AddListener(Close);
             if (quitButton != null) quitButton.onClick.AddListener(QuitGame);
+            if (saveButton != null) saveButton.onClick.AddListener(() => { if (SaveLoadController.Instance != null) SaveLoadController.Instance.OpenSave(); });
+            if (loadButton != null) loadButton.onClick.AddListener(() => { if (SaveLoadController.Instance != null) SaveLoadController.Instance.OpenLoad(); });
         }
 
         private void BindChoice(Button[] buttons, System.Action<int> onSelect)
