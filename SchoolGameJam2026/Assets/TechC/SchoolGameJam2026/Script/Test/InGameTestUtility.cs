@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.UI;
 
@@ -31,6 +32,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         /// </summary>
         public static IEnumerator LoadInGameScene()
         {
+            UseTestEndingRecord();
             yield return SceneManager.LoadSceneAsync(InGameSceneName, LoadSceneMode.Single);
 
             // Awake → Start を確実に通すため数フレーム待つ
@@ -42,6 +44,16 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
 
             // 日付切り替えの演出はテスト時間を延ばすだけなので省略する（演出自体は専用のテストで確認）
             FindComponent<DayTransitionUI>().SetDurations(0f, 0f);
+        }
+
+        /// <summary>
+        /// 見たエンディングの記録を、本物のファイルではなくテスト用の空のファイルに書くようにする
+        /// </summary>
+        public static void UseTestEndingRecord()
+        {
+            string path = System.IO.Path.Combine(Application.temporaryCachePath, "test_ending_record.json");
+            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+            EndingRecordStore.SetFilePathForTest(path);
         }
 
         public static T FindComponent<T>() where T : Object
@@ -119,6 +131,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         {
             for (int i = 0; i < MaxWaitFrames && SceneManager.GetActiveScene().name != sceneName; i++)
             {
+                // 最終日の後のエンディングの会話は、送りながら待つ
+                EndingPlayerUI ending = Object.FindAnyObjectByType<EndingPlayerUI>();
+                if (ending != null && ending.IsPlaying) ending.Advance();
                 yield return null;
             }
 

@@ -15465,6 +15465,39 @@ MonoBehaviour:
       eventCG: 
       effect: 
       bgm: 
+  - id: "END_\u30B2\u30FC\u30E0\u30AA\u30FC\u30D0\u30FC"
+    pages:
+    - kind: 1
+      speaker: 
+      text: "\uFF08AI\u3092\u89E3\u653E\u3057\u3066\u3057\u307E\u3063\u305F\u3068\u304D\u306E\u30A8\u30F3\u30C7\u30A3\u30F3\u30B0\u306E\u6587\u7AE0\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\uFF09"
+      se: 
+      character: 
+      background: 
+      eventCG: 
+      effect: 
+      bgm: 
+  - id: "END_\u51A4\u7F6A"
+    pages:
+    - kind: 1
+      speaker: 
+      text: "\uFF08\u4EBA\u9593\u3092AI\u3068\u5224\u5B9A\u3057\u3066\u3057\u307E\u3063\u305F\u3068\u304D\u306E\u30A8\u30F3\u30C7\u30A3\u30F3\u30B0\u306E\u6587\u7AE0\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\uFF09"
+      se: 
+      character: 
+      background: 
+      eventCG: 
+      effect: 
+      bgm: 
+  - id: "END_\u901A\u5E38\u30AF\u30EA\u30A2"
+    pages:
+    - kind: 1
+      speaker: 
+      text: "\uFF08\u5168\u54E1\u3092\u6B63\u3057\u304F\u5224\u5B9A\u3057\u305F\u3068\u304D\u306E\u30A8\u30F3\u30C7\u30A3\u30F3\u30B0\u306E\u6587\u7AE0\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\uFF09"
+      se: 
+      character: 
+      background: 
+      eventCG: 
+      effect: 
+      bgm: 
   conditions:
   - day: 1
     characterId: A
@@ -21355,7 +21388,28 @@ MonoBehaviour:
     ngAction: 0
   flags: []
   aiJudgements: []
-  endings: []
+  endings:
+  - priority: 1
+    result: 2
+    requiredFlags: []
+    ngFlags: []
+    kind: 1
+    endingId: "END_\u30B2\u30FC\u30E0\u30AA\u30FC\u30D0\u30FC"
+    listName: "\u30B2\u30FC\u30E0\u30AA\u30FC\u30D0\u30FC"
+  - priority: 2
+    result: 1
+    requiredFlags: []
+    ngFlags: []
+    kind: 0
+    endingId: "END_\u51A4\u7F6A"
+    listName: "\u51A4\u7F6A\u30A8\u30F3\u30C9"
+  - priority: 3
+    result: 0
+    requiredFlags: []
+    ngFlags: []
+    kind: 0
+    endingId: "END_\u901A\u5E38\u30AF\u30EA\u30A2"
+    listName: "\u901A\u5E38\u30A8\u30F3\u30C9"
   characterSprites: []
   backgrounds: []
   eventCGs: []

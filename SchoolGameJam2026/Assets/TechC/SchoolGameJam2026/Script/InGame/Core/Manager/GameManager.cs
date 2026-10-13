@@ -10,6 +10,24 @@ using TechC.SchoolGameJam2026.Scripts.Scenario;
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
     /// <summary>
+    /// 最終日の後にどのエンディングになるか
+    /// </summary>
+    public class EndingDecision
+    {
+        /// <summary> 最終日の判定結果 </summary>
+        public EndingResult Result;
+
+        /// <summary> エンディングシートで選ばれた行（当てはまる行がなければ null） </summary>
+        public ScenarioEnding Ending;
+
+        /// <summary> エンディングの会話（なければ null。会話を見せずに画面を移る） </summary>
+        public ScenarioDialogue Dialogue;
+
+        /// <summary> 会話の後にゲームオーバー画面に移るか（false ならクリア画面） </summary>
+        public bool IsGameOver;
+    }
+
+    /// <summary>
     /// ゲーム全体の進行管理、日数、および「その日の朝に戻す」リセット機能を管理するマネージャー (Singleton)
     /// </summary>
     public class GameManager : MonoBehaviour
@@ -339,28 +357,34 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         /// <summary>
-        /// リザルトを閉じた後の進行。最終日ならエンディングへ、それ以外は翌日へ進む
+        /// 最終日の判定結果とフラグから、エンディングシートでどのエンディングになるかを決める
+        /// エンディングシートに当てはまる行がなければ、AI を解放したらゲームオーバー、それ以外はクリア（会話なし）
         /// </summary>
-        /// <returns>翌日に進んだ場合 true、エンディングへ遷移した場合 false</returns>
-        public bool AdvanceDayOrFinishGame()
+        public EndingDecision DecideEnding()
         {
-            if (IsFinalDay)
-            {
-                FinishGame();
-                return false;
-            }
+            EndingResult result = EvaluateFinalResult();
+            ScenarioEnding ending = scenarioDatabase != null ? scenarioDatabase.SelectEnding(result, Flags) : null;
 
-            AdvanceToNextDay();
-            return true;
+            return new EndingDecision
+            {
+                Result = result,
+                Ending = ending,
+                Dialogue = ending != null && scenarioDatabase != null ? scenarioDatabase.FindDialogue(ending.endingId) : null,
+                IsGameOver = ending != null ? ending.kind == EndingKind.GameOver : result == EndingResult.ReleasedAI,
+            };
         }
 
-        private void FinishGame()
+        /// <summary>
+        /// エンディングを見たことを記録し、クリア画面かゲームオーバー画面に移る
+        /// （エンディングの会話を見せた後に呼ぶ）
+        /// </summary>
+        public void FinishGame(EndingDecision decision)
         {
-            // エンディングシートでの分岐ができるまでは、AI を解放したらゲームオーバー、それ以外はクリア
-            EndingResult result = EvaluateFinalResult();
-            bool isGameOver = result == EndingResult.ReleasedAI;
-            string nextScene = isGameOver ? gameOverSceneName : clearSceneName;
-            Debug.Log($"<color=gold>全日程が終了しました。判定結果: {result}（{nextScene}）へ遷移します。</color>");
+            if (decision == null) decision = DecideEnding();
+            if (decision.Ending != null) EndingRecordStore.MarkSeen(decision.Ending.endingId);
+
+            string nextScene = decision.IsGameOver ? gameOverSceneName : clearSceneName;
+            Debug.Log($"<color=gold>全日程が終了しました。判定結果: {decision.Result} / エンディング: {decision.Ending?.endingId ?? "なし"}（{nextScene}）へ遷移します。</color>");
 
             if (!string.IsNullOrEmpty(nextScene)) SceneManager.LoadScene(nextScene);
         }

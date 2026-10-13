@@ -27,6 +27,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private DialogueClickable smartphoneTalk;   // スマホ（補助ちゃんとの会話）
         [SerializeField] private ConfirmDialogUI confirmDialog;      // AI確定・解放・プロフィール解禁の確認
         [SerializeField] private ChoiceUI choiceUI;                  // 会話の後に出す選択肢
+        [SerializeField] private EndingPlayerUI endingPlayer;        // 最終日の後のエンディング
 
         private const string SmartphoneNoTalkMessage = "今日はもう連絡ができない";
         private const string UnjudgedMessage = "まだ判定していない人がいます";
@@ -527,9 +528,13 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 string label = GameManagerInstance.IsFinalDay ? "最終結果" : $"{GameManagerInstance.CurrentDay + 1}日目";
                 if (dayTransitionUI != null) await dayTransitionUI.CoverAsync(label, token);
 
-                // 最終日ならエンディングへの遷移は GameManager が行う（覆ったままシーンが切り替わる）
-                bool advancedToNextDay = GameManagerInstance.AdvanceDayOrFinishGame();
-                if (!advancedToNextDay) return;
+                if (GameManagerInstance.IsFinalDay)
+                {
+                    await PlayEndingAsync(token);
+                    return;
+                }
+
+                GameManagerInstance.AdvanceToNextDay();
 
                 if (navigationUI != null)
                 {
@@ -544,6 +549,25 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 isDayTransitioning = false;
             }
+        }
+
+        /// <summary>
+        /// 最終日の後: エンディングシートで決まったエンディングの会話を見せてから、クリア / ゲームオーバー画面に移る
+        /// （ロード画面で覆われた状態で呼ぶ。会話がなければそのまま画面を移る）
+        /// </summary>
+        private async UniTask PlayEndingAsync(CancellationToken token)
+        {
+            EndingDecision decision = GameManagerInstance.DecideEnding();
+
+            if (decision.Dialogue != null && endingPlayer != null)
+            {
+                var finished = new UniTaskCompletionSource();
+                endingPlayer.Play(decision.Dialogue, GameManagerInstance.Scenario, () => finished.TrySetResult());
+                if (dayTransitionUI != null) await dayTransitionUI.RevealAsync(token);
+                await finished.Task.AttachExternalCancellation(token);
+            }
+
+            GameManagerInstance.FinishGame(decision);
         }
 
         #endregion
