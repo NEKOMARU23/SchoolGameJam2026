@@ -41,20 +41,37 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
 
         public static bool IsSatisfied(ScenarioConditionRow row, Context context)
         {
-            if (row.hasSelfAffection && context.SelfAffection < row.selfAffection) return false;
             if (row.hasActionCount && context.ActionCount < row.actionCount) return false;
+            return AreCommonConditionsMet(row.hasSelfAffection, row.selfAffection, row.otherAffections, row.requiredFlags, row.ngFlags, context);
+        }
 
-            foreach (AffectionCondition other in row.otherAffections)
+        /// <summary>
+        /// 選択肢を出してよいか（条件をすべて満たしているか）
+        /// </summary>
+        public static bool IsSatisfied(ScenarioChoice choice, Context context)
+        {
+            return AreCommonConditionsMet(choice.hasSelfAffection, choice.selfAffection, choice.otherAffections, choice.requiredFlags, choice.ngFlags, context);
+        }
+
+        /// <summary>
+        /// 条件シートと選択肢シートで共通の条件（好感度・フラグ）
+        /// </summary>
+        private static bool AreCommonConditionsMet(bool hasSelfAffection, int selfAffection, List<AffectionCondition> otherAffections,
+            List<string> requiredFlags, List<string> ngFlags, Context context)
+        {
+            if (hasSelfAffection && context.SelfAffection < selfAffection) return false;
+
+            foreach (AffectionCondition other in otherAffections)
             {
                 if (context.AffectionOf(other.characterId) < other.minValue) return false;
             }
 
             if (context.Flags != null)
             {
-                if (!context.Flags.AreAllOn(row.requiredFlags)) return false;
-                if (!context.Flags.AreAllOff(row.ngFlags)) return false;
+                if (!context.Flags.AreAllOn(requiredFlags)) return false;
+                if (!context.Flags.AreAllOff(ngFlags)) return false;
             }
-            else if (row.requiredFlags.Count > 0)
+            else if (requiredFlags.Count > 0)
             {
                 return false;
             }

@@ -52,6 +52,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
     {
         public const string SheetPages = "本文";
         public const string SheetConditions = "条件";
+        public const string SheetChoices = "選択肢";
         public const string SheetDaily = "日別設定";
         public const string SheetFlags = "フラグ一覧";
         public const string SheetAI = "AI判定";
@@ -111,6 +112,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
 
             target.dialogues.Clear();
             target.conditions.Clear();
+            target.choices.Clear();
             target.dailySettings.Clear();
             target.flags.Clear();
             target.aiJudgements.Clear();
@@ -125,9 +127,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
             Sheet ai = context.Open(sheets, SheetAI, "キャラ", "判定日");
             Sheet endings = context.Open(sheets, SheetEndings, "優先度", "判定結果", "種類", "エンディングID");
 
+            // 選択肢シートは後から増えたので、ない古いファイルも読めるようにする
+            Sheet choices = null;
+            if (sheets.ContainsKey(SheetChoices)) choices = context.Open(sheets, SheetChoices, "セリフID", "順", "選択肢の文");
+            else report.Warn(SheetChoices, 0, "シートがないため、選択肢なしで取り込みます");
+
             if (flags != null) ParseFlags(flags, target, context);
             if (pages != null) ParsePages(pages, target, context);
             if (conditions != null) ParseConditions(conditions, target, context);
+            if (choices != null) ParseChoices(choices, target, context);
             if (daily != null) ParseDaily(daily, target, context);
             if (ai != null) ParseAI(ai, target, context);
             if (endings != null) ParseEndings(endings, target, context);
@@ -252,7 +260,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                 if (c.hasSelfAffection) ok &= ctx.ReadInt(row, "本人の好感度", out c.selfAffection, required: true, min: int.MinValue);
                 c.hasActionCount = row["行動回数"].Length > 0;
                 if (c.hasActionCount) ok &= ctx.ReadInt(row, "行動回数", out c.actionCount, required: true, min: 0);
-                ok &= ReadOtherAffections(row, c, ctx);
+                ok &= ReadOtherAffections(row, c.otherAffections, ctx);
 
                 c.requiredFlags = ctx.ReadFlags(row, "必要フラグ");
                 c.ngFlags = ctx.ReadFlags(row, "NGフラグ");
@@ -274,7 +282,49 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
             foreach (var group in groups.Values) ctx.CheckPriorities(group);
         }
 
-        private static bool ReadOtherAffections(Row row, ScenarioConditionRow c, Context ctx)
+        private static void ParseChoices(Sheet sheet, ScenarioDatabase db, Context ctx)
+        {
+            var groups = new Dictionary<string, List<(int priority, Row row)>>(StringComparer.Ordinal);
+
+            foreach (Row row in sheet.Rows)
+            {
+                var c = new ScenarioChoice { dialogueId = row["セリフID"], text = row["選択肢の文"], sourceLocation = $"{SheetChoices} {row.Number}行目" };
+                bool ok = true;
+
+                if (c.dialogueId.Length == 0) { ctx.Error(row, "セリフIDが空です"); ok = false; }
+                else if (!ctx.DialogueIds.Contains(c.dialogueId)) { ctx.Error(row, $"セリフID「{c.dialogueId}」が本文シートにありません"); ok = false; }
+
+                ok &= ctx.ReadInt(row, "順", out c.order, required: true, min: 1);
+                if (c.text.Length == 0) { ctx.Error(row, "選択肢の文が空です"); ok = false; }
+
+                c.hasSelfAffection = row["本人の好感度"].Length > 0;
+                if (c.hasSelfAffection) ok &= ctx.ReadInt(row, "本人の好感度", out c.selfAffection, required: true, min: int.MinValue);
+                ok &= ReadOtherAffections(row, c.otherAffections, ctx);
+                ok &= ctx.ReadInt(row, "好感度の変化", out c.affectionChange, required: false, min: int.MinValue);
+
+                c.requiredFlags = ctx.ReadFlags(row, "必要フラグ");
+                c.ngFlags = ctx.ReadFlags(row, "NGフラグ");
+                c.gainFlags = ctx.ReadFlags(row, "獲得フラグ");
+                c.aiTargets = ctx.ReadCharacterList(row, "AI化");
+
+                c.nextDialogueId = row["次のセリフID"];
+                if (c.nextDialogueId.Length > 0 && !ctx.DialogueIds.Contains(c.nextDialogueId))
+                {
+                    ctx.Error(row, $"次のセリフID「{c.nextDialogueId}」が本文シートにありません");
+                    ok = false;
+                }
+
+                if (!ok) continue;
+                db.choices.Add(c);
+
+                if (!groups.TryGetValue(c.dialogueId, out var list)) groups[c.dialogueId] = list = new List<(int, Row)>();
+                list.Add((c.order, row));
+            }
+
+            foreach (var group in groups.Values) ctx.CheckPriorities(group, "順");
+        }
+
+        private static bool ReadOtherAffections(Row row, List<AffectionCondition> target, Context ctx)
         {
             string text = row["他キャラの好感度"];
             if (text.Length == 0) return true;
@@ -296,7 +346,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                     ok = false;
                     continue;
                 }
-                c.otherAffections.Add(new AffectionCondition { characterId = id, minValue = int.Parse(m.Groups[2].Value) });
+                target.Add(new AffectionCondition { characterId = id, minValue = int.Parse(m.Groups[2].Value) });
             }
             return ok;
         }
@@ -561,8 +611,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                 if (!AssetExists(kind, name)) Warn(row, $"{label}「{name}」の素材が Data フォルダにありません（素材がそろうまでは表示・再生されません）");
             }
 
-            /// <summary> 優先度が 1, 2, 3 … と抜け・重複なく並んでいるか </summary>
-            public void CheckPriorities(List<(int priority, Row row)> group)
+            /// <summary> 優先度（選択肢シートでは「順」）が 1, 2, 3 … と抜け・重複なく並んでいるか </summary>
+            public void CheckPriorities(List<(int priority, Row row)> group, string label = "優先度")
             {
                 group.Sort((a, b) => a.priority.CompareTo(b.priority));
                 for (int i = 0; i < group.Count; i++)
@@ -572,8 +622,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
 
                     bool duplicated = i > 0 && group[i].priority == group[i - 1].priority;
                     Error(group[i].row, duplicated
-                        ? $"優先度 {group[i].priority} が同じ場面の中で重複しています"
-                        : $"優先度が抜けています（{expected} がなく {group[i].priority} があります）");
+                        ? $"{label} {group[i].priority} が同じ場面の中で重複しています"
+                        : $"{label}が抜けています（{expected} がなく {group[i].priority} があります）");
                     return;
                 }
             }
