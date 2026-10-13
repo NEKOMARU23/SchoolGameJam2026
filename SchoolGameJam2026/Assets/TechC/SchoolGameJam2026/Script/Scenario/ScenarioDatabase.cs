@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using TechC.SchoolGameJam2026.Scripts.Core.State;
 
 namespace TechC.SchoolGameJam2026.Scripts.Scenario
 {
@@ -110,6 +111,31 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
             }
             list.Sort((a, b) => a.order.CompareTo(b.order));
             return list;
+        }
+
+        /// <summary>
+        /// エンディングシートを優先度の小さい順に調べ、最終日の判定結果とフラグに当てはまる最初のエンディングを返す
+        /// </summary>
+        /// <returns>当てはまるものがなければ null</returns>
+        public ScenarioEnding SelectEnding(EndingResult result, FlagStore flags)
+        {
+            var sorted = new List<ScenarioEnding>(endings);
+            sorted.Sort((a, b) => a.priority.CompareTo(b.priority));
+
+            foreach (ScenarioEnding ending in sorted)
+            {
+                if (ending.result != EndingResult.Any && ending.result != result) continue;
+                if (flags == null)
+                {
+                    if (ending.requiredFlags.Count > 0) continue;
+                }
+                else if (!flags.AreAllOn(ending.requiredFlags) || !flags.AreAllOff(ending.ngFlags))
+                {
+                    continue;
+                }
+                return ending;
+            }
+            return null;
         }
 
         public ScenarioDailySetting GetDailySetting(int day, string characterId)
