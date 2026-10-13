@@ -103,6 +103,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         public string sourceLocation = "";      // エラー表示用（例: 条件 12行目）
     }
 
+    /// <summary> 選択肢シートの1行（会話の後に出す選択肢1つ） </summary>
+    [Serializable]
+    public class ScenarioChoice
+    {
+        public string dialogueId = "";          // この会話の後に出す
+        public int order;                       // 並べる順番（1, 2, 3 …）
+        public string text = "";                // ボタンに表示する文
+
+        public bool hasSelfAffection;
+        public int selfAffection;
+        public List<AffectionCondition> otherAffections = new List<AffectionCondition>();
+        public List<string> requiredFlags = new List<string>();
+        public List<string> ngFlags = new List<string>();
+
+        public int affectionChange;             // 選んだときの、会話の相手の好感度の増減
+        public List<string> gainFlags = new List<string>();
+        public List<string> aiTargets = new List<string>();
+        public string nextDialogueId = "";      // 選んだ後に出す会話（空なら会話はそこで終わる）
+        public string sourceLocation = "";
+    }
+
     /// <summary> 日別設定シートの1行 </summary>
     [Serializable]
     public class ScenarioDailySetting

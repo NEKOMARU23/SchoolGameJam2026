@@ -96,7 +96,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Editor
 
                 ApplyAssets(temp, assets);
                 Save(temp);
-                summary = $"取り込みました: 会話 {temp.dialogues.Count} 件 / 条件 {temp.conditions.Count} 行 / 日別設定 {temp.dailySettings.Count} 行 / " +
+                summary = $"取り込みました: 会話 {temp.dialogues.Count} 件 / 条件 {temp.conditions.Count} 行 / 選択肢 {temp.choices.Count} 行 / 日別設定 {temp.dailySettings.Count} 行 / " +
                           $"フラグ {temp.flags.Count} 個 / AI判定 {temp.aiJudgements.Count} 行 / エンディング {temp.endings.Count} 行（警告 {report.Warnings.Count} 件）";
                 return report;
             }

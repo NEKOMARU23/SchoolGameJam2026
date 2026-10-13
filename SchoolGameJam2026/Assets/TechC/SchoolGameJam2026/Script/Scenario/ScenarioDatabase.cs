@@ -35,6 +35,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         [Header("Excel から取り込んだデータ")]
         public List<ScenarioDialogue> dialogues = new List<ScenarioDialogue>();
         public List<ScenarioConditionRow> conditions = new List<ScenarioConditionRow>();
+        public List<ScenarioChoice> choices = new List<ScenarioChoice>();
         public List<ScenarioDailySetting> dailySettings = new List<ScenarioDailySetting>();
         public List<ScenarioFlagDefinition> flags = new List<ScenarioFlagDefinition>();
         public List<ScenarioAIJudgement> aiJudgements = new List<ScenarioAIJudgement>();
@@ -93,6 +94,22 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
             }
             rows.Sort((a, b) => a.priority.CompareTo(b.priority));
             return rows;
+        }
+
+        /// <summary>
+        /// その会話の後に出す選択肢を、並べる順に取り出す（条件はまだ調べない）
+        /// </summary>
+        public List<ScenarioChoice> GetChoices(string dialogueId)
+        {
+            var list = new List<ScenarioChoice>();
+            if (string.IsNullOrEmpty(dialogueId)) return list;
+
+            foreach (ScenarioChoice choice in choices)
+            {
+                if (choice.dialogueId == dialogueId) list.Add(choice);
+            }
+            list.Sort((a, b) => a.order.CompareTo(b.order));
+            return list;
         }
 
         public ScenarioDailySetting GetDailySetting(int day, string characterId)

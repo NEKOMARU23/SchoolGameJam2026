@@ -76,6 +76,77 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 $"「{expectedMessage}」のエラーがありません: {string.Join(" / ", report.Errors)}");
         }
 
+        [Test]
+        public void 選択肢シートを取り込める()
+        {
+            ScenarioDatabase db = Parse(CreateWorkbook(), out ImportReport report);
+
+            CollectionAssert.IsEmpty(report.Errors.Select(e => e.ToString()));
+            List<ScenarioChoice> choices = db.GetChoices("A_D1_対話_1");
+            Assert.AreEqual(2, choices.Count);
+            Assert.AreEqual("鍵のことを聞く", choices[0].text);
+            CollectionAssert.AreEqual(new[] { "info_鍵" }, choices[0].requiredFlags);
+            Assert.AreEqual("B", choices[0].otherAffections[0].characterId);
+            Assert.AreEqual(1, choices[0].affectionChange);
+            CollectionAssert.AreEqual(new[] { "flag_和解" }, choices[0].gainFlags);
+            Assert.AreEqual("A_D1_対話_2", choices[0].nextDialogueId);
+            Assert.AreEqual(-1, choices[1].affectionChange);
+            CollectionAssert.AreEqual(new[] { "C" }, choices[1].aiTargets);
+            Assert.AreEqual("", choices[1].nextDialogueId, "次のセリフIDは空欄でよい");
+        }
+
+        [TestCase(1, "セリフID", "A_D1_存在しない", "本文シートにありません")]
+        [TestCase(1, "次のセリフID", "A_D1_存在しない", "本文シートにありません")]
+        [TestCase(1, "選択肢の文", "", "選択肢の文が空です")]
+        [TestCase(1, "必要フラグ", "info_ない", "フラグ一覧にありません")]
+        [TestCase(2, "順", "3", "順が抜けています")]
+        [TestCase(2, "順", "1", "重複しています")]
+        [TestCase(1, "好感度の変化", "たくさん", "整数で書いてください")]
+        public void 選択肢シートの書き間違いはエラーになる(int dataRow, string header, string value, string expectedMessage)
+        {
+            var sheets = CreateWorkbook();
+            SetCell(sheets["選択肢"], dataRow, header, value);
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsTrue(report.Errors.Any(e => e.Sheet == "選択肢" && e.Text.Contains(expectedMessage)),
+                $"「{expectedMessage}」のエラーがありません: {string.Join(" / ", report.Errors)}");
+        }
+
+        [Test]
+        public void 選択肢シートがない古いファイルも警告だけで取り込める()
+        {
+            var sheets = CreateWorkbook();
+            sheets.Remove("選択肢");
+
+            ScenarioDatabase db = Parse(sheets, out ImportReport report);
+
+            Assert.IsFalse(report.HasErrors, string.Join(" / ", report.Errors));
+            Assert.IsTrue(report.Warnings.Exists(w => w.Sheet == "選択肢"));
+            CollectionAssert.IsEmpty(db.choices);
+        }
+
+        [Test]
+        public void 選択肢は好感度とフラグの条件を満たすときだけ出せる()
+        {
+            var flags = new FlagStore();
+            var choice = new ScenarioChoice
+            {
+                hasSelfAffection = true, selfAffection = 2,
+                requiredFlags = { "item_鍵" }, ngFlags = { "flag_和解" },
+            };
+            var ctx = new ScenarioSelector.Context { Flags = flags, SelfAffection = 2 };
+
+            Assert.IsFalse(ScenarioSelector.IsSatisfied(choice, ctx), "必要フラグがない");
+            flags.TurnOn("item_鍵");
+            Assert.IsTrue(ScenarioSelector.IsSatisfied(choice, ctx));
+            ctx.SelfAffection = 1;
+            Assert.IsFalse(ScenarioSelector.IsSatisfied(choice, ctx), "好感度が足りない");
+            ctx.SelfAffection = 2;
+            flags.TurnOn("flag_和解");
+            Assert.IsFalse(ScenarioSelector.IsSatisfied(choice, ctx), "NGフラグが ON");
+        }
+
         [TestCase("6", false)]
         [TestCase("7", true)]
         public void AI判定の判定日に最終日は書けない(string day, bool expectError)
@@ -282,6 +353,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                     Condition("1", "A", "聞き取り", "B", "", "1", dialogueId: "A_D1_聞き取り_B_1"),
                     Condition("1", "", "スマホ", "", "1", "1", dialogueId: "SP_D1_1"),
                     Condition("1", "", "スマホ", "", "2", "1", dialogueId: "SP_D1_2")),
+                ["選択肢"] = Table(
+                    new[] { "セリフID", "順", "選択肢の文", "必要フラグ", "NGフラグ", "本人の好感度", "他キャラの好感度", "好感度の変化", "獲得フラグ", "AI化", "次のセリフID" },
+                    new[] { "A_D1_対話_1", "1", "鍵のことを聞く", "info_鍵", "", "", "B>=1", "1", "flag_和解", "", "A_D1_対話_2" },
+                    new[] { "A_D1_対話_1", "2", "黙る", "", "", "", "", "-1", "", "C", "" }),
                 ["日別設定"] = Table(
                     new[] { "日", "キャラ", "正解行動", "NG行動" },
                     new[] { "1", "A", "拷問", "交渉" }),

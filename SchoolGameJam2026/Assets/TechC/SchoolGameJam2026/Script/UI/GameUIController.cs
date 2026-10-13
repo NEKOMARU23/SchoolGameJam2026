@@ -26,6 +26,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private DayTransitionUI dayTransitionUI;
         [SerializeField] private DialogueClickable smartphoneTalk;   // スマホ（補助ちゃんとの会話）
         [SerializeField] private ConfirmDialogUI confirmDialog;      // AI確定・解放・プロフィール解禁の確認
+        [SerializeField] private ChoiceUI choiceUI;                  // 会話の後に出す選択肢
 
         private const string SmartphoneNoTalkMessage = "今日はもう連絡ができない";
         private const string UnjudgedMessage = "まだ判定していない人がいます";
@@ -36,6 +37,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private string currentHearingTargetId = "B";
         private bool isDayTransitioning = false;             // 日付切り替え演出中（連打で複数日進むのを防ぐ）
         private List<DialoguePage> currentSmartphonePages;   // 表示中のスマホ会話（ページごとの SE 用）
+        private ScenarioDialogue currentSmartphoneDialogue;  // 表示中のスマホ会話（終わったら選択肢を調べる）
+        private ScenarioDialogue interrogationDialogue;      // 取調室で表示中の Excel の会話（終わったら選択肢を調べる）
+        private CharacterInstance interrogationPartner;      // その会話の相手
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
 
@@ -84,7 +88,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (dialogueUI != null)
             {
-                dialogueUI.OnDialogueFinished += UpdateInterrogationState;
+                dialogueUI.OnDialogueFinished += HandleDialogueFinished;
             }
 
             if (smartphoneTalk != null)
@@ -121,7 +125,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (dialogueUI != null)
             {
-                dialogueUI.OnDialogueFinished -= UpdateInterrogationState;
+                dialogueUI.OnDialogueFinished -= HandleDialogueFinished;
             }
 
             if (smartphoneTalk != null)
@@ -156,6 +160,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void HandleDayStarted(int day)
         {
+            CloseChoices();
             if (statusHeaderUI != null) statusHeaderUI.UpdateDayDisplay(day);
             RefreshAllViews();
         }
@@ -165,6 +170,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// </summary>
         private void HandleStateRestored()
         {
+            CloseChoices();
             if (statusHeaderUI != null && GameManagerInstance != null) statusHeaderUI.UpdateDayDisplay(GameManagerInstance.CurrentDay);
             RefreshAllViews();
         }
@@ -185,6 +191,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public void SelectCharacter(string characterId)
         {
             currentSelectedCharacterId = characterId;
+            interrogationDialogue = null;   // 別の部屋に移ったら、前の会話の選択肢は出さない
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
 
             CharacterInstance targetChar = GetCharacter(characterId);
@@ -233,7 +240,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             ActionOutcome outcome = InterrogationInstance.ExecuteAction(targetChar, actionType, currentHearingTargetId);
 
-            ShowOutcome(GetDisplayName(targetChar), outcome);
+            ShowOutcome(targetChar, outcome);
             UpdateInterrogationState();
         }
 
@@ -278,7 +285,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (outcome.HasDialogue)
             {
-                ShowOutcome(GetDisplayName(targetChar), outcome);
+                ShowOutcome(targetChar, outcome);
             }
             else if (actionType == InterrogationActionType.Release)
             {
@@ -337,6 +344,15 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             if (navigationUI != null) navigationUI.ShowSmartphoneTalkPanel();
+            OpenSmartphoneDialogue(dialogue);
+        }
+
+        /// <summary>
+        /// スマホの会話画面に Excel の会話を表示する（選択肢を選んだ後の会話もここで出す）
+        /// </summary>
+        private void OpenSmartphoneDialogue(ScenarioDialogue dialogue)
+        {
+            currentSmartphoneDialogue = dialogue;
 
             // Excel の会話のページと、最初に指定された立ち絵で開く（ページごとの SE は OnPageShown で鳴らす）
             currentSmartphonePages = DialogueTextFormat.FromScenario(dialogue);
@@ -363,11 +379,72 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// スマホの会話が終わったら元の画面（モニター）に戻る
+        /// スマホの会話が終わったら、選択肢があれば出し、なければ元の画面（モニター）に戻る
         /// </summary>
         private void HandleSmartphoneTalkClosed()
         {
+            ScenarioDialogue finished = currentSmartphoneDialogue;
+            currentSmartphoneDialogue = null;
+            if (TryShowChoices(finished, null, isSmartphone: true)) return;
+
             if (navigationUI != null) navigationUI.BackToPreviousPanel();
+        }
+
+        /// <summary>
+        /// 取調室の会話が終わったら、選択肢があれば出す
+        /// </summary>
+        private void HandleDialogueFinished()
+        {
+            ScenarioDialogue finished = interrogationDialogue;
+            CharacterInstance partner = interrogationPartner;
+            interrogationDialogue = null;
+            interrogationPartner = null;
+
+            TryShowChoices(finished, partner, isSmartphone: false);
+            UpdateInterrogationState();
+        }
+
+        /// <summary>
+        /// 会話の後の選択肢のうち、条件を満たすものだけを出す（1つもなければ何もしない）
+        /// </summary>
+        /// <returns>選択肢を出した場合 true</returns>
+        private bool TryShowChoices(ScenarioDialogue dialogue, CharacterInstance partner, bool isSmartphone)
+        {
+            if (dialogue == null || choiceUI == null || GameManagerInstance == null) return false;
+
+            List<ScenarioChoice> choices = GameManagerInstance.GetAvailableChoices(dialogue, partner);
+            if (choices.Count == 0) return false;
+
+            choiceUI.Show(choices.ConvertAll(c => c.text), index => HandleChoiceSelected(choices[index], partner, isSmartphone));
+            return true;
+        }
+
+        /// <summary>
+        /// 選択肢を選んだときの処理。効果は GameManager が適用し、次の会話があれば同じ画面で続ける
+        /// （行動回数・スマホの回数は増えない）
+        /// </summary>
+        private void HandleChoiceSelected(ScenarioChoice choice, CharacterInstance partner, bool isSmartphone)
+        {
+            if (logUI != null) logUI.AddLog("あなた", choice.text);
+            ScenarioDialogue next = GameManagerInstance.SelectChoice(choice, partner);
+
+            if (isSmartphone)
+            {
+                if (next != null) OpenSmartphoneDialogue(next);
+                else if (navigationUI != null) navigationUI.BackToPreviousPanel();
+                return;
+            }
+
+            if (next != null) ShowOutcome(partner, ActionOutcome.FromDialogue(next));
+            RefreshProfileView(currentProfileCharacterId);
+            UpdateInterrogationState();
+        }
+
+        private void CloseChoices()
+        {
+            interrogationDialogue = null;
+            currentSmartphoneDialogue = null;
+            if (choiceUI != null && choiceUI.IsOpen) choiceUI.Hide();
         }
 
         /// <summary>
@@ -544,7 +621,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (interrogationUI == null) return;
 
             CharacterInstance targetChar = GetCharacter(currentSelectedCharacterId);
-            bool isPlaying = dialogueUI != null && dialogueUI.IsDialoguePlaying;
+            // 会話中・選択肢を選んでいる間は、次の行動はできない
+            bool isPlaying = (dialogueUI != null && dialogueUI.IsDialoguePlaying) || (choiceUI != null && choiceUI.IsOpen);
 
             // 判定は各 Manager に問い合わせ、ビューには結果だけを渡す
             // 最終日は取り調べのボタンを隠して判定（解放・AI確定）のボタンだけを出す
@@ -628,11 +706,22 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary>
         /// 取り調べの結果（Excel の会話か短い文）を表示し、ログにも記録する
         /// </summary>
-        private void ShowOutcome(string speakerName, ActionOutcome outcome)
+        private void ShowOutcome(CharacterInstance partner, ActionOutcome outcome)
         {
             if (outcome == null) return;
-            if (outcome.HasDialogue) ShowPages(speakerName, DialogueTextFormat.FromScenario(outcome.Dialogue));
-            else ShowDialogue(speakerName, outcome.Text);
+            string speakerName = GetDisplayName(partner);
+
+            if (outcome.HasDialogue)
+            {
+                // 会話が終わったら、この会話の選択肢を調べる
+                interrogationDialogue = outcome.Dialogue;
+                interrogationPartner = partner;
+                ShowPages(speakerName, DialogueTextFormat.FromScenario(outcome.Dialogue));
+            }
+            else
+            {
+                ShowDialogue(speakerName, outcome.Text);
+            }
         }
 
         private void ShowPages(string speakerName, List<DialoguePage> pages)
