@@ -54,11 +54,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             yield return null;
 
             yield return Click(ReleaseButtonName);
-            Assert.IsTrue(IsPanelActive("ConfirmDialog"), "解放の確認が出ません");
+            Assert.IsTrue(IsConfirmDialogOpen(ConfirmDialogPath), "解放の確認が出ません");
             StringAssert.Contains("解放しますか", ConfirmMessage());
 
             yield return Click("NoButton", ConfirmDialogPath);
-            Assert.IsFalse(IsPanelActive("ConfirmDialog"), "「いいえ」で確認が閉じません");
+            Assert.IsFalse(IsConfirmDialogOpen(ConfirmDialogPath), "「いいえ」で確認が閉じません");
             Assert.IsFalse(GetCharacter("B").IsReleased, "「いいえ」なのに解放されました");
             Assert.AreEqual(0, InterrogationManager.CurrentDailyActions);
 
@@ -279,7 +279,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             yield return Click("ACharacterChange_Button");
             yield return Click("Button_UnlockBasicInfo");
 
-            Assert.IsFalse(IsPanelActive("ConfirmDialog"), "ポイントが足りないのに確認が出ました");
+            Assert.IsFalse(IsConfirmDialogOpen(ConfirmDialogPath), "ポイントが足りないのに確認が出ました");
             Assert.IsFalse(GetCharacter("A").IsBasicInfoUnlocked);
         }
 
@@ -296,7 +296,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
 
         private static string ConfirmMessage()
         {
-            Transform text = FindComponent<ConfirmDialogUI>().transform.Find("MessageText");
+            Transform text = GetConfirmDialog(ConfirmDialogPath).transform.Find("MessageText");
             Assert.IsNotNull(text, "確認ダイアログの文字欄が見つかりません");
             return text.GetComponent<TMPro.TextMeshProUGUI>().text;
         }
