@@ -29,6 +29,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private ConfirmDialogUI confirmDialog;      // AI確定・解放・プロフィール解禁の確認
         [SerializeField] private ChoiceUI choiceUI;                  // 会話の後に出す選択肢
         [SerializeField] private EndingPlayerUI endingPlayer;        // 最終日の後のエンディング
+        [SerializeField] private AutoSkipButtonsUI[] autoSkipButtons; // 会話枠の「オート」「スキップ」（取調室・スマホ）
 
         private const string SmartphoneNoTalkMessage = "今日はもう連絡ができない";
         private const string UnjudgedMessage = "まだ判定していない人がいます";
@@ -38,6 +39,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private string currentProfileCharacterId = "A";  // プロフィール画面で表示中のキャラクターID
         private string currentHearingTargetId = "B";
         private bool isDayTransitioning = false;             // 日付切り替え演出中（連打で複数日進むのを防ぐ）
+        private bool isAutoOn;                               // オート（取調室とスマホで共通）
+        private bool isSkipOn;                               // スキップ（取調室とスマホで共通）
         private List<DialoguePage> currentSmartphonePages;   // 表示中のスマホ会話（ページごとの SE 用）
         private ScenarioDialogue currentSmartphoneDialogue;  // 表示中のスマホ会話（終わったら選択肢を調べる）
         private ScenarioDialogue interrogationDialogue;      // 取調室で表示中の Excel の会話（終わったら選択肢を調べる）
@@ -100,13 +103,16 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (dialogueUI != null)
             {
                 dialogueUI.OnDialogueFinished += HandleDialogueFinished;
+                dialogueUI.OnSkipStopped += StopSkip;
             }
 
             if (smartphoneTalk != null)
             {
                 smartphoneTalk.OnClosed += HandleSmartphoneTalkClosed;
                 smartphoneTalk.OnPageShown += HandleSmartphonePageShown;
+                smartphoneTalk.OnSkipStopped += StopSkip;
             }
+            RefreshAutoSkipButtons();
 
             // 立ち絵と SE は、Excel の名前で Data フォルダの素材を探す
             if (dialogueUI != null) dialogueUI.SetAssetResolvers(FindCharacterSprite, PlaySeByName);
@@ -138,12 +144,14 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (dialogueUI != null)
             {
                 dialogueUI.OnDialogueFinished -= HandleDialogueFinished;
+                dialogueUI.OnSkipStopped -= StopSkip;
             }
 
             if (smartphoneTalk != null)
             {
                 smartphoneTalk.OnClosed -= HandleSmartphoneTalkClosed;
                 smartphoneTalk.OnPageShown -= HandleSmartphonePageShown;
+                smartphoneTalk.OnSkipStopped -= StopSkip;
             }
 
             if (SettingsManager.Instance != null)
@@ -154,9 +162,69 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         private void HandleSettingsChanged(GameSettings settings)
         {
-            if (dialogueUI != null) dialogueUI.SetTextSpeed(settings.TextIntervalSeconds);
-            if (smartphoneTalk != null) smartphoneTalk.SetCharacterDisplayInterval(settings.TextIntervalSeconds);
+            if (dialogueUI != null)
+            {
+                dialogueUI.SetTextSpeed(settings.TextIntervalSeconds);
+                dialogueUI.SetAutoWait(settings.AutoWaitSeconds);
+            }
+            if (smartphoneTalk != null)
+            {
+                smartphoneTalk.SetCharacterDisplayInterval(settings.TextIntervalSeconds);
+                smartphoneTalk.SetAutoWait(settings.AutoWaitSeconds);
+            }
         }
+
+        #region オート・スキップ
+
+        /// <summary> 「オート」ボタン: 取調室とスマホの会話で共通のオン・オフ </summary>
+        public void ToggleAuto()
+        {
+            isAutoOn = !isAutoOn;
+            if (dialogueUI != null) dialogueUI.SetAuto(isAutoOn);
+            if (smartphoneTalk != null) smartphoneTalk.SetAuto(isAutoOn);
+            RefreshAutoSkipButtons();
+        }
+
+        /// <summary> 「スキップ」ボタン: 取調室とスマホの会話で共通のオン・オフ </summary>
+        public void ToggleSkip()
+        {
+            isSkipOn = !isSkipOn;
+            if (dialogueUI != null) dialogueUI.SetSkip(isSkipOn);
+            if (smartphoneTalk != null) smartphoneTalk.SetSkip(isSkipOn);
+            RefreshAutoSkipButtons();
+        }
+
+        public bool IsAutoOn => isAutoOn;
+        public bool IsSkipOn => isSkipOn;
+
+        /// <summary> スキップを止める（未読の会話に来たとき・選択肢が出たとき） </summary>
+        private void StopSkip()
+        {
+            if (!isSkipOn) return;
+            ToggleSkip();
+        }
+
+        private void RefreshAutoSkipButtons()
+        {
+            if (autoSkipButtons == null) return;
+            foreach (AutoSkipButtonsUI buttons in autoSkipButtons)
+            {
+                if (buttons != null) buttons.SetState(isAutoOn, isSkipOn);
+            }
+        }
+
+        /// <summary>
+        /// スキップしてよい会話か。オプションのスキップの種類が「すべて」なら全部、「既読のみ」なら一度最後まで読んだ会話だけ
+        /// （Excel の会話でない短い文は、いつでも飛ばしてよい）
+        /// </summary>
+        private static bool IsSkippable(ScenarioDialogue dialogue)
+        {
+            if (dialogue == null || string.IsNullOrEmpty(dialogue.id)) return true;
+            bool skipAll = SettingsManager.Instance != null && SettingsManager.Instance.Current.skipMode == SkipMode.All;
+            return skipAll || ReadHistoryStore.IsRead(dialogue.id);
+        }
+
+        #endregion
 
         #region イベントハンドラ（Managerからの通知を受けてViewに描画指示）
 
@@ -443,7 +511,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 texts.Add(page.Body);
                 if (image == null && page.ImageKey != null && !page.HidesImage) image = FindCharacterSprite(page.ImageKey);
             }
-            smartphoneTalk.OpenDialogueWithPages(texts, image);
+            smartphoneTalk.OpenDialogueWithPages(texts, image, IsSkippable(dialogue));
 
             if (logUI != null)
             {
@@ -465,6 +533,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             ScenarioDialogue finished = currentSmartphoneDialogue;
             currentSmartphoneDialogue = null;
+            if (finished != null) ReadHistoryStore.MarkRead(finished.id);
             if (TryShowChoices(finished, null, isSmartphone: true)) return;
 
             if (navigationUI != null) navigationUI.BackToPreviousPanel();
@@ -480,6 +549,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             interrogationDialogue = null;
             interrogationPartner = null;
 
+            if (finished != null) ReadHistoryStore.MarkRead(finished.id);
             TryShowChoices(finished, partner, isSmartphone: false);
             UpdateInterrogationState();
         }
@@ -495,6 +565,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             List<ScenarioChoice> choices = GameManagerInstance.GetAvailableChoices(dialogue, partner);
             if (choices.Count == 0) return false;
 
+            StopSkip();   // 選択肢はプレイヤーが選ぶので、スキップはここで止める
             choiceUI.Show(choices.ConvertAll(c => c.text), index => HandleChoiceSelected(choices[index], partner, isSmartphone));
             return true;
         }
@@ -819,7 +890,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 // 会話が終わったら、この会話の選択肢を調べる
                 interrogationDialogue = outcome.Dialogue;
                 interrogationPartner = partner;
-                ShowPages(speakerName, DialogueTextFormat.FromScenario(outcome.Dialogue));
+                ShowPages(speakerName, DialogueTextFormat.FromScenario(outcome.Dialogue), IsSkippable(outcome.Dialogue));
             }
             else
             {
@@ -827,11 +898,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
         }
 
-        private void ShowPages(string speakerName, List<DialoguePage> pages)
+        private void ShowPages(string speakerName, List<DialoguePage> pages, bool skippable = true)
         {
             if (pages == null || pages.Count == 0) return;
 
-            if (dialogueUI != null) dialogueUI.StartDialogue(speakerName, pages);
+            if (dialogueUI != null) dialogueUI.StartDialogue(speakerName, pages, skippable);
 
             if (logUI != null)
             {
