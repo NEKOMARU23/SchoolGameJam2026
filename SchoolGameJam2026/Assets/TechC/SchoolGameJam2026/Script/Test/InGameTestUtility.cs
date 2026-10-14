@@ -47,13 +47,17 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         /// <summary>
-        /// 見たエンディングの記録を、本物のファイルではなくテスト用の空のファイルに書くようにする
+        /// 見たエンディングと既読の記録を、本物のファイルではなくテスト用の空のファイルに書くようにする
         /// </summary>
         public static void UseTestEndingRecord()
         {
             string path = System.IO.Path.Combine(Application.temporaryCachePath, "test_ending_record.json");
             if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
             EndingRecordStore.SetFilePathForTest(path);
+
+            string readPath = System.IO.Path.Combine(Application.temporaryCachePath, "test_read_record.json");
+            if (System.IO.File.Exists(readPath)) System.IO.File.Delete(readPath);
+            ReadHistoryStore.SetFilePathForTest(readPath);
         }
 
         public static T FindComponent<T>() where T : Object
