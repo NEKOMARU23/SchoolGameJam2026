@@ -22,8 +22,23 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- 文字送り設定 ---")]
         [SerializeField] private float textSpeed = 0.05f;
 
+        [Header("--- オート・スキップ ---")]
+        [Tooltip("オートで次のページへ進むまでの待ち時間（オプションの設定で上書きされる）")]
+        [SerializeField] private float autoWaitSeconds = 1.2f;
+        [Tooltip("スキップ中に1ページを送る間隔（秒）")]
+        [SerializeField] private float skipInterval = 0.06f;
+
         /// <summary> 全ページの表示が完了したときに通知 </summary>
         public event Action OnDialogueFinished;
+
+        /// <summary> スキップできない（未読の）会話に来て、スキップが止まったときに通知 </summary>
+        public event Action OnSkipStopped;
+
+        public bool IsAuto { get; private set; }
+        public bool IsSkipping { get; private set; }
+
+        private bool currentSkippable = true;   // 今の会話をスキップしてよいか（既読、またはスキップの種類が「すべて」）
+        private float modeTimer;
 
         /// <summary> 文字送り中、または未表示のページが残っているか </summary>
         public bool IsDialoguePlaying { get; private set; } = false;
@@ -58,11 +73,14 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// ページの一覧（Excel の会話など）の再生を開始
         /// </summary>
         /// <param name="speakerName">話者の指定がないページで表示する名前（会話の相手）</param>
-        public void StartDialogue(string speakerName, IReadOnlyList<DialoguePage> dialoguePages)
+        /// <param name="skippable">スキップしてよい会話か（既読、またはスキップの種類が「すべて」。判断は呼び出し側）</param>
+        public void StartDialogue(string speakerName, IReadOnlyList<DialoguePage> dialoguePages, bool skippable = true)
         {
             StopTyping();
             pages.Clear();
             currentSpeakerName = speakerName;
+            currentSkippable = skippable;
+            modeTimer = 0f;
 
             if (dialoguePages != null)
             {
@@ -104,6 +122,61 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public void SetTextSpeed(float secondsPerCharacter)
         {
             textSpeed = Mathf.Max(0f, secondsPerCharacter);
+        }
+
+        /// <summary> オートで次のページへ進むまでの待ち時間（オプションの「オートの待ち時間」） </summary>
+        public void SetAutoWait(float seconds)
+        {
+            autoWaitSeconds = Mathf.Max(0f, seconds);
+        }
+
+        /// <summary> オート（ページを表示し終えたら、少し待って自動で次へ）のオン・オフ </summary>
+        public void SetAuto(bool on)
+        {
+            IsAuto = on;
+            modeTimer = 0f;
+        }
+
+        /// <summary> スキップ（会話をどんどん送る）のオン・オフ </summary>
+        public void SetSkip(bool on)
+        {
+            IsSkipping = on;
+            modeTimer = 0f;
+        }
+
+        private void Update()
+        {
+            if (!IsDialoguePlaying) return;
+
+            if (IsSkipping)
+            {
+                if (!currentSkippable)
+                {
+                    // まだ読んでいない会話に来たら、スキップをやめて読ませる
+                    IsSkipping = false;
+                    OnSkipStopped?.Invoke();
+                    return;
+                }
+
+                modeTimer += Time.deltaTime;
+                if (modeTimer >= skipInterval)
+                {
+                    modeTimer = 0f;
+                    OnClickDialogueArea();
+                }
+                return;
+            }
+
+            // オート: 文字を表示し終えたら、待ち時間のあとに次のページへ
+            if (IsAuto && !isTyping)
+            {
+                modeTimer += Time.deltaTime;
+                if (modeTimer >= autoWaitSeconds)
+                {
+                    modeTimer = 0f;
+                    ShowNextPage();
+                }
+            }
         }
 
         /// <summary>
@@ -241,6 +314,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private void OnPageCompleted()
         {
             isTyping = false;
+            modeTimer = 0f;   // オートの待ち時間は、ページを表示し終えてから数える
 
             // 最終ページを表示し終えたら会話終了
             if (pages.Count == 0)

@@ -38,6 +38,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
 
         [SerializeField] private Camera eventCamera;
 
+        [Header("オート・スキップ")]
+        [Tooltip("押してもページを送らない場所（オート・スキップのボタンなど）")]
+        [SerializeField] private RectTransform[] ignoreClickAreas = Array.Empty<RectTransform>();
+        [SerializeField, Min(0f)] private float autoWaitSeconds = 1.2f;
+        [SerializeField, Min(0.01f)] private float skipInterval = 0.06f;
+
         private readonly Dictionary<int, int> clickCountsByDay = new();
         private readonly List<string> activePages = new();
         private int activePageIndex = -1;
@@ -46,8 +52,20 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         private Coroutine typingCoroutine;
         private bool isTyping;
 
+        private bool currentSkippable = true;
+        private float modeTimer;
+
         public int CurrentDay => currentDay;
         public bool IsOpen { get; private set; }
+
+        /// <summary>オート（ページを表示し終えたら、少し待って自動で次へ）がオンか。</summary>
+        public bool IsAuto { get; private set; }
+
+        /// <summary>スキップ（会話をどんどん送る）がオンか。</summary>
+        public bool IsSkipping { get; private set; }
+
+        /// <summary>スキップできない（未読の）会話に来て、スキップが止まったときに通知します。</summary>
+        public event Action OnSkipStopped;
 
         /// <summary>会話ウィンドウが閉じられたとき（最後のページを読み終えた・閉じるボタン）に通知します。</summary>
         public event Action OnClosed;
@@ -102,6 +120,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
 
         private void Update()
         {
+            TickAutoAndSkip();
+
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
             {
                 return;
@@ -118,7 +138,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
             // 会話中は、閉じるボタン以外の画面クリックですべてページを進めます。
             if (IsOpen)
             {
-                if (!IsPointerOverCloseButton(pointerPosition))
+                if (!IsPointerOverCloseButton(pointerPosition) && !IsPointerOverIgnoredArea(pointerPosition))
                 {
                     AdvanceDialoguePage();
                 }
@@ -150,6 +170,71 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
             if (hit2D.collider != null && IsOwnTransform(hit2D.transform))
             {
                 OpenDialogue();
+            }
+        }
+
+        /// <summary>オートで次のページへ進むまでの待ち時間（秒）を変えます（オプションの「オートの待ち時間」）。</summary>
+        public void SetAutoWait(float seconds)
+        {
+            autoWaitSeconds = Mathf.Max(0f, seconds);
+        }
+
+        /// <summary>オートのオン・オフを切り替えます。</summary>
+        public void SetAuto(bool on)
+        {
+            IsAuto = on;
+            modeTimer = 0f;
+        }
+
+        /// <summary>スキップのオン・オフを切り替えます。</summary>
+        public void SetSkip(bool on)
+        {
+            IsSkipping = on;
+            modeTimer = 0f;
+        }
+
+        /// <summary>
+        /// オート・スキップでページを送ります。
+        /// スキップは、スキップしてよい会話（既読、またはスキップの種類が「すべて」）のときだけ進み、
+        /// そうでない会話に来たら止まります。最後のページを送ると会話を閉じます。
+        /// </summary>
+        private void TickAutoAndSkip()
+        {
+            if (!IsOpen || OptionUI.IsOpen)
+            {
+                return;
+            }
+
+            if (IsSkipping)
+            {
+                if (!currentSkippable)
+                {
+                    IsSkipping = false;
+                    OnSkipStopped?.Invoke();
+                    return;
+                }
+
+                modeTimer += Time.unscaledDeltaTime;
+                if (modeTimer >= skipInterval)
+                {
+                    modeTimer = 0f;
+                    if (isTyping) CompleteCurrentPageTyping();
+                    else AdvanceDialoguePage();
+                }
+                return;
+            }
+
+            if (!IsAuto || isTyping)
+            {
+                modeTimer = 0f;
+                return;
+            }
+
+            modeTimer += Time.unscaledDeltaTime;
+            if (modeTimer >= autoWaitSeconds)
+            {
+                modeTimer = 0f;
+                AdvanceDialoguePage();
             }
         }
 
@@ -236,9 +321,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
         /// </summary>
         /// <param name="pageTexts">1ページずつの文</param>
         /// <param name="imageOverride">表示する画像（null なら共通画像）</param>
-        public void OpenDialogueWithPages(IReadOnlyList<string> pageTexts, Sprite imageOverride = null)
+        /// <param name="skippable">スキップしてよい会話か（既読、またはスキップの種類が「すべて」。判断は呼び出し側）</param>
+        public void OpenDialogueWithPages(IReadOnlyList<string> pageTexts, Sprite imageOverride = null, bool skippable = true)
         {
             lastInteractionFrame = Time.frameCount;
+            currentSkippable = skippable;
+            modeTimer = 0f;
             ShowPages(pageTexts != null ? new List<string>(pageTexts) : null, imageOverride, 0);
         }
 
@@ -461,6 +549,18 @@ namespace TechC.SchoolGameJam2026.Scripts.UI.Dialogue
                 closeButtonRect,
                 screenPosition,
                 uiCamera);
+        }
+
+        private bool IsPointerOverIgnoredArea(Vector2 screenPosition)
+        {
+            foreach (RectTransform area in ignoreClickAreas)
+            {
+                if (area == null || !area.gameObject.activeInHierarchy) continue;
+                Canvas canvas = area.GetComponentInParent<Canvas>();
+                Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+                if (RectTransformUtility.RectangleContainsScreenPoint(area, screenPosition, uiCamera)) return true;
+            }
+            return false;
         }
 
         private bool IsOwnTransform(Transform hitTransform)
