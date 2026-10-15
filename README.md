@@ -1,1 +1,22 @@
 # SchoolGameJam2026
+
+取り調べ推理アドベンチャー（Unity 6000.4.3f1 / URP）。
+4人の容疑者の中に紛れた「人格AI」を、7日間の取り調べで見つけ出すゲームです。
+
+## 資料
+| ファイル | 内容 |
+|---|---|
+| [Docs/開発状況まとめ.md](Docs/開発状況まとめ.md) | ゲームのルール、画面、データの編集方法、進み具合、分かっている問題 |
+| [Docs/仕様書.md](Docs/仕様書.md) | これから作る機能と、決まったこと |
+| [Docs/操作の分かりやすさ_改善案.md](Docs/操作の分かりやすさ_改善案.md) | 初めて遊ぶ人にとって分かりにくい所と、その改善案 |
+| [CLAUDE.md](CLAUDE.md) | AI（Claude Code）向けの作業メモ |
+
+## はじめかた
+1. Unity Hub で `SchoolGameJam2026` フォルダを開く（Unity 6000.4.3f1）
+2. `Assets/TechC/SchoolGameJam2026/Scenes/Production/Title.unity` を開いて再生する
+
+シナリオ（セリフ・条件・エンディングなど）は `Assets/Editor/ScenarioData.xlsx` に書き、Unity のメニュー「Tools ＞ シナリオExcelを取り込む」でゲームに反映します。
+
+## 作業のルール
+- 1つの機能ごとにブランチ（`feature/名前/機能名`）を作り、main にはプルリクエストで入れる
+- コミットメッセージは `fix:` `feat:` `refactoring:` `chore:` `test:` の接頭語＋日本語
