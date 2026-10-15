@@ -1,84 +1,54 @@
 # CLAUDE.md — SchoolGameJam2026
 
-Context for Claude Code sessions. The human-facing summary (rules, progress, known issues) is in `Docs/開発状況まとめ.md`; read it too when game rules matter.
-**Planned features and all decisions made with the user are in `Docs/仕様書.md` (16 items, agreed implementation order: options → flag/state foundation → debug menu → new Excel format → AI/final-day judgement → choices → endings → save/load → auto/skip). Read it before implementing any of them.**
-The new Excel template is `Assets/Editor/ScenarioData.xlsx` (sheets: 説明/本文/条件/日別設定/フラグ一覧/AI判定/エンディング/リスト). Columns are looked up by header name; rows whose first cell starts with `#` are comments. The game does not read it yet — the importer still reads the old single-sheet `ScenarioData.csv` format.
+Context for Claude Code sessions. Last updated 2026-10-15 (main = PR #35 merged).
+Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, known issues), `Docs/仕様書.md` (planned features + every decision made with the user, items 1–17), `Docs/操作の分かりやすさ_改善案.md` (UX issues found from screenshots, U1–U15). Read the relevant one before changing game rules or UI.
 
 ## User / communication
-- The user (NEKOMARU23) cannot read English. **All replies, reports, commit messages and code comments must be in Japanese.**
-- The user is a student developer on a team; explain Unity/git steps concretely.
-- Before running PlayMode tests or editing `.prefab`/`.unity` files, **ask the user to close Unity** and verify with `tasklist //FI "IMAGENAME eq Unity.exe"`. Editing YAML while the editor is open caused stale/mixed state once (a phantom "最終結果" bug that disappeared after reopening).
+- The user (NEKOMARU23) **cannot read English. Every reply, report, PR description, commit message and code comment must be in Japanese.** This has slipped many times right after reading English tool output — check the language before sending.
+- Student developer on a team; explain Unity/git steps concretely and plainly.
+- Workflow the user wants: one branch per feature named `feature/kono/<english-word>` → commits (`feat:` `fix:` `refactoring:` `chore:` `test:` + Japanese, split by feature, Japanese body, `Co-Authored-By` trailer) → push → **PR with a Japanese title and a short explanation** → the user reviews and merges. Don't merge locally into main.
+- Push/PR (origin is SSH, which Claude can't use): `git push https://github.com/NEKOMARU23/SchoolGameJam2026.git <branch>:<branch>`; `gh` is at `C:\Program Files\GitHub CLI` (add to `$env:Path`), `gh pr create --repo NEKOMARU23/SchoolGameJam2026 --base main --head <branch> --title … --body-file …`. Write commit messages to a file with bash `printf` (PowerShell `Set-Content -Encoding utf8` adds a BOM to the message).
 
 ## Repository layout
-- Git root: `c:/Unity/SchoolGameJam2026` (paths in git output are prefixed `SchoolGameJam2026/`).
-- Unity project: `c:/Unity/SchoolGameJam2026/SchoolGameJam2026`, Unity **6000.4.3f1**, URP, Input System, TextMeshPro, **UniTask** (no DOTween), Test Framework 1.6.
-- Game code: `Assets/TechC/SchoolGameJam2026/Script/` — no asmdef; everything compiles into Assembly-CSharp. `ProjectSettings.asset` has `playModeTestRunnerEnabled: 1` so tests can live in Assembly-CSharp (test files are wrapped in `#if UNITY_EDITOR`).
-- Editor tool: `Assets/Editor/ScenarioCSVImporter.cs` (CSV → DayScenarioSO, writes to `Assets/Resources/Scenarios` — NOT the assets the game uses).
-- `Scenes/WorkSpace/Work_*` are other members' sandboxes. Don't refactor them beyond what's required to compile.
+- Git root `c:/Unity/SchoolGameJam2026` (git paths are prefixed `SchoolGameJam2026/`). Unity project `c:/Unity/SchoolGameJam2026/SchoolGameJam2026`, Unity **6000.4.3f1**, URP, Input System, TextMeshPro, UniTask (no DOTween), Test Framework 1.6, **com.unity.pipeline** (Unity CLI bridge).
+- Game code: `Assets/TechC/SchoolGameJam2026/Script/`, no asmdef (Assembly-CSharp). Tests live there too, wrapped in `#if UNITY_EDITOR` (`playModeTestRunnerEnabled: 1`).
+- Editor tools: `Assets/Editor/` (Assembly-CSharp-Editor). Temporary one-off editor scripts go in `Assets/Editor/ClaudeTemp/` and are deleted afterwards.
+- `Scenes/WorkSpace/Work_*` are members' sandboxes. `Work_KONO.unity`, `ProjectSettings.asset`, `SchoolGameJam2026.slnx`, `VFXManager.asset`, deleted `Readme`/`TutorialInfo` show as modified locally — never commit them.
+- Local-only branches (not pushed, not for main): `feature/kono/vfx-test` (VFX Graph experiments: hit effect, fire tornado + synthesized SE), `feature/kono/choice-sample` (test choice data).
 
-## Scenes (build order)
-`Wolk_ABE`(disabled), `Title`, `InGame`, `Result`(disabled), `Manager`, `ClearScene`, `GameOverScene`.
-`AppBootstrapper` additively loads `Manager` (AudioManager) at startup. `InGame.unity` is just an instance of `Prefab/InGame.prefab` with a few overrides (notably `successPointReward: 200`, `Header` m_IsActive 0).
+## Scenes
+`Title` (start, つづきから, エンディング一覧, option), `InGame` (instance of `Prefab/InGame.prefab`, overrides e.g. `successPointReward: 200`, `Header` inactive), `Manager` (additively loaded by `AppBootstrapper`; AudioManager + `Prefab/Option.prefab` = SettingsManager, OptionUI, SaveSlotUI, SaveLoadController), `ClearScene` / `GameOverScene` (SaveDeletePromptUI). `Result` is disabled.
 
 ## Architecture (namespace root `TechC.SchoolGameJam2026.Scripts`)
-Rule the user cares about: **logic in Managers, display in Views, `GameUIController` mediates.** Views receive results only (no game rules inside views).
+Rule the user cares about: **logic in Managers, display in Views, `GameUIController` mediates.** Views only display what they're given.
 
-| Layer | Class | Responsibility |
-|---|---|---|
-| Manager | `Core.Manager.GameManager` | days (maxDays=7), scenarios, morning backup/reset, AI confirm (`CanConfirmAI`/`ConfirmAI`), `IsGameCleared`, `AdvanceDayOrFinishGame` (loads ClearScene/GameOverScene) |
-| Manager | `Core.Manager.InterrogationManager` | actions, points, affection, daily limit (4), `CanExecuteAction` (incl. released check), release flag, `TryUnlockProfile`, `GetHearingTargetIds`, `GetConfirmAIDialogue` |
-| Manager | `Core.Manager.SmartphoneTalkManager` | per-day smartphone talk count; resets on `OnDayStarted`/`OnDayReset` |
-| Manager | `Core.Manager.AudioManager` (Manager scene) | BGM by scene name (`Title`/`InGame`/`Result`), SE via `EventManager` + `PlaySEEvent` |
-| Mediator | `UI.GameUIController` | receives view input, calls managers, builds view data (`ProfileViewData`, result text), orchestrates day transition (UniTask) |
-| View | `UI.ScreenNavigationUI` | panel switching with history stack |
-| View | `UI.InterrogationUI`, `ProfileUI`, `MonitorUI`, `ResultUI`, `LogUI`, `StatusHeaderUI`, `DialogueUI`, `DayTransitionUI`, dialogs | display only |
-| Format | `UI.DialogueTextFormat` | single parser for dialogue text: `|` pages, `[SYS]`, `[IMG:xxx]` |
-| View(+own data) | `UI.Dialogue.DialogueClickable` | other member's class (restored). Holds per-day/per-talk text for 補助ちゃん; opened via `OpenDialogueForTalk(day, talkNumber)`; raises `OnClosed` |
-| Data | `SO.DayScenarioSO`, `SO.ProfileDataSO` (`BasicInfoKey = "BASIC"`) | |
+| Area | Classes |
+|---|---|
+| Managers (`Core.Manager`) | `GameManager` (days, `ScenarioDatabase`, morning snapshot / `ResetCurrentDay`, `CaptureState`/`RestoreState`, AI judgement sheet at day end, final-day `EvaluateFinalResult`, `DecideEnding`/`FinishGame`, `CreateSaveData`/`ApplySave`, choices `GetAvailableChoices`/`SelectChoice`), `InterrogationManager` (actions, points, affection, 4/day, final day = judgement only, `CanUnlockProfile`), `SmartphoneTalkManager`, `SettingsManager` (settings.json), `AudioManager` |
+| State (`Core.State`) | `FlagStore`, `GameStateSnapshot`, `SaveData`/`SaveStore` (20 slots, `saves/slot_NN.json`, pending load for Title→InGame), `EndingRecordStore` (ending_record.json), `ReadHistoryStore` (read_record.json, global) |
+| Scenario (`Scenario`) | `ScenarioDatabase` (asset `Data/ScenarioDatabase.asset`, generated), `ScenarioRows`, `ScenarioSelector`; `Scenario.Import`: `XlsxReader`, `ScenarioWorkbookParser` (validation); importer `Assets/Editor/ScenarioExcelImporter.cs` (menu Tools ＞ シナリオExcelを取り込む) |
+| Mediator (`UI`) | `GameUIController` (also `ISaveTarget`; log history; auto/skip state; skippable = read or SkipMode.All) |
+| Views (`UI`) | `ScreenNavigationUI`, `MonitorUI`, `InterrogationUI`, `DialogueUI` (typing, auto/skip), `Dialogue.DialogueClickable` (teammate's smartphone view; auto/skip + `ignoreClickAreas`), `ChoiceUI`, `ConfirmDialogUI`, `EndingPlayerUI`, `EndingListUI`, `SaveSlotUI`, `SaveLoadController`, `OptionUI`, `AutoSkipButtonsUI`, `ProfileUI`, `LogUI`, `ResultUI`, `StatusHeaderUI`, `DayTransitionUI`, `SaveDeletePromptUI`, `OpenLoadButton` |
+| Dev | `DebugTools.DebugMenu` (F1, editor/dev builds only) |
 
-Game rules summary: 4 suspects A–D (A=ココア is AI), 7 days, 4 actions/day, once per person per day; correct = `elementIndex == 0 && action == correctAction` (known fragility); clear = confirmed AI on day 7 and AI never released.
-
-## Key IDs in `Prefab/InGame.prefab` (for YAML edits; re-verify before use)
-- Canvas GO `7364358246981998045`, Canvas RectTransform `8649986850158955345`
-- GameManager GO `8762172388528793037` (GameManager, InterrogationManager, GameUIController `8892950995207965899`, SmartphoneTalkManager `4711512873405592785`)
-- ScreenNavigationUI `6042100579899794112`, StatusHeaderUI `5173942068317205519`, MonitorUI `1762519590160357425`, InterrogationUI `735181164149097286`, ProfileUI `1421899173729478357`, LogUI `1035069311232201608`, DialogueUI `4815162342108123457`, DayTransitionUI `3340496237113850003`
-- MonitorPanel GO `6056070719320347505`; smartphone button = `MonitorPanel/Button_Help` Button `2364422990428228726`
-- SmartphoneTalkPanel GO `4196940290206858242`, its DialogueClickable `5622193443835218396`
-- TMP template for new texts: `Header/DayText` TMP `1152734100104709572`
-- Script GUIDs: DialogueClickable `47c34825aeab0c44aac0b5ebc75ca2cb`, StatusHeaderUI `05afc6b96bd71c644abccd2cc59dea15`, DayTransitionUI `7142340ce51d4f9f8cea3b05d9d7a496`, SmartphoneTalkManager `cc0049871c024802b8c21fdf272dd1d4`, DialogueUI `09e0d483ed6341f4f9ce917a1e7f717e`; built-ins Image `fe87c0e1cc204ed48ad3b37840f39efc`, Button `4e29b1a8efbd4b44bb3f3716e73f07ff`, TMP `f4688fdb7df04437aeb418b961361dc5`
-- Designer mockups (SatumaYoukan): `InGame_Home`, `Ingame_Chat` (補助ちゃん art), `Ingame_Chat_Select`, `Ingame_Data` — references for layout, not used at runtime.
+Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/本文/条件/選択肢/日別設定/フラグ一覧/AI判定/エンディング/リスト; columns found by header; `#` rows are comments). Old `Data/Day1–7_Scenario.asset` + `DayScenarioSO` are unused (deletion not yet confirmed; `InterrogationActionType` lives in `DayScenarioSO.cs`).
 
 ## How to work here
-### Prefab / scene YAML edits
-- Do them with a Python script (Unity closed), keep CRLF line endings, verify afterwards: no dangling `{fileID: X}`, no duplicate IDs, correct parent/children.
-- New MonoBehaviour that a prefab references: **write the `.meta` with a GUID first**, then the `.cs`. Reuse an old GUID from git history when restoring a deleted script so existing references reconnect.
-- Write Japanese in YAML as JSON-style `"\uXXXX"` strings; in `re.sub` use a lambda replacement (backslashes break templates).
-- `UnityEvent` persistent calls with `m_Target: {fileID: 0}` are dead bindings — look for them after refactors.
+### Prefer the Unity CLI while the Editor is open (memory: unity-cli-pipeline)
+- `unity status` / `unity command editor_status` → "ready". `unity recompile --json` (`compilationFailed` is `null` when already up to date).
+- Tests: `unity command run_tests --mode PlayMode --async_tests true`, then poll `unity command test_status --result-only` until `"status": "completed"` (89 tests ≈ 2–9 min).
+- Prefab/scene edits: write a temp `[MenuItem("Tools/ClaudeTemp/…")]` script, `unity recompile`, then `unity command menu --path …`. Edit other scenes with `OpenScene(Additive)` → `SaveScene` → `CloseScene` so the user's open scene isn't changed. Right after a recompile, commands can fail with "Connection reset" or "Main thread operation timed out" — wait and retry.
+- C# in the Editor: `unity command eval_file --file x.cs` (put code in a file; PowerShell mangles quoted `--code`).
+- Screenshots: open the Game view (`menu --path "Window/General/Game"`), set `Application.runInBackground = true` via eval (otherwise play mode pauses when Unity is in the background), `capture_game_view --save_path Temp/x.png` (saves under **Assets/**Temp — delete it afterwards). `--source camera` misses VFX and post-processing.
+- If the Editor is closed: batch mode `Unity.exe -batchmode -projectPath … -executeMethod …` / `-runTests -testPlatform PlayMode`.
 
-### Compile check without Unity
-Unity-generated `Assembly-CSharp.csproj` can be stale. Build a temp copy: drop `<Compile>` entries for deleted files, add new `.cs` files, add `Library/ScriptAssemblies/UnityEngine.TestRunner.dll` reference, then `dotnet build _tmpcheck.csproj -o <scratch>` and delete the temp csproj.
-
-### Running PlayMode tests (Unity must be closed)
-```
-"C:\Program Files\Unity\Hub\Editor\6000.4.3f1\Editor\Unity.exe" -batchmode -projectPath "c:\Unity\SchoolGameJam2026\SchoolGameJam2026" -runTests -testPlatform PlayMode -testResults <scratch>\results.xml -logFile <scratch>\unity.log
-```
-Run via PowerShell `Start-Process -Wait`; parse the NUnit XML. Tests: `Script/Test/` (`InGameTestUtility`, `InGameDay1SmokeTest`, `InGameFullWeekTest`; 14 tests, all passing as of 2026-10-10). `LoadInGameScene()` sets `DayTransitionUI.SetDurations(0,0)`; tests that check the transition re-enable real durations. Test method names cannot start with a digit. Use `FindAnyObjectByType`/`FindObjectsByType(FindObjectsInactive)` (sort-mode overloads are deprecated in 6.4).
+### Tests
+`Script/Test/`: `InGameTestUtility` (`LoadInGameScene` also redirects ending/read records to temp files via `UseTestEndingRecord`; `JudgeOnFinalDay`, `EndDayByButton`, `ClickConfirmYes`, `GetConfirmDialog(path)` — two `ConfirmDialog` objects exist, InGame's and Option's, so find by path). Don't `using …Core.Manager;` in tests — `GameManager` collides with the utility property; qualify as `Core.Manager.X`. Test names can't start with a digit.
 
 ### Shell gotchas (Windows)
-- Bash heredocs mangle `\\` and some quotes — write Python helpers to files (scratchpad) and run them.
-- Console is cp932: set `PYTHONIOENCODING=utf-8` and write output to a file before reading Japanese.
-- `ProjectSettings.asset`, `Assets/Settings/*.asset`, `Script/UI/Dialogue.meta` often show as modified with line-ending-only diffs — don't commit those.
+- Bash heredocs: don't use them for files with `\\` or quotes — write Python/C# files with the Write tool. Never `cat > file` without input (it hangs waiting for stdin). `sed` replacement `\U` uppercases the rest.
+- Console is cp932: `PYTHONIOENCODING=utf-8`. Keep CRLF when patching files from Python.
+- The scratchpad and Unity's `Temp/` get cleared between days — don't rely on files kept there.
 
-### Commits
-- Prefix + Japanese description: `fix:` `feat:` `refactoring:` `chore:` `test:`; **one commit per feature**, with a Japanese body explaining what/why. End with the Co-Authored-By trailer.
-- When one file mixes features, build intermediate file states and commit step by step, compile-checking each step.
-- Don't push unless asked. Current work branch: `refactoring/kono/code` (7 commits ahead of `main`, last 2 not pushed as of 2026-10-10).
-
-## Open items (see Docs for full list)
-- CSV importer target vs used assets (`Resources/Scenarios` vs `Data/`); Priority gaps → null → NRE in `ActionResponseGroup`; no in-cell newline/quote support. User said to ignore Excel until lines are written.
-- Correct-answer judgement depends on dialogue list order.
-- `successPointReward` prefab 2000000 vs scene override 200.
-- `Header` inactive in InGame scene (status texts may be invisible).
-- `Setting_Button` unwired; options/volume and `ButtonSoundTrigger` not in production scenes; `OnNightPhaseStarted` has no subscriber.
-- Placeholder content/layout: 補助ちゃん lines, SmartphoneTalkPanel, DayTransitionPanel, SmartphoneNotice.
-- Intentional: only `ProfileItem_3` (PAST_3) is shown on the profile panel.
+## Open items
+See `Docs/開発状況まとめ.md` (仮のまま・既知の問題) and `Docs/操作の分かりやすさ_改善案.md`. Biggest: `Header` (day/points/actions) is hidden in the InGame scene; monitors don't show who is in each room; choice UI squashed; Save/Load buttons overlap in Option; result text overlaps; name mismatch マキナ/メリ.
