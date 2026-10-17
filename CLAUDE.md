@@ -1,7 +1,7 @@
 # CLAUDE.md — SchoolGameJam2026
 
 Context for Claude Code sessions. Last updated 2026-10-17 (main = PR #40 merged; PR #41 = U3 monitor buttons, awaiting review).
-Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, known issues), `Docs/仕様書.md` (planned features + every decision made with the user, items 1–17), `Docs/操作の分かりやすさ_改善案.md` (UX issues found from screenshots, U1–U15; section 4 = decided designs U2–U9 with mockups), `Docs/資料画面のデザイン相談.md` (profile-screen design request for the designer — design only, no programmer behaviour), `Docs/資料画面の動き_プログラム側.md` (profile-screen behaviour/data to implement, section 9 = build list). Read the relevant one before changing game rules or UI.
+Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, known issues), `Docs/仕様書.md` (planned features + every decision made with the user, items 1–17), `Docs/操作の分かりやすさ_改善案.md` (UX issues found from screenshots, U1–U15; section 4 = decided designs U2–U9 with mockups), `Docs/資料画面のデザイン相談.md` (profile-screen design request for the designer — design only, no programmer behaviour), `Docs/資料画面の動き_プログラム側.md` (profile-screen behaviour/data to implement, section 9 = build list), `Docs/モニター画面の変更点_デザイナー向け.md` (U2/U3 monitor-screen changes explained to the designer with before/after images in `Docs/images/monitor_change/`, made by a PIL script; design-only, lists the placeholder visuals to replace). Read the relevant one before changing game rules or UI.
 
 ## User / communication
 - The user (NEKOMARU23) **cannot read English. Every reply, report, PR description, commit message and code comment must be in Japanese.** This has slipped many times right after reading English tool output — check the language before sending.
