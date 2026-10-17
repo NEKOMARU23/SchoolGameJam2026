@@ -54,6 +54,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private ScenarioDialogue interrogationDialogue;      // 取調室で表示中の Excel の会話（終わったら選択肢を調べる）
         private CharacterInstance interrogationPartner;      // その会話の相手
         private int pendingEarnedPoints;                     // 行動で入ったポイント（会話が全部終わったら出す）
+        private bool wasInterrogatedOnEnter;                 // 部屋に入ったとき、もう取り調べ済みだったか（「今日はもう取り調べました」を出すか）
         private readonly List<LogEntry> logHistory = new List<LogEntry>();   // ログの内容（セーブに入れる）
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
@@ -360,6 +361,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
 
             CharacterInstance targetChar = GetCharacter(characterId);
+            wasInterrogatedOnEnter = InterrogationInstance != null && targetChar != null && InterrogationInstance.HasInterrogatedToday(characterId);
 
             if (interrogationUI != null && targetChar != null && targetChar.ProfileData != null)
             {
@@ -919,12 +921,14 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             bool canJudge = !isPlaying && InterrogationInstance != null
                 && InterrogationInstance.CanExecuteAction(targetChar, InterrogationActionType.Release, out _);
 
-            // 今日もう取り調べた人には、灰色のボタンを残さず「今日はもう取り調べました」と出す
+            // 今日もう取り調べた人には、灰色のボタンを残さない
+            // 行動を選んだその場ではボタンを消すだけにして、あとで部屋に入り直したときに「今日はもう取り調べました」と出す
             // （1日の行動回数とキャラの人数が同じなので、回数を使い切ったときも全員取り調べ済みになる）
             bool interrogatedToday = !isFinalDay && targetChar != null && InterrogationInstance != null
                 && InterrogationInstance.HasInterrogatedToday(targetChar.CharacterId);
+            bool showNotice = interrogatedToday && wasInterrogatedOnEnter;
 
-            interrogationUI.UpdateActionButtons(!isFinalDay && !interrogatedToday, canInterrogate, isFinalDay, canJudge, interrogatedToday);
+            interrogationUI.UpdateActionButtons(!isFinalDay && !interrogatedToday, canInterrogate, isFinalDay, canJudge, showNotice);
         }
 
         /// <summary>
