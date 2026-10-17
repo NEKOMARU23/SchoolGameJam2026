@@ -64,7 +64,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
         {
             { "拷問", ScenarioAction.Torture }, { "対話", ScenarioAction.Talk }, { "交渉", ScenarioAction.Negotiate },
             { "聞き取り", ScenarioAction.HearAbout }, { "解放", ScenarioAction.Release }, { "AI確定", ScenarioAction.ConfirmAI },
-            { "スマホ", ScenarioAction.Smartphone },
+            { "スマホ", ScenarioAction.Smartphone }, { "朝", ScenarioAction.Morning },
         };
 
         private static readonly Dictionary<string, PageKind> PageKinds = new Dictionary<string, PageKind>
@@ -234,7 +234,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
             {
                 if (!Actions.TryGetValue(row["行動"], out ScenarioAction action))
                 {
-                    ctx.Error(row, $"行動「{row["行動"]}」は使えません（拷問 / 対話 / 交渉 / 聞き取り / 解放 / AI確定 / スマホ）");
+                    ctx.Error(row, $"行動「{row["行動"]}」は使えません（拷問 / 対話 / 交渉 / 聞き取り / 解放 / AI確定 / スマホ / 朝）");
                     continue;
                 }
 
@@ -246,7 +246,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                 {
                     ok &= ctx.ReadInt(row, "回目", out c.talkNumber, required: true, min: 1);
                 }
-                else
+                else if (action != ScenarioAction.Morning)   // 朝はキャラ・回目とも空
                 {
                     ok &= ctx.ReadCharacter(row, "キャラ", out c.characterId, required: true);
                 }
@@ -584,7 +584,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                     if (required) Error(row, $"{header}が空です");
                     return !required;
                 }
-                if (!Actions.TryGetValue(text, out ScenarioAction a) || a == ScenarioAction.Smartphone)
+                if (!Actions.TryGetValue(text, out ScenarioAction a) || a == ScenarioAction.Smartphone || a == ScenarioAction.Morning)
                 {
                     Error(row, $"{header}「{text}」は使えません（拷問 / 対話 / 交渉 / 聞き取り / 解放 / AI確定）");
                     return false;

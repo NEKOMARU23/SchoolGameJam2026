@@ -11,7 +11,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         Narration   // 地の文（話者名なし）
     }
 
-    /// <summary> 条件シートの「行動」（取り調べの行動 + スマホ） </summary>
+    /// <summary> 条件シートの「行動」（取り調べの行動 + スマホ + 朝） </summary>
     public enum ScenarioAction
     {
         Torture,
@@ -20,7 +20,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         HearAbout,
         Release,
         ConfirmAI,
-        Smartphone
+        Smartphone,
+        Morning     // 朝: その日の始めに自動で流れるスマホの会話
     }
 
     /// <summary> エンディングシートの「判定結果」 </summary>
@@ -83,7 +84,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
     public class ScenarioConditionRow
     {
         public int day;
-        public string characterId = "";         // スマホは空
+        public string characterId = "";         // スマホ・朝は空
         public ScenarioAction action;
         public string hearingTargetId = "";     // 聞き取りのときだけ
         public int talkNumber;                  // スマホのときだけ（回目）

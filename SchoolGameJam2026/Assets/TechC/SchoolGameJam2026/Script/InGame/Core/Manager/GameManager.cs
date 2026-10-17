@@ -54,6 +54,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         // その日の朝の状態（「今日をやり直す」で戻す先）
         private GameStateSnapshot morningSnapshot;
 
+        // まだ流していない朝の会話（画面側が TakeMorningTalk で受け取って流す）
+        private ScenarioDialogue pendingMorningTalk;
+
         #region プロパティ
         public int CurrentDay => currentDay;
         public int MaxDays => maxDays;
@@ -221,9 +224,42 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             // その日だけの状態（行動回数・スマホの会話回数など）を朝の状態にしてから、朝の状態を記録する
             InterrogationManager.Instance?.ResetDailyActions(0);
             SmartphoneTalkManager.Instance?.ResetForNewDay();
+
+            // 朝の会話の効果（獲得フラグ・AI化）は、朝の状態を記録する前に反映する
+            // （「今日をやり直す」で効果が消えず、会話も流し直さないようにするため）
+            pendingMorningTalk = SelectMorningTalk();
             morningSnapshot = CaptureState();
 
             OnDayStarted?.Invoke(currentDay);
+        }
+
+        /// <summary>
+        /// 条件シートの行動「朝」から、その日の朝の会話を選び、効果を反映する
+        /// </summary>
+        /// <returns>流す会話。その日の朝の会話がなければ null</returns>
+        private ScenarioDialogue SelectMorningTalk()
+        {
+            if (scenarioDatabase == null) return null;
+
+            ScenarioConditionRow row = ScenarioSelector.Select(
+                scenarioDatabase.GetConditionRows(currentDay, "", ScenarioAction.Morning),
+                CreateSelectorContext(null, 0));
+            if (row == null) return null;
+
+            ApplyScenarioEffects(row);
+            return scenarioDatabase.FindDialogue(row.dialogueId);
+        }
+
+        /// <summary>
+        /// まだ流していない朝の会話を受け取る（受け取ったら空になるので、1日に1回だけ流れる）
+        /// ロードや「今日をやり直す」では朝の会話は用意されない
+        /// </summary>
+        /// <returns>流す会話。なければ null</returns>
+        public ScenarioDialogue TakeMorningTalk()
+        {
+            ScenarioDialogue talk = pendingMorningTalk;
+            pendingMorningTalk = null;
+            return talk;
         }
 
         /// <summary>
@@ -307,6 +343,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             if (save == null || save.current == null) return;
 
             morningSnapshot = CloneSnapshot(save.morning ?? save.current);
+            pendingMorningTalk = null;
             RestoreState(save.current);
             OnSaveLoaded?.Invoke(save);
         }

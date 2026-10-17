@@ -31,6 +31,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private EndingPlayerUI endingPlayer;        // 最終日の後のエンディング
         [SerializeField] private AutoSkipButtonsUI[] autoSkipButtons; // 会話枠の「オート」「スキップ」（取調室・スマホ）
 
+        [Header("--- 朝の会話（その日の始めに自動で流れるスマホの会話） ---")]
+        [Tooltip("スマホの呼び出し音（Data/SE のファイル名。空なら鳴らさない）")]
+        [SerializeField] private string morningRingSeName = "";
+        [Tooltip("呼び出し音を鳴らしてから会話画面を開くまでの秒数（音がないときは待たない）")]
+        [SerializeField, Min(0f)] private float morningRingSeconds = 1.5f;
+
         private const string SmartphoneNoTalkMessage = "今日はもう連絡ができない";
         private const string UnjudgedMessage = "まだ判定していない人がいます";
 
@@ -41,6 +47,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private bool isDayTransitioning = false;             // 日付切り替え演出中（連打で複数日進むのを防ぐ）
         private bool isAutoOn;                               // オート（取調室とスマホで共通）
         private bool isSkipOn;                               // スキップ（取調室とスマホで共通）
+        private bool isMorningTalk;                          // 表示中のスマホ会話が朝の会話か（終わったら日が変わる演出でモニターへ戻る）
         private List<DialoguePage> currentSmartphonePages;   // 表示中のスマホ会話（ページごとの SE 用）
         private ScenarioDialogue currentSmartphoneDialogue;  // 表示中のスマホ会話（終わったら選択肢を調べる）
         private ScenarioDialogue interrogationDialogue;      // 取調室で表示中の Excel の会話（終わったら選択肢を調べる）
@@ -70,6 +77,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             RefreshAllViews();
+
+            // はじめからのときは、1日目の朝の会話を流す（GameManager の Start が先に終わっていた場合）
+            StartMorningTalkAsync(this.GetCancellationTokenOnDestroy()).Forget();
 
             // セーブ・ロード（Manager シーンのオプション画面）から操作できるようにする
             SaveLoadController.Target = this;
@@ -243,6 +253,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             CloseChoices();
             if (statusHeaderUI != null) statusHeaderUI.UpdateDayDisplay(day);
             RefreshAllViews();
+
+            // 日付の切り替え演出の中では、演出の側で流す（はじめから・デバッグの日付移動のときはここで流す）
+            if (!isDayTransitioning) StartMorningTalkAsync(this.GetCancellationTokenOnDestroy()).Forget();
         }
 
         /// <summary>
@@ -262,6 +275,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
             interrogationDialogue = null;
+            isMorningTalk = false;
             if (smartphoneTalk != null && smartphoneTalk.IsOpen)
             {
                 currentSmartphoneDialogue = null;
@@ -496,6 +510,70 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
+        /// 朝の会話があれば、呼び出し音を鳴らしてからスマホの会話画面を自動で開く
+        /// （スマホで話せる回数は使わない。ロード・今日をやり直すでは GameManager が会話を用意しないので流れない）
+        /// </summary>
+        /// <returns>朝の会話を始めた場合 true</returns>
+        private async UniTask<bool> StartMorningTalkAsync(CancellationToken token)
+        {
+            if (GameManagerInstance == null || smartphoneTalk == null || isMorningTalk) return false;
+
+            ScenarioDialogue talk = GameManagerInstance.TakeMorningTalk();
+            if (talk == null) return false;
+
+            isMorningTalk = true;
+            if (!string.IsNullOrEmpty(morningRingSeName))
+            {
+                PlaySeByName(morningRingSeName);
+                await UniTask.Delay(TimeSpan.FromSeconds(morningRingSeconds), ignoreTimeScale: true, cancellationToken: token);
+            }
+
+            if (navigationUI != null) navigationUI.ShowSmartphoneTalkPanel();
+            OpenSmartphoneDialogue(talk);
+            return true;
+        }
+
+        /// <summary>
+        /// スマホの会話（選択肢の後の会話も含む）が全部終わったときの処理
+        /// 朝の会話なら日が変わるときと同じ演出でモニター画面へ、それ以外は元の画面に戻る
+        /// </summary>
+        private void FinishSmartphoneTalk()
+        {
+            if (isMorningTalk)
+            {
+                isMorningTalk = false;
+                ReturnFromMorningTalkAsync(this.GetCancellationTokenOnDestroy()).Forget();
+                return;
+            }
+            if (navigationUI != null) navigationUI.BackToPreviousPanel();
+        }
+
+        private async UniTaskVoid ReturnFromMorningTalkAsync(CancellationToken token)
+        {
+            // 日付の切り替え演出がまだ終わっていなければ（スキップですぐ閉じたときなど）、終わるのを待つ
+            await UniTask.WaitWhile(() => isDayTransitioning, cancellationToken: token);
+            if (GameManagerInstance == null) return;
+
+            isDayTransitioning = true;
+            try
+            {
+                if (dayTransitionUI != null) await dayTransitionUI.CoverAsync($"{GameManagerInstance.CurrentDay}日目", token);
+
+                if (navigationUI != null)
+                {
+                    navigationUI.ShowMonitorPanel();
+                    navigationUI.ClearHistory();
+                }
+
+                if (dayTransitionUI != null) await dayTransitionUI.RevealAsync(token);
+            }
+            finally
+            {
+                isDayTransitioning = false;
+            }
+        }
+
+        /// <summary>
         /// スマホの会話画面に Excel の会話を表示する（選択肢を選んだ後の会話もここで出す）
         /// </summary>
         private void OpenSmartphoneDialogue(ScenarioDialogue dialogue)
@@ -536,7 +614,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (finished != null) ReadHistoryStore.MarkRead(finished.id);
             if (TryShowChoices(finished, null, isSmartphone: true)) return;
 
-            if (navigationUI != null) navigationUI.BackToPreviousPanel();
+            FinishSmartphoneTalk();
         }
 
         /// <summary>
@@ -582,7 +660,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             if (isSmartphone)
             {
                 if (next != null) OpenSmartphoneDialogue(next);
-                else if (navigationUI != null) navigationUI.BackToPreviousPanel();
+                else FinishSmartphoneTalk();
                 return;
             }
 
@@ -693,6 +771,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                     navigationUI.ClearHistory();
                 }
 
+                // 朝の会話があれば、覆いを外す前に呼び出し音を鳴らしてスマホの会話画面を開く
+                await StartMorningTalkAsync(token);
+
                 if (dayTransitionUI != null) await dayTransitionUI.RevealAsync(token);
             }
             finally
@@ -778,6 +859,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             var characters = GameManagerInstance != null ? GameManagerInstance.AllCharacters : null;
             Dictionary<string, bool> statusMap = new Dictionary<string, bool>();
             Dictionary<string, Sprite> faceMap = new Dictionary<string, Sprite>();
+            Dictionary<string, MonitorJudgementLabel> judgementMap = new Dictionary<string, MonitorJudgementLabel>();
+            bool isFinalDay = GameManagerInstance != null && GameManagerInstance.IsFinalDay;
 
             if (characters != null)
             {
@@ -787,6 +870,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                     statusMap[c.CharacterId] = c.IsJudged;
                     // モニターには取調室と同じ画像を映す
                     if (c.ProfileData != null) faceMap[c.CharacterId] = c.ProfileData.characterIcon;
+                    // 最終日は、判定することがその日の目的なので、判定の状態を出す
+                    judgementMap[c.CharacterId] = !isFinalDay ? MonitorJudgementLabel.None
+                        : c.IsConfirmedAI ? MonitorJudgementLabel.ConfirmedAI
+                        : c.IsReleased ? MonitorJudgementLabel.Released
+                        : MonitorJudgementLabel.Unjudged;
                 }
             }
 
@@ -794,6 +882,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 monitorUI.UpdateRoomStatus(statusMap);
                 monitorUI.UpdateRoomFaces(faceMap);
+                monitorUI.UpdateJudgementLabels(judgementMap);
             }
         }
 
