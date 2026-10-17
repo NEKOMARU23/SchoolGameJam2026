@@ -99,6 +99,34 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
+        public IEnumerator 行動の会話が終わると入ったポイントが出て0のときは出ない()
+        {
+            var pointGain = FindComponent<PointGainUI>();
+
+            // ココアに正解行動（対話）: 会話の間は出ず、会話が終わったら出る
+            yield return Click("SelectRoomA_Button");
+            int before = InterrogationManager.TodayEarnedPoints;
+            yield return Click("Button_Talk");
+            int earned = InterrogationManager.TodayEarnedPoints - before;
+            Assert.Greater(earned, 0, "前提: 1日目のココアへの対話でポイントが入る");
+            Assert.IsFalse(pointGain.IsShowing, "会話の途中でポイントが出ました");
+
+            yield return SkipDialogueByButton();
+            Assert.IsTrue(pointGain.IsShowing, "会話が終わってもポイントが出ません");
+            Assert.AreEqual($"+{earned}pt", pointGain.GetComponentInChildren<TMPro.TextMeshProUGUI>(true).text);
+
+            // メリに NG行動（拷問）: ポイントは0なので出ない
+            yield return Click("Button_ToMonitor");
+            yield return Click("SelectRoomB_Button");
+            Assert.IsFalse(pointGain.IsShowing, "部屋を移っても前のポイントが残っています");
+            before = InterrogationManager.TodayEarnedPoints;
+            yield return Click("Button_Torture");
+            yield return SkipDialogueByButton();
+            Assert.AreEqual(before, InterrogationManager.TodayEarnedPoints, "前提: 1日目のメリへの拷問（NG行動）はポイントが入らない");
+            Assert.IsFalse(pointGain.IsShowing, "ポイントが入っていないのに出ました");
+        }
+
+        [UnityTest]
         public IEnumerator 四人全員に別々のアクションを実行できる()
         {
             var controller = FindComponent<GameUIController>();

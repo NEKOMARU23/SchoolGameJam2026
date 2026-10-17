@@ -30,6 +30,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private ChoiceUI choiceUI;                  // 会話の後に出す選択肢
         [SerializeField] private EndingPlayerUI endingPlayer;        // 最終日の後のエンディング
         [SerializeField] private AutoSkipButtonsUI[] autoSkipButtons; // 会話枠の「オート」「スキップ」（取調室・スマホ）
+        [SerializeField] private PointGainUI pointGainUI;            // 行動で入ったポイント（「+20pt」）
 
         [Header("--- 朝の会話（その日の始めに自動で流れるスマホの会話） ---")]
         [Tooltip("スマホの呼び出し音（Data/SE のファイル名。空なら鳴らさない）")]
@@ -52,6 +53,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private ScenarioDialogue currentSmartphoneDialogue;  // 表示中のスマホ会話（終わったら選択肢を調べる）
         private ScenarioDialogue interrogationDialogue;      // 取調室で表示中の Excel の会話（終わったら選択肢を調べる）
         private CharacterInstance interrogationPartner;      // その会話の相手
+        private int pendingEarnedPoints;                     // 行動で入ったポイント（会話が全部終わったら出す）
         private readonly List<LogEntry> logHistory = new List<LogEntry>();   // ログの内容（セーブに入れる）
 
         public string CurrentSelectedCharacterId => currentSelectedCharacterId;
@@ -354,6 +356,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             currentSelectedCharacterId = characterId;
             interrogationDialogue = null;   // 別の部屋に移ったら、前の会話の選択肢は出さない
+            pendingEarnedPoints = 0;
             if (dialogueUI != null) dialogueUI.ResetDialogueState();
 
             CharacterInstance targetChar = GetCharacter(characterId);
@@ -402,6 +405,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             ActionOutcome outcome = InterrogationInstance.ExecuteAction(targetChar, actionType, currentHearingTargetId);
 
+            if (pointGainUI != null) pointGainUI.Hide();
+            pendingEarnedPoints = outcome != null ? outcome.EarnedPoints : 0;
             ShowOutcome(targetChar, outcome);
             UpdateInterrogationState();
         }
@@ -628,7 +633,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             interrogationPartner = null;
 
             if (finished != null) ReadHistoryStore.MarkRead(finished.id);
-            TryShowChoices(finished, partner, isSmartphone: false);
+            if (!TryShowChoices(finished, partner, isSmartphone: false)) ShowEarnedPoints();
             UpdateInterrogationState();
         }
 
@@ -665,12 +670,24 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             if (next != null) ShowOutcome(partner, ActionOutcome.FromDialogue(next));
+            else ShowEarnedPoints();   // 選択肢で会話が終わったら、ここで行動のポイントを出す
             RefreshProfileView(currentProfileCharacterId);
             UpdateInterrogationState();
         }
 
+        /// <summary>
+        /// 行動の会話（選択肢の後の会話も含む）が全部終わったら、入ったポイントを「+◯pt」と短く出す（0なら出さない）
+        /// </summary>
+        private void ShowEarnedPoints()
+        {
+            int points = pendingEarnedPoints;
+            pendingEarnedPoints = 0;
+            if (pointGainUI != null) pointGainUI.Show(points);
+        }
+
         private void CloseChoices()
         {
+            pendingEarnedPoints = 0;
             interrogationDialogue = null;
             currentSmartphoneDialogue = null;
             if (choiceUI != null && choiceUI.IsOpen) choiceUI.Hide();
