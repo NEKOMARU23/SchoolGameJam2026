@@ -1,6 +1,6 @@
 # CLAUDE.md — SchoolGameJam2026
 
-Context for Claude Code sessions. Last updated 2026-10-15 (main = PR #35 merged).
+Context for Claude Code sessions. Last updated 2026-10-17 (main = PR #38 merged; PR #39 docs-only, awaiting review).
 Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, known issues), `Docs/仕様書.md` (planned features + every decision made with the user, items 1–17), `Docs/操作の分かりやすさ_改善案.md` (UX issues found from screenshots, U1–U15; section 4 = decided designs U2–U9 with mockups), `Docs/資料画面のデザイン相談.md` (profile-screen design request for the designer — design only, no programmer behaviour), `Docs/資料画面の動き_プログラム側.md` (profile-screen behaviour/data to implement, section 9 = build list). Read the relevant one before changing game rules or UI.
 
 ## User / communication
@@ -49,6 +49,12 @@ Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/�
 - Bash heredocs: don't use them for files with `\\` or quotes — write Python/C# files with the Write tool. Never `cat > file` without input (it hangs waiting for stdin). `sed` replacement `\U` uppercases the rest.
 - Console is cp932: `PYTHONIOENCODING=utf-8`. Keep CRLF when patching files from Python.
 - The scratchpad and Unity's `Temp/` get cleared between days — don't rely on files kept there.
+- Docs-only commits without touching the Unity project's checked-out branch: `git -c core.longpaths=true worktree add <scratchpad>/wt <branch>` (long Unity paths fail without core.longpaths), copy the docs in, commit, push, `git worktree remove`.
+- Mockup images for UI discussions: compose with Python/PIL over the screenshots in `Docs/images/ux/` and the real sprites (stand art `Image/修正版/`, name plates `Image/CharacterUI/`); fonts `C:/Windows/Fonts/YuGothB.ttc`. The user decides UI from images, not text.
 
 ## Open items
-See `Docs/開発状況まとめ.md` (仮のまま・既知の問題) and `Docs/操作の分かりやすさ_改善案.md`. Biggest: `Header` (day/points/actions) is hidden in the InGame scene; monitors don't show who is in each room; choice UI squashed; Save/Load buttons overlap in Option; result text overlaps; name mismatch マキナ/メリ.
+See `Docs/開発状況まとめ.md` (仮のまま・既知の問題) and `Docs/操作の分かりやすさ_改善案.md` (section 3 = status table).
+- Done: U1 header (PR #37), U10 overlap / U12 / U13 / U14 (PR #38).
+- Decided but not built: U2–U9 (改善案 section 4, with mockups). Includes the "朝の会話" system (new 行動「朝」 in the 条件 sheet → auto smartphone talk at day start, ring SE, same transition as day change; not replayed on reset/load) used by U4 (final day) and U9 (day 1).
+- Profile screen rebuild (U7): design request `Docs/資料画面のデザイン相談.md` (designer-only content — keep programmer behaviour out of it), implementation plan `Docs/資料画面の動き_プログラム側.md` (section 9 = build list). Waiting for the designer.
+- Still open: U10 English headings, U11 (マキナ = 補助ちゃん's name; Meri's 友人について button uses the wrong plate `Game_Charactername_MakinaAI.png`), U15, U5 undecided parts, hidden-stat (好感度) discussion (改善案 U5).
