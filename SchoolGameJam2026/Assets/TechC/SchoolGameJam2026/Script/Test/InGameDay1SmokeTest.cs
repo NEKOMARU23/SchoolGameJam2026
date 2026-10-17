@@ -127,6 +127,28 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
+        public IEnumerator 取り調べたあとはボタンを消して今日はもう取り調べましたと出す()
+        {
+            yield return Click("SelectRoomA_Button");
+            Assert.IsFalse(IsPanelActive("InterrogatedNotice"), "取り調べる前から「今日はもう取り調べました」が出ています");
+            Assert.IsTrue(FindButton("Button_Talk").gameObject.activeInHierarchy, "取り調べる前に行動のボタンがありません");
+
+            yield return Click("Button_Talk");
+            yield return SkipDialogueByButton();
+            Assert.IsTrue(IsPanelActive("InterrogatedNotice"), "取り調べたあとに「今日はもう取り調べました」が出ません");
+            foreach (string name in new[] { "Button_Torture", "Button_Talk", "Button_Negotiate" })
+            {
+                Assert.IsFalse(FindButton(name).gameObject.activeInHierarchy, $"取り調べたあとも {name} が残っています");
+            }
+
+            // まだ取り調べていない部屋では、ボタンが出て札は出ない
+            yield return Click("Button_ToMonitor");
+            yield return Click("SelectRoomB_Button");
+            Assert.IsFalse(IsPanelActive("InterrogatedNotice"), "まだ取り調べていない部屋で「今日はもう取り調べました」が出ています");
+            Assert.IsTrue(FindButton("Button_Talk").gameObject.activeInHierarchy, "まだ取り調べていない部屋に行動のボタンがありません");
+        }
+
+        [UnityTest]
         public IEnumerator 四人全員に別々のアクションを実行できる()
         {
             var controller = FindComponent<GameUIController>();

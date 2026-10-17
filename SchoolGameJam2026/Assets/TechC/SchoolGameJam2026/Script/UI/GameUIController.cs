@@ -919,7 +919,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             bool canJudge = !isPlaying && InterrogationInstance != null
                 && InterrogationInstance.CanExecuteAction(targetChar, InterrogationActionType.Release, out _);
 
-            interrogationUI.UpdateActionButtons(!isFinalDay, canInterrogate, isFinalDay, canJudge);
+            // 今日もう取り調べた人には、灰色のボタンを残さず「今日はもう取り調べました」と出す
+            // （1日の行動回数とキャラの人数が同じなので、回数を使い切ったときも全員取り調べ済みになる）
+            bool interrogatedToday = !isFinalDay && targetChar != null && InterrogationInstance != null
+                && InterrogationInstance.HasInterrogatedToday(targetChar.CharacterId);
+
+            interrogationUI.UpdateActionButtons(!isFinalDay && !interrogatedToday, canInterrogate, isFinalDay, canJudge, interrogatedToday);
         }
 
         /// <summary>
