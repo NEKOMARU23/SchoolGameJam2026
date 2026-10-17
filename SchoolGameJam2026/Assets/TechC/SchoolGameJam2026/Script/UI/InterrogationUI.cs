@@ -30,6 +30,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private Button releaseButton;
         [SerializeField] private GameObject confirmAiButtonObject;
 
+        [Header("--- 「今日はもう取り調べました」の札（取り調べのボタンの代わりに出す） ---")]
+        [SerializeField] private GameObject interrogatedNotice;
+
         [Header("--- 聞き取り（他キャラ選択）パネルUI ---")]
         [SerializeField] private GameObject hearingPanel;
         [SerializeField] private List<HearingButtonBinding> hearingButtonBindings = new List<HearingButtonBinding>();
@@ -86,8 +89,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <param name="canInterrogate">拷問・対話・交渉・聞き取りのボタンを押せるか</param>
         /// <param name="showJudgement">解放・AI確定のボタンを表示するか</param>
         /// <param name="canJudge">解放・AI確定のボタンを押せるか</param>
-        public void UpdateActionButtons(bool showInterrogation, bool canInterrogate, bool showJudgement, bool canJudge)
+        /// <param name="showInterrogatedNotice">「今日はもう取り調べました」を出すか</param>
+        public void UpdateActionButtons(bool showInterrogation, bool canInterrogate, bool showJudgement, bool canJudge, bool showInterrogatedNotice = false)
         {
+            if (interrogatedNotice != null) interrogatedNotice.SetActive(showInterrogatedNotice);
+
             if (interrogationButtons != null)
             {
                 foreach (var btn in interrogationButtons)

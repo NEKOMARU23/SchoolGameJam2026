@@ -127,6 +127,40 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
+        public IEnumerator 行動を選ぶとボタンが消え入り直すと今日はもう取り調べましたと出る()
+        {
+            string[] actionButtons = { "Button_Torture", "Button_Talk", "Button_Negotiate" };
+
+            yield return Click("SelectRoomA_Button");
+            Assert.IsFalse(IsPanelActive("InterrogatedNotice"), "取り調べる前から「今日はもう取り調べました」が出ています");
+            Assert.IsTrue(FindButton("Button_Talk").gameObject.activeInHierarchy, "取り調べる前に行動のボタンがありません");
+
+            // 行動を選んだその場では、ボタンが消えるだけで文は出ない
+            yield return Click("Button_Talk");
+            foreach (string name in actionButtons)
+            {
+                Assert.IsFalse(FindButton(name).gameObject.activeInHierarchy, $"行動を選んだあとも {name} が残っています");
+            }
+            yield return SkipDialogueByButton();
+            Assert.IsFalse(IsPanelActive("InterrogatedNotice"), "行動を選んだその場で「今日はもう取り調べました」が出ました");
+
+            // 部屋に入り直すと文が出る
+            yield return Click("Button_ToMonitor");
+            yield return Click("SelectRoomA_Button");
+            Assert.IsTrue(IsPanelActive("InterrogatedNotice"), "入り直しても「今日はもう取り調べました」が出ません");
+            foreach (string name in actionButtons)
+            {
+                Assert.IsFalse(FindButton(name).gameObject.activeInHierarchy, $"入り直したら {name} が出ています");
+            }
+
+            // まだ取り調べていない部屋では、ボタンが出て札は出ない
+            yield return Click("Button_ToMonitor");
+            yield return Click("SelectRoomB_Button");
+            Assert.IsFalse(IsPanelActive("InterrogatedNotice"), "まだ取り調べていない部屋で「今日はもう取り調べました」が出ています");
+            Assert.IsTrue(FindButton("Button_Talk").gameObject.activeInHierarchy, "まだ取り調べていない部屋に行動のボタンがありません");
+        }
+
+        [UnityTest]
         public IEnumerator 四人全員に別々のアクションを実行できる()
         {
             var controller = FindComponent<GameUIController>();
