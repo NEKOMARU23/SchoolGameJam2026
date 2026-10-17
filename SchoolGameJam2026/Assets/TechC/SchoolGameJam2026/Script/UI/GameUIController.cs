@@ -777,17 +777,24 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         {
             var characters = GameManagerInstance != null ? GameManagerInstance.AllCharacters : null;
             Dictionary<string, bool> statusMap = new Dictionary<string, bool>();
+            Dictionary<string, Sprite> faceMap = new Dictionary<string, Sprite>();
 
             if (characters != null)
             {
-                // 解放した人・判定した人の部屋には入れない
                 foreach (CharacterInstance c in characters)
                 {
+                    // 解放した人・判定した人の部屋には入れない
                     statusMap[c.CharacterId] = c.IsJudged;
+                    // モニターには取調室と同じ画像を映す
+                    if (c.ProfileData != null) faceMap[c.CharacterId] = c.ProfileData.characterIcon;
                 }
             }
 
-            if (monitorUI != null) monitorUI.UpdateRoomStatus(statusMap);
+            if (monitorUI != null)
+            {
+                monitorUI.UpdateRoomStatus(statusMap);
+                monitorUI.UpdateRoomFaces(faceMap);
+            }
         }
 
         private void UpdateInterrogationState()

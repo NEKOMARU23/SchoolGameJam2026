@@ -34,6 +34,23 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
+        public IEnumerator モニターに各部屋のキャラの顔が映っている()
+        {
+            Transform grid = FindComponent<MonitorUI>().transform.Find("MonitorGrid");
+            foreach (string id in new[] { "A", "B", "C", "D" })
+            {
+                Transform face = grid.Find($"MonitorRoom_{id}/SelectRoom{id}_Button/Screen/Face");
+                Assert.IsNotNull(face, $"部屋 {id} のモニターに顔の表示がありません");
+
+                Image faceImage = face.GetComponent<Image>();
+                CharacterInstance character = GameManager.AllCharacters.Find(c => c.CharacterId == id);
+                Assert.IsTrue(faceImage.enabled, $"部屋 {id} の顔が表示されていません");
+                Assert.AreEqual(character.ProfileData.characterIcon, faceImage.sprite, $"部屋 {id} に別のキャラの顔が映っています");
+            }
+            yield break;
+        }
+
+        [UnityTest]
         public IEnumerator 四人全員に別々のアクションを実行できる()
         {
             var controller = FindComponent<GameUIController>();

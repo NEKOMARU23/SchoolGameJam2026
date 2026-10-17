@@ -15,6 +15,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public string characterId;
         public Button roomButton;
         public GameObject releasedOverlay;
+        // モニターに映すキャラの顔（立ち絵の上のほうだけを見せる。見せる位置と大きさはプレハブで調整する）
+        public Image faceImage;
     }
 
     public class MonitorUI : MonoBehaviour
@@ -128,6 +130,22 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 {
                     binding.releasedOverlay.SetActive(isReleased);
                 }
+            }
+        }
+
+        /// <summary>
+        /// IDごとの顔の画像を受け取り、各モニターに映す（描画専用）
+        /// </summary>
+        public void UpdateRoomFaces(Dictionary<string, Sprite> faceMap)
+        {
+            foreach (var binding in monitorRoomBindings)
+            {
+                if (binding.faceImage == null) continue;
+
+                Sprite face = null;
+                bool hasFace = faceMap != null && faceMap.TryGetValue(binding.characterId, out face) && face != null;
+                binding.faceImage.enabled = hasFace;
+                if (hasFace) binding.faceImage.sprite = face;
             }
         }
 
