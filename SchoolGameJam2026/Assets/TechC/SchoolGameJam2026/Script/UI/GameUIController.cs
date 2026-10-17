@@ -859,6 +859,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             var characters = GameManagerInstance != null ? GameManagerInstance.AllCharacters : null;
             Dictionary<string, bool> statusMap = new Dictionary<string, bool>();
             Dictionary<string, Sprite> faceMap = new Dictionary<string, Sprite>();
+            Dictionary<string, MonitorJudgementLabel> judgementMap = new Dictionary<string, MonitorJudgementLabel>();
+            bool isFinalDay = GameManagerInstance != null && GameManagerInstance.IsFinalDay;
 
             if (characters != null)
             {
@@ -868,6 +870,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                     statusMap[c.CharacterId] = c.IsJudged;
                     // モニターには取調室と同じ画像を映す
                     if (c.ProfileData != null) faceMap[c.CharacterId] = c.ProfileData.characterIcon;
+                    // 最終日は、判定することがその日の目的なので、判定の状態を出す
+                    judgementMap[c.CharacterId] = !isFinalDay ? MonitorJudgementLabel.None
+                        : c.IsConfirmedAI ? MonitorJudgementLabel.ConfirmedAI
+                        : c.IsReleased ? MonitorJudgementLabel.Released
+                        : MonitorJudgementLabel.Unjudged;
                 }
             }
 
@@ -875,6 +882,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             {
                 monitorUI.UpdateRoomStatus(statusMap);
                 monitorUI.UpdateRoomFaces(faceMap);
+                monitorUI.UpdateJudgementLabels(judgementMap);
             }
         }
 

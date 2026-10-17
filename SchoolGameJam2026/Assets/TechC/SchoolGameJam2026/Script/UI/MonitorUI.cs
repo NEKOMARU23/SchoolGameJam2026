@@ -9,6 +9,15 @@ using UnityEngine.UI;
 
 namespace TechC.SchoolGameJam2026.Scripts.UI
 {
+    /// <summary> 最終日のモニターに出す、判定の状態 </summary>
+    public enum MonitorJudgementLabel
+    {
+        None,       // 出さない（最終日以外）
+        Unjudged,   // 未判定
+        ConfirmedAI,// AI と判定した
+        Released    // 解放した
+    }
+
     [Serializable]
     public struct MonitorRoomBinding
     {
@@ -17,6 +26,11 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         public GameObject releasedOverlay;
         // モニターに映すキャラの顔（立ち絵の上のほうだけを見せる。見せる位置と大きさはプレハブで調整する）
         public Image faceImage;
+        // 最終日の「未判定」の札（モニターの左上）
+        public GameObject unjudgedLabel;
+        // 最終日の判定結果の札（モニターの真ん中。「AI判定」「解放」）
+        public GameObject judgedLabel;
+        public TextMeshProUGUI judgedText;
     }
 
     public class MonitorUI : MonoBehaviour
@@ -34,6 +48,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private GameObject smartphoneNoticeRoot;
         [SerializeField] private TextMeshProUGUI smartphoneNoticeText;
         [SerializeField, Min(0f)] private float noticeDuration = 2f;
+
+        [Header("--- 最終日の判定結果の文字と色 ---")]
+        [SerializeField] private string confirmedAIText = "AI判定";
+        [SerializeField] private Color confirmedAIColor = new Color(1f, 0.35f, 0.35f);
+        [SerializeField] private string releasedText = "解放";
+        [SerializeField] private Color releasedColor = Color.white;
 
         private CancellationTokenSource noticeCts;
 
@@ -129,6 +149,29 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 if (binding.releasedOverlay != null)
                 {
                     binding.releasedOverlay.SetActive(isReleased);
+                }
+            }
+        }
+
+        /// <summary>
+        /// IDごとの判定の状態を受け取り、最終日の「未判定」と判定結果の札を出す（描画専用）
+        /// </summary>
+        public void UpdateJudgementLabels(Dictionary<string, MonitorJudgementLabel> labelMap)
+        {
+            foreach (var binding in monitorRoomBindings)
+            {
+                MonitorJudgementLabel label = MonitorJudgementLabel.None;
+                if (labelMap != null) labelMap.TryGetValue(binding.characterId, out label);
+
+                if (binding.unjudgedLabel != null) binding.unjudgedLabel.SetActive(label == MonitorJudgementLabel.Unjudged);
+
+                bool judged = label == MonitorJudgementLabel.ConfirmedAI || label == MonitorJudgementLabel.Released;
+                if (binding.judgedLabel != null) binding.judgedLabel.SetActive(judged);
+                if (judged && binding.judgedText != null)
+                {
+                    bool isAI = label == MonitorJudgementLabel.ConfirmedAI;
+                    binding.judgedText.text = isAI ? confirmedAIText : releasedText;
+                    binding.judgedText.color = isAI ? confirmedAIColor : releasedColor;
                 }
             }
         }
