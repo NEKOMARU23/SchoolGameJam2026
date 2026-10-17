@@ -79,6 +79,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 $"「{expectedMessage}」のエラーがありません: {string.Join(" / ", report.Errors)}");
         }
 
+        [TestCase("正解行動", "解放")]
+        [TestCase("NG行動", "解放")]
+        [TestCase("NG行動", "AI確定")]
+        [TestCase("NG行動", "聞き取り")]
+        public void 日別設定には拷問_対話_交渉だけ書ける(string header, string value)
+        {
+            var sheets = CreateWorkbook();
+            SetCell(sheets["日別設定"], 1, header, value);
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsTrue(report.Errors.Any(e => e.Sheet == "日別設定" && e.Text.Contains("は使えません")),
+                $"日別設定の{header}に「{value}」を書いてもエラーになりません: {string.Join(" / ", report.Errors)}");
+        }
+
         [Test]
         public void 選択肢シートを取り込める()
         {
@@ -255,26 +270,42 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         #region ゲーム中の動き
 
         [UnityTest]
-        public IEnumerator 日別設定の正解行動を選ぶとポイントが増え違う行動では増えない()
+        public IEnumerator 行動のポイントは成功_普通_最低の三段階で減ることはない()
         {
             yield return LoadInGameScene();
             ScenarioDatabase db = GameManager.Scenario;
             Assert.IsNotNull(db, "GameManager に ScenarioDatabase がつながっていません");
 
-            // 1人目には正解行動、2人目には正解以外の行動をする
-            CharacterInstance first = GetCharacter("A");
-            CharacterInstance second = GetCharacter("B");
-            InterrogationActionType correct = db.GetDailySetting(1, "A").correctAction;
-            InterrogationActionType wrong = WrongAction(db.GetDailySetting(1, "B").correctAction);
+            // 成功＝日別設定の正解行動、最低＝NG行動、普通＝どちらでもない行動
+            ScenarioDailySetting a = db.GetDailySetting(1, "A");
+            ScenarioDailySetting b = db.GetDailySetting(1, "B");
+            ScenarioDailySetting c = db.GetDailySetting(1, "C");
+            Assume.That(b.hasNgAction && !Core.Manager.InterrogationManager.IsJudgementAction(b.ngAction), "前提: 1日目のメリに取り調べの NG行動がある");
+            InterrogationActionType normal = NormalAction(c);
 
-            int before = InterrogationManager.TodayEarnedPoints;
-            Core.Manager.ActionOutcome outcome = InterrogationManager.ExecuteAction(first, correct);
-            Assert.Greater(InterrogationManager.TodayEarnedPoints, before, "正解行動でポイントが増えません");
-            Assert.IsTrue(outcome.HasDialogue, "Excel の会話が選ばれていません");
+            Core.Manager.ActionOutcome success = InterrogationManager.ExecuteAction(GetCharacter("A"), a.correctAction);
+            Assert.IsTrue(success.HasDialogue, "Excel の会話が選ばれていません");
+            Core.Manager.ActionOutcome middle = InterrogationManager.ExecuteAction(GetCharacter("C"), normal);
+            int before = InterrogationManager.CurrentPoints;
+            Core.Manager.ActionOutcome lowest = InterrogationManager.ExecuteAction(GetCharacter("B"), b.ngAction);
 
-            before = InterrogationManager.TodayEarnedPoints;
-            InterrogationManager.ExecuteAction(second, wrong);
-            Assert.LessOrEqual(InterrogationManager.TodayEarnedPoints, before, "正解でない行動でポイントが増えました");
+            Assert.Greater(success.EarnedPoints, middle.EarnedPoints, "成功のポイントが普通より多くありません");
+            Assert.Greater(middle.EarnedPoints, lowest.EarnedPoints, "普通のポイントが最低より多くありません");
+            Assert.GreaterOrEqual(lowest.EarnedPoints, 0, "最低のポイントが0より小さくなっています");
+            Assert.GreaterOrEqual(InterrogationManager.CurrentPoints, before, "NG行動でポイントが減りました");
+            Assert.AreEqual(success.EarnedPoints + middle.EarnedPoints + lowest.EarnedPoints, InterrogationManager.TodayEarnedPoints,
+                "今日の獲得ポイントが、行動で入ったポイントの合計になっていません");
+        }
+
+        /// <summary> 正解行動でも NG行動でもない、取り調べの行動 </summary>
+        private static InterrogationActionType NormalAction(ScenarioDailySetting setting)
+        {
+            foreach (var action in new[] { InterrogationActionType.Torture, InterrogationActionType.Talk, InterrogationActionType.Negotiate })
+            {
+                if (action != setting.correctAction && !(setting.hasNgAction && action == setting.ngAction)) return action;
+            }
+            Assert.Fail("普通になる行動がありません");
+            return InterrogationActionType.Talk;
         }
 
         [UnityTest]
@@ -324,11 +355,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             var db = ScriptableObject.CreateInstance<ScenarioDatabase>();
             report = ScenarioWorkbookParser.Parse(sheets, db, assetExists ?? ((kind, name) => true), CharacterIds, 7);
             return db;
-        }
-
-        private static InterrogationActionType WrongAction(InterrogationActionType correct)
-        {
-            return correct == InterrogationActionType.Talk ? InterrogationActionType.Torture : InterrogationActionType.Talk;
         }
 
         /// <summary> 書き間違いのない最小のワークブック </summary>

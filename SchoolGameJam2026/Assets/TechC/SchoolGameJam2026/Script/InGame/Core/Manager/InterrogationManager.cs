@@ -19,10 +19,13 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary> 会話がないときに表示する短い文（行動できない理由など） </summary>
         public string Text { get; private set; } = "";
 
+        /// <summary> この行動で入ったポイント（0以上。画面で「+◯pt」と出す） </summary>
+        public int EarnedPoints { get; private set; }
+
         public bool HasDialogue => Dialogue != null && Dialogue.pages.Count > 0;
 
-        public static ActionOutcome FromDialogue(ScenarioDialogue dialogue) => new ActionOutcome { Dialogue = dialogue };
-        public static ActionOutcome FromText(string text) => new ActionOutcome { Text = text ?? "" };
+        public static ActionOutcome FromDialogue(ScenarioDialogue dialogue, int earnedPoints = 0) => new ActionOutcome { Dialogue = dialogue, EarnedPoints = earnedPoints };
+        public static ActionOutcome FromText(string text, int earnedPoints = 0) => new ActionOutcome { Text = text ?? "", EarnedPoints = earnedPoints };
     }
 
     /// <summary>
@@ -32,11 +35,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
     {
         public static InterrogationManager Instance { get; private set; }
 
-        [Header("ポイント設定")]
+        [Header("ポイント設定（行動で入るポイントは三段階。どれも0以上）")]
         [SerializeField] private int currentPoints = 0;
-        [SerializeField] private int successPointReward = 20;
-        [SerializeField] private int failPointPenalty = 5;
-        [SerializeField] private int fixedHearAboutPoint = 10;
+        [Tooltip("成功: 日別設定の「正解行動」をしたとき")]
+        [SerializeField, Min(0)] private int successPointReward = 20;
+        [Tooltip("普通: 正解行動でも NG行動でもないとき")]
+        [SerializeField, Min(0)] private int normalPointReward = 10;
+        [Tooltip("最低: 日別設定の「NG行動」をしたとき")]
+        [SerializeField, Min(0)] private int ngPointReward = 0;
+        [SerializeField, Min(0)] private int fixedHearAboutPoint = 10;
 
         [Header("好感度調整設定")]
         [SerializeField] private int correctAffectionReward = 1;
@@ -188,7 +195,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             // 3. 正解の判定・ポイント・好感度、会話の効果（獲得フラグ・AI化）
-            ApplyScoring(targetChar, actionType, db.GetDailySetting(day, targetChar.CharacterId));
+            int earnedPoints = ApplyScoring(targetChar, actionType, db.GetDailySetting(day, targetChar.CharacterId));
             game.ApplyScenarioEffects(row);
 
             // 4. 状態更新（カウントアップ・履歴保持）
@@ -222,7 +229,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
-            return dialogue != null ? ActionOutcome.FromDialogue(dialogue) : ActionOutcome.FromText("「……」");
+            return dialogue != null ? ActionOutcome.FromDialogue(dialogue, earnedPoints) : ActionOutcome.FromText("「……」", earnedPoints);
         }
 
         /// <summary>
@@ -307,40 +314,44 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         /// <summary>
         /// 正解の判定とポイント・好感度の計算
-        /// 拷問・対話・交渉は、日別設定の「正解行動」を選べば正解（どの会話が出たかには関係しない）
+        /// 拷問・対話・交渉は、日別設定で三段階に分ける（どの会話が出たかには関係しない）
+        /// 成功＝正解行動、最低＝NG行動、普通＝どちらでもない行動。ポイントは減らない
         /// </summary>
-        private void ApplyScoring(CharacterInstance targetChar, InterrogationActionType actionType, ScenarioDailySetting setting)
+        /// <returns>この行動で入ったポイント</returns>
+        private int ApplyScoring(CharacterInstance targetChar, InterrogationActionType actionType, ScenarioDailySetting setting)
         {
-            if (actionType == InterrogationActionType.HearAbout)
-            {
-                AddPoints(fixedHearAboutPoint);
-                TodayEarnedPoints += fixedHearAboutPoint;
-                return;
-            }
+            if (actionType == InterrogationActionType.HearAbout) return EarnPoints(fixedHearAboutPoint);
 
-            if (IsJudgementAction(actionType)) return;
+            if (IsJudgementAction(actionType)) return 0;
 
             if (setting == null)
             {
                 Debug.LogWarning($"[InterrogationManager] 日別設定がないため、{targetChar.CharacterId} への行動は正解判定をしません。");
-                return;
+                return 0;
             }
 
             if (actionType == setting.correctAction)
             {
-                AddPoints(successPointReward);
-                TodayEarnedPoints += successPointReward;
                 if (correctAffectionReward != 0) targetChar.AddAffection(correctAffectionReward);
+                return EarnPoints(successPointReward);
             }
-            else
+
+            if (setting.hasNgAction && actionType == setting.ngAction)
             {
-                // 所持ポイントは0未満にならないため、実際に減った分だけを計上する
-                TodayEarnedPoints -= ConsumePoints(failPointPenalty);
-                if (setting.hasNgAction && actionType == setting.ngAction && failAffectionPenalty != 0)
-                {
-                    targetChar.AddAffection(-failAffectionPenalty);
-                }
+                if (failAffectionPenalty != 0) targetChar.AddAffection(-failAffectionPenalty);
+                return EarnPoints(ngPointReward);
             }
+
+            return EarnPoints(normalPointReward);
+        }
+
+        /// <summary> 行動で入ったポイントを足し、今日の獲得ポイントにも計上する </summary>
+        private int EarnPoints(int amount)
+        {
+            if (amount <= 0) return 0;
+            AddPoints(amount);
+            TodayEarnedPoints += amount;
+            return amount;
         }
 
         private void IncrementActionCount(string characterId, InterrogationActionType actionType)

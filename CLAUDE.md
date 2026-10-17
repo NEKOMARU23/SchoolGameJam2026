@@ -1,6 +1,6 @@
 # CLAUDE.md — SchoolGameJam2026
 
-Context for Claude Code sessions. Last updated 2026-10-17 (main = PR #41 merged; PR #42 = U4 final day + 朝の会話, awaiting review).
+Context for Claude Code sessions. Last updated 2026-10-17 (main = PR #42 merged; PR #43 = U5 points, awaiting review).
 Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, known issues), `Docs/仕様書.md` (planned features + every decision made with the user, items 1–17), `Docs/操作の分かりやすさ_改善案.md` (UX issues found from screenshots, U1–U15; section 4 = decided designs U2–U9 with mockups), `Docs/資料画面のデザイン相談.md` (profile-screen design request for the designer — design only, no programmer behaviour), `Docs/資料画面の動き_プログラム側.md` (profile-screen behaviour/data to implement, section 9 = build list), `Docs/モニター画面の変更点_デザイナー向け.md` (U2/U3 monitor-screen changes explained to the designer with before/after images in `Docs/images/monitor_change/`, made by a PIL script; design-only, lists the placeholder visuals to replace). Read the relevant one before changing game rules or UI.
 
 ## User / communication
@@ -17,7 +17,7 @@ Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, 
 - Local-only branches (not pushed, not for main): `feature/kono/vfx-test` (VFX Graph experiments: hit effect, fire tornado + synthesized SE), `feature/kono/choice-sample` (test choice data).
 
 ## Scenes
-`Title` (start, つづきから, エンディング一覧, option), `InGame` (instance of `Prefab/InGame.prefab`, overrides e.g. `successPointReward: 200`, `Header` inactive), `Manager` (additively loaded by `AppBootstrapper`; AudioManager + `Prefab/Option.prefab` = SettingsManager, OptionUI, SaveSlotUI, SaveLoadController), `ClearScene` / `GameOverScene` (SaveDeletePromptUI). `Result` is disabled.
+`Title` (start, つづきから, エンディング一覧, option), `InGame` (instance of `Prefab/InGame.prefab`, overrides e.g. `Header` inactive), `Manager` (additively loaded by `AppBootstrapper`; AudioManager + `Prefab/Option.prefab` = SettingsManager, OptionUI, SaveSlotUI, SaveLoadController), `ClearScene` / `GameOverScene` (SaveDeletePromptUI). `Result` is disabled.
 
 ## Architecture (namespace root `TechC.SchoolGameJam2026.Scripts`)
 Rule the user cares about: **logic in Managers, display in Views, `GameUIController` mediates.** Views only display what they're given.
@@ -36,7 +36,7 @@ Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/�
 ## How to work here
 ### Prefer the Unity CLI while the Editor is open (memory: unity-cli-pipeline)
 - `unity status` / `unity command editor_status` → "ready". `unity recompile --json` (`compilationFailed` is `null` when already up to date).
-- Tests: `unity command run_tests --mode PlayMode --async_tests true`, then poll `unity command test_status --result-only` until `"status": "completed"` (96 tests ≈ 2–9 min).
+- Tests: `unity command run_tests --mode PlayMode --async_tests true`, then poll `unity command test_status --result-only` until `"status": "completed"` (101 tests ≈ 2–9 min).
 - Prefab/scene edits: write a temp `[MenuItem("Tools/ClaudeTemp/…")]` script, `unity recompile`, then `unity command menu --path …`. Edit other scenes with `OpenScene(Additive)` → `SaveScene` → `CloseScene` so the user's open scene isn't changed. Right after a recompile, commands can fail with "Connection reset" or "Main thread operation timed out" — wait and retry.
 - C# in the Editor: `unity command eval_file --file x.cs` (put code in a file; PowerShell mangles quoted `--code`).
 - Screenshots: open the Game view (`menu --path "Window/General/Game"`), set `Application.runInBackground = true` via eval (otherwise play mode pauses when Unity is in the background), `capture_game_view --save_path Temp/x.png` (saves under **Assets/**Temp — delete it afterwards). `--source camera` misses VFX and post-processing.
@@ -54,8 +54,10 @@ Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/�
 
 ## Open items
 See `Docs/開発状況まとめ.md` (仮のまま・既知の問題) and `Docs/操作の分かりやすさ_改善案.md` (section 3 = status table).
-- Done: U1 header (PR #37), U10 overlap / U12 / U13 / U14 (PR #38), U2 monitor faces + name plates (PR #40; `SelectRoom?_Button/Screen/Face` per room in `InGame.prefab`, faces passed from `ProfileData.characterIcon` via `MonitorUI.UpdateRoomFaces`; screen colour + `Image/Monitor/Monitor_Scanline.png` are placeholders), U3 monitor layout (PR #41; inverted-V monitors, `MonitorPanel/SideMenu` with 4 labelled icons, `HoverHighlightUI` on the phone/notebook = lift + glow image + label; MonitorPanel is scaled 1.05 so its edges are off-screen), U4 (PR #42; final-day monitor labels via `MonitorUI.UpdateJudgementLabels`; "朝の会話" = 行動「朝」 (`ScenarioAction.Morning`, no character/回目) → `GameManager.StartNewDay` selects it and applies its effects before the morning snapshot, `TakeMorningTalk()` hands it to `GameUIController` once, which plays it after the day transition and returns via the same transition; ring SE = `morningRingSeName` (empty, no asset yet); day-7 text is a placeholder). U4 room-button rename (「解放する」「AI と判定する」) is NOT done: the buttons are designer-drawn images (`Game_Kaihou_Button.png`, `Game_AI_Button.png`).
-- Decided but not built: U5–U9 (改善案 section 4, with mockups). U9 = day-1 朝の会話 (just add a 条件 row).
+- Done: U1 header (PR #37), U10 overlap / U12 / U13 / U14 (PR #38), U2 monitor faces + name plates (PR #40; `SelectRoom?_Button/Screen/Face` per room in `InGame.prefab`, faces passed from `ProfileData.characterIcon` via `MonitorUI.UpdateRoomFaces`; screen colour + `Image/Monitor/Monitor_Scanline.png` are placeholders), U3 monitor layout (PR #41; inverted-V monitors, `MonitorPanel/SideMenu` with 4 labelled icons, `HoverHighlightUI` on the phone/notebook = lift + glow image + label; MonitorPanel is scaled 1.05 so its edges are off-screen), U4 (PR #42; final-day monitor labels via `MonitorUI.UpdateJudgementLabels`; "朝の会話" = 行動「朝」 (`ScenarioAction.Morning`, no character/回目) → `GameManager.StartNewDay` selects it and applies its effects before the morning snapshot, `TakeMorningTalk()` hands it to `GameUIController` once, which plays it after the day transition and returns via the same transition; ring SE = `morningRingSeName` (empty, no asset yet); day-7 text is a placeholder). U4 room-button rename was dropped (2026-10-17): keep the designer-drawn images 「解放」「AI(確定)」 (`Game_Kaihou_Button.png`, `Game_AI_Button.png`).
+- U5 partly done (PR #43): action points are 3 levels (success = 正解行動 / normal / lowest = NG行動, all >= 0, no penalty; placeholder values 20/10/0 in `InterrogationManager`), `ActionOutcome.EarnedPoints`, `PointGainUI` shows "+Npt" after the whole action conversation (incl. choices). Character reactions (expression + SE) are still undecided.
+- Decided but not built: U6–U9 (改善案 section 4, with mockups). U9 = day-1 朝の会話 (just add a 条件 row).
+- 日別設定 accepts only 拷問/対話/交渉 (parser error otherwise; its dropdown uses the `リスト` column 「日別設定の行動」). The old NG行動「解放」 rows (left over from when 解放 was possible on any day) were changed to 拷問.
 - Excel edits: openpyxl keeps the data validations/comments/freeze panes of `ScenarioData.xlsx` (checked); the 説明 sheet's text starts at column B. Re-import with `unity command menu --path "Tools/シナリオExcelを取り込む"`.
 - Profile screen rebuild (U7): design request `Docs/資料画面のデザイン相談.md` (designer-only content — keep programmer behaviour out of it), implementation plan `Docs/資料画面の動き_プログラム側.md` (section 9 = build list). Waiting for the designer.
 - Still open: U10 English headings, U11 (マキナ = 補助ちゃん's name; Meri's 友人について button uses the wrong plate `Game_Charactername_MakinaAI.png`), U15, U5 undecided parts, hidden-stat (好感度) discussion (改善案 U5).
