@@ -51,6 +51,54 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
+        public IEnumerator モニター画面の左上のアイコンに文字が出ている()
+        {
+            var expected = new (string button, string label)[]
+            {
+                ("Day_Button", "1日を終える"),
+                ("Reset_Button", "今日をリセット"),
+                ("Button_Log", "ログ"),
+                ("Setting_Button", "設定"),
+            };
+            foreach (var (button, label) in expected)
+            {
+                Transform text = FindButton(button, "MonitorPanel").transform.Find("Label/Text");
+                Assert.IsNotNull(text, $"{button} に文字の札がありません");
+                Assert.IsTrue(text.gameObject.activeInHierarchy, $"{button} の文字が表示されていません");
+                Assert.AreEqual(label, text.GetComponent<TMPro.TextMeshProUGUI>().text);
+            }
+            yield break;
+        }
+
+        [UnityTest]
+        public IEnumerator スマホにマウスを乗せると持ち上がって名前が出る()
+        {
+            Button phone = FindButton("Button_Help", "MonitorPanel");
+            var hover = phone.GetComponent<HoverHighlightUI>();
+            Assert.IsNotNull(hover, "スマホにマウスを乗せたときの反応がありません");
+
+            Transform panel = FindComponent<MonitorUI>().transform;
+            GameObject label = panel.Find("SmartphoneLabel").gameObject;
+            GameObject glow = panel.Find("SmartphoneGlow").gameObject;
+            var rect = (RectTransform)phone.transform;
+            Vector2 basePosition = rect.anchoredPosition;
+            Assert.IsFalse(label.activeSelf, "乗せる前から名前が出ています");
+
+            var pointer = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
+            hover.OnPointerEnter(pointer);
+            yield return null;
+            Assert.IsTrue(label.activeSelf, "乗せても「スマホ」の名前が出ません");
+            Assert.IsTrue(glow.activeSelf, "乗せてもふちが光りません");
+            Assert.Greater(rect.anchoredPosition.y, basePosition.y, "乗せても持ち上がりません");
+
+            hover.OnPointerExit(pointer);
+            yield return null;
+            Assert.IsFalse(label.activeSelf, "離しても名前が消えません");
+            Assert.IsFalse(glow.activeSelf, "離しても光が消えません");
+            Assert.AreEqual(basePosition, rect.anchoredPosition, "離しても元の位置に戻りません");
+        }
+
+        [UnityTest]
         public IEnumerator 四人全員に別々のアクションを実行できる()
         {
             var controller = FindComponent<GameUIController>();
