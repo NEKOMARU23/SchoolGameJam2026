@@ -21315,12 +21315,12 @@ MonoBehaviour:
     characterId: C
     correctAction: 1
     hasNgAction: 1
-    ngAction: 4
+    ngAction: 0
   - day: 1
     characterId: D
     correctAction: 2
     hasNgAction: 1
-    ngAction: 4
+    ngAction: 0
   - day: 2
     characterId: A
     correctAction: 1
@@ -21335,12 +21335,12 @@ MonoBehaviour:
     characterId: C
     correctAction: 1
     hasNgAction: 1
-    ngAction: 4
+    ngAction: 0
   - day: 2
     characterId: D
     correctAction: 1
     hasNgAction: 1
-    ngAction: 4
+    ngAction: 0
   - day: 3
     characterId: A
     correctAction: 0

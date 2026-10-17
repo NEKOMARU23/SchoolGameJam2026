@@ -584,9 +584,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                     if (required) Error(row, $"{header}が空です");
                     return !required;
                 }
-                if (!Actions.TryGetValue(text, out ScenarioAction a) || a == ScenarioAction.Smartphone || a == ScenarioAction.Morning)
+                // ポイントの三段階に使うのは拷問・対話・交渉だけ（聞き取りは固定のポイント、解放・AI確定は最終日の判定）
+                if (!Actions.TryGetValue(text, out ScenarioAction a)
+                    || (a != ScenarioAction.Torture && a != ScenarioAction.Talk && a != ScenarioAction.Negotiate))
                 {
-                    Error(row, $"{header}「{text}」は使えません（拷問 / 対話 / 交渉 / 聞き取り / 解放 / AI確定）");
+                    Error(row, $"{header}「{text}」は使えません（拷問 / 対話 / 交渉）");
                     return false;
                 }
                 action = (InterrogationActionType)(int)a;

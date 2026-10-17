@@ -79,6 +79,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 $"「{expectedMessage}」のエラーがありません: {string.Join(" / ", report.Errors)}");
         }
 
+        [TestCase("正解行動", "解放")]
+        [TestCase("NG行動", "解放")]
+        [TestCase("NG行動", "AI確定")]
+        [TestCase("NG行動", "聞き取り")]
+        public void 日別設定には拷問_対話_交渉だけ書ける(string header, string value)
+        {
+            var sheets = CreateWorkbook();
+            SetCell(sheets["日別設定"], 1, header, value);
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsTrue(report.Errors.Any(e => e.Sheet == "日別設定" && e.Text.Contains("は使えません")),
+                $"日別設定の{header}に「{value}」を書いてもエラーになりません: {string.Join(" / ", report.Errors)}");
+        }
+
         [Test]
         public void 選択肢シートを取り込める()
         {
