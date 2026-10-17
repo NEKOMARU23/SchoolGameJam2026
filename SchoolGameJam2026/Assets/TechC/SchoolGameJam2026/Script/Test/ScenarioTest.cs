@@ -51,6 +51,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             Assert.AreEqual(1, db.GetConditionRows(1, "A", ScenarioAction.HearAbout, "B").Count);
             Assert.AreEqual(0, db.GetConditionRows(1, "A", ScenarioAction.HearAbout, "C").Count, "聞き取り相手が違う行は候補にならない");
             Assert.AreEqual(2, db.GetSmartphoneTalkCount(1), "スマホの回数は回目の最大");
+            ScenarioConditionRow morning = db.GetConditionRows(1, "", ScenarioAction.Morning).Single();
+            Assert.AreEqual("MORNING_D1", morning.dialogueId, "朝の行はキャラ・回目なしで取り込める");
+            CollectionAssert.AreEqual(new[] { "flag_和解" }, morning.gainFlags);
             Assert.AreEqual(InterrogationActionType.Torture, db.GetDailySetting(1, "A").correctAction);
             Assert.AreEqual(InterrogationActionType.Negotiate, db.GetDailySetting(1, "A").ngAction);
         }
@@ -344,7 +347,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                     new[] { "A_D1_対話_2", "会話", "", "鍵の話をしよう", "", "", "", "", "", "" },
                     new[] { "A_D1_聞き取り_B_1", "会話", "", "B のこと？", "", "", "", "", "", "" },
                     new[] { "SP_D1_1", "会話", "補助ちゃん", "1回目", "", "", "", "", "", "" },
-                    new[] { "SP_D1_2", "会話", "補助ちゃん", "2回目", "", "", "", "", "", "" }),
+                    new[] { "SP_D1_2", "会話", "補助ちゃん", "2回目", "", "", "", "", "", "" },
+                    new[] { "MORNING_D1", "会話", "補助ちゃん", "おはようございます", "", "", "", "", "", "" }),
                 ["条件"] = Table(
                     ConditionHeaders,
                     Condition("1", "A", "対話", "", "", "1", dialogueId: "A_D1_対話_2",
@@ -352,7 +356,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                     Condition("1", "A", "対話", "", "", "2", dialogueId: "A_D1_対話_1"),
                     Condition("1", "A", "聞き取り", "B", "", "1", dialogueId: "A_D1_聞き取り_B_1"),
                     Condition("1", "", "スマホ", "", "1", "1", dialogueId: "SP_D1_1"),
-                    Condition("1", "", "スマホ", "", "2", "1", dialogueId: "SP_D1_2")),
+                    Condition("1", "", "スマホ", "", "2", "1", dialogueId: "SP_D1_2"),
+                    Condition("1", "", "朝", "", "", "1", dialogueId: "MORNING_D1", gain: "flag_和解")),
                 ["選択肢"] = Table(
                     new[] { "セリフID", "順", "選択肢の文", "必要フラグ", "NGフラグ", "本人の好感度", "他キャラの好感度", "好感度の変化", "獲得フラグ", "AI化", "次のセリフID" },
                     new[] { "A_D1_対話_1", "1", "鍵のことを聞く", "info_鍵", "", "", "B>=1", "1", "flag_和解", "", "A_D1_対話_2" },

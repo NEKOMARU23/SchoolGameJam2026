@@ -86,7 +86,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
                 {
                     if (row.talkNumber != talkNumber) continue;
                 }
-                else
+                else if (action != ScenarioAction.Morning)
                 {
                     if (row.characterId != characterId) continue;
                     if (action == ScenarioAction.HearAbout && row.hearingTargetId != (hearingTargetId ?? "")) continue;
