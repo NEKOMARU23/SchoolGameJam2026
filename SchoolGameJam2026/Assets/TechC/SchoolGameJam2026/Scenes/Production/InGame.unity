@@ -355,10 +355,6 @@ PrefabInstance:
       propertyPath: m_RaycastPadding.z
       value: 35
       objectReference: {fileID: 0}
-    - target: {fileID: 9060186676737419975, guid: 4f5f7adf754dc9d4bb6e7b8d87043468, type: 3}
-      propertyPath: successPointReward
-      value: 200
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 9211046292193694692, guid: 4f5f7adf754dc9d4bb6e7b8d87043468, type: 3}
