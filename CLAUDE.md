@@ -9,7 +9,7 @@ Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, 
 - Tests: 122, all passing. Unity Editor may be open (check `unity status`; launch with `"C:/Program Files/Unity/Hub/Editor/6000.4.3f1/Editor/Unity.exe" -projectPath "C:/Unity/SchoolGameJam2026/SchoolGameJam2026"` in the background if needed).
 - **Rules that must not slip**: Japanese only; no art to AI (never open image files or screenshots; screenshots only for the user, saved to `Screenshots/`); wireframes/decks in neutral colours; designer-owned design is not edited; commit as soon as something is confirmed working (user asked for this).
 - Next candidates (non-visual, ready to build): letterboxing for non-16:9 screens (仕様書11番, the last missing part), full-route automated tests (16番), remaining debug-menu ideas (12番: show which condition row chose the dialogue, play an ending directly, delete saves/records).
-- Needs a decision first: U5 character reactions (auto expression + SE on affection change, or scenario-only), night phase (`OnNightPhaseStarted` has no listener), button SEs (`ButtonSoundTrigger` not attached; SE list/assets undecided), whether 補助ちゃん is shown as「マキナ」, deleting old `Data/Day1–7_Scenario.asset`.
+- Decided 2026-10-19: U5 character reactions = scenario-only (expression/SE columns of 本文; no automatic reaction code); night phase not used (removed); button SE = only the "play a sound on press" mechanism, sound asset later; 補助ちゃん is shown as「マキナ」; old `Day1–7_Scenario.asset` deleted.
 - Waiting on others: designer (profile-screen UI U7, replacing placeholder visuals), scenario writer (all dialogue/flags/endings, U9 day-1 朝の会話 text, day-7 text, 見出し for フラグ一覧 rows), SE assets (morning ring tone).
 
 ## User / communication
@@ -40,7 +40,7 @@ Rule the user cares about: **logic in Managers, display in Views, `GameUIControl
 | Views (`UI`) | `ScreenNavigationUI`, `MonitorUI`, `InterrogationUI`, `DialogueUI` (typing, auto/skip), `Dialogue.DialogueClickable` (teammate's smartphone view; auto/skip + `ignoreClickAreas`), `ChoiceUI`, `ConfirmDialogUI`, `EndingPlayerUI`, `EndingListUI`, `SaveSlotUI`, `SaveLoadController`, `OptionUI`, `AutoSkipButtonsUI`, `ProfileUI`, `LogUI`, `ResultUI`, `StatusHeaderUI`, `DayTransitionUI`, `SaveDeletePromptUI`, `OpenLoadButton`, `HoverHighlightUI` (phone/notebook hover), `PointGainUI` ("+Npt"), `NextPageMarkUI` ("▼") |
 | Dev | `DebugTools.DebugMenu` (F1, editor/dev builds only) |
 
-Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/本文/条件/選択肢/日別設定/フラグ一覧/AI判定/エンディング/リスト; columns found by header; `#` rows are comments). Old `Data/Day1–7_Scenario.asset` + `DayScenarioSO` are unused (deletion not yet confirmed; `InterrogationActionType` lives in `DayScenarioSO.cs`).
+Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/本文/条件/選択肢/日別設定/フラグ一覧/AI判定/エンディング/リスト; columns found by header; `#` rows are comments). The old `Day1–7_Scenario.asset` + `DayScenarioSO` were deleted (2026-10-19); `InterrogationActionType` lives in `SO/InterrogationActionType.cs`.
 
 ## How to work here
 ### Prefer the Unity CLI while the Editor is open (memory: unity-cli-pipeline)
