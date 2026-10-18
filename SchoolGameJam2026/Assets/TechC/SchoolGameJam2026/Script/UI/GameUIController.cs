@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using TechC.SchoolGameJam2026.Scripts.InGame.MainSystem;
 using TechC.SchoolGameJam2026.Scripts.Core.Manager;
 using TechC.SchoolGameJam2026.Scripts.SO;
@@ -50,6 +53,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private bool isDayTransitioning = false;             // 日付切り替え演出中（連打で複数日進むのを防ぐ）
         private bool isAutoOn;                               // オート（取調室とスマホで共通）
         private bool isSkipOn;                               // スキップ（取調室とスマホで共通）
+        private bool isSkipOnByKey;                          // Ctrl を押している間だけのスキップか（離したら戻す）
         private bool isMorningTalk;                          // 表示中のスマホ会話が朝の会話か（終わったら日が変わる演出でモニターへ戻る）
         private List<DialoguePage> currentSmartphonePages;   // 表示中のスマホ会話（ページごとの SE 用）
         private ScenarioDialogue currentSmartphoneDialogue;  // 表示中のスマホ会話（終わったら選択肢を調べる）
@@ -86,6 +90,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             // はじめからのときは、1日目の朝の会話を流す（GameManager の Start が先に終わっていた場合）
             StartMorningTalkAsync(this.GetCancellationTokenOnDestroy()).Forget();
 
+            // Esc でログなどを先に閉じられるようにする（オプション画面は Manager シーンにある）
+            OptionUI.EscapeHandler = TryCloseByEscape;
+
             // セーブ・ロード（Manager シーンのオプション画面）から操作できるようにする
             SaveLoadController.Target = this;
 
@@ -96,6 +103,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         private void OnDestroy()
         {
             if (ReferenceEquals(SaveLoadController.Target, this)) SaveLoadController.Target = null;
+            if (OptionUI.EscapeHandler == (Func<bool>)TryCloseByEscape) OptionUI.EscapeHandler = null;
             Unsubscribe();
         }
 
@@ -209,11 +217,139 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary> 「スキップ」ボタン: 取調室とスマホの会話で共通のオン・オフ </summary>
         public void ToggleSkip()
         {
-            isSkipOn = !isSkipOn;
+            isSkipOnByKey = false;
+            SetSkip(!isSkipOn);
+        }
+
+        private void SetSkip(bool on)
+        {
+            isSkipOn = on;
             if (dialogueUI != null) dialogueUI.SetSkip(isSkipOn);
             if (smartphoneTalk != null) smartphoneTalk.SetSkip(isSkipOn);
             RefreshAutoSkipButtons();
         }
+
+        #region キーボード操作
+
+        // Enter・Space: 会話を進める（文字送りの途中なら全文を出す）
+        // Ctrl: 押している間だけスキップ ／ A: オートの切り替え ／ L: ログを開く・閉じる
+        // Esc: ログ・確認の窓が開いていれば閉じる（それ以外はオプション画面の開閉。OptionUI が行う）
+        private void Update()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null) return;
+
+            bool ctrlHeld = keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed;
+            if (!CanUseShortcutKeys())
+            {
+                if (!ctrlHeld) ReleaseSkipKey();
+                return;
+            }
+
+            bool ctrlPressed = keyboard.leftCtrlKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame;
+            if (ctrlPressed && !isSkipOn)
+            {
+                isSkipOnByKey = true;
+                SetSkip(true);
+            }
+            else if (!ctrlHeld)
+            {
+                ReleaseSkipKey();
+            }
+
+            if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)
+            {
+                AdvanceByKey();
+            }
+            if (keyboard.aKey.wasPressedThisFrame) ToggleAuto();
+            if (keyboard.lKey.wasPressedThisFrame) ToggleLogByKey();
+        }
+
+        private void LateUpdate()
+        {
+            // 最後にクリックしたボタンが選ばれたままだと、Enter・Space でそのボタンがもう一度押されてしまうので、選択を外す
+            // （文字を打つ欄が選ばれているときは外さない）
+            EventSystem eventSystem = EventSystem.current;
+            GameObject selected = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
+            if (selected != null && selected.GetComponent<TMP_InputField>() == null && selected.GetComponent<UnityEngine.UI.InputField>() == null)
+            {
+                eventSystem.SetSelectedGameObject(null);
+            }
+        }
+
+        /// <summary>
+        /// キー操作を受け付けてよいか（ほかの画面が開いている間や、日付の切り替え中は受け付けない）
+        /// </summary>
+        private bool CanUseShortcutKeys()
+        {
+            if (OptionUI.IsOpen) return false;
+            if (SaveLoadController.Instance != null && SaveLoadController.Instance.IsOpen) return false;
+            if (confirmDialog != null && confirmDialog.IsOpen) return false;
+            if (choiceUI != null && choiceUI.IsOpen) return false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (DebugTools.DebugMenu.IsOpen) return false;
+#endif
+            // エンディングは日付の切り替え演出の中で流れるので、そのときだけは受け付ける
+            if (isDayTransitioning && !(endingPlayer != null && endingPlayer.IsPlaying)) return false;
+            return true;
+        }
+
+        private void ReleaseSkipKey()
+        {
+            if (!isSkipOnByKey) return;
+            isSkipOnByKey = false;
+            if (isSkipOn) SetSkip(false);
+        }
+
+        /// <summary> 今出ている会話を1つ進める（文字送りの途中なら全文を出す） </summary>
+        private void AdvanceByKey()
+        {
+            if (endingPlayer != null && endingPlayer.IsPlaying)
+            {
+                endingPlayer.Advance();
+                return;
+            }
+            if (IsLogOpen) return;
+
+            if (smartphoneTalk != null && smartphoneTalk.IsOpen)
+            {
+                smartphoneTalk.AdvanceDialoguePage();
+                return;
+            }
+            if (dialogueUI != null && dialogueUI.isActiveAndEnabled && dialogueUI.IsDialoguePlaying)
+            {
+                dialogueUI.OnClickDialogueArea();
+            }
+        }
+
+        private bool IsLogOpen => logUI != null && logUI.gameObject.activeInHierarchy;
+
+        private void ToggleLogByKey()
+        {
+            if (logUI == null || (endingPlayer != null && endingPlayer.IsPlaying)) return;
+            if (IsLogOpen) logUI.Hide();
+            else logUI.Show();
+        }
+
+        /// <summary>
+        /// Esc で閉じる画面があれば閉じる（ログ、確認の窓）。閉じたら true（オプション画面は開かない）
+        /// </summary>
+        private bool TryCloseByEscape()
+        {
+            if (confirmDialog != null && confirmDialog.IsOpen)
+            {
+                confirmDialog.Hide();
+                return true;
+            }
+            if (IsLogOpen)
+            {
+                logUI.Hide();
+                return true;
+            }
+            return false;
+        }
+
+        #endregion
 
         public bool IsAutoOn => isAutoOn;
         public bool IsSkipOn => isSkipOn;
