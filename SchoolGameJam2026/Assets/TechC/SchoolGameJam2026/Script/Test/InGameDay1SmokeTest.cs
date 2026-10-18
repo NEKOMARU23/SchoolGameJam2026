@@ -161,6 +161,54 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
+        public IEnumerator 文字が全部出ると文の最後に次へ進む印が出る()
+        {
+            var dialogueUI = FindComponent<DialogueUI>();
+            NextPageMarkUI mark = FindNextPageMark("InterrogationPanel");
+
+            yield return Click("SelectRoomA_Button");
+            yield return Click("Button_Talk");
+            yield return null;
+            Assert.IsFalse(mark.IsShowing, "文字送りの途中で「▼」が出ています");
+
+            // 全文を出すと「▼」が出る（次のページが残っているとき）
+            dialogueUI.OnClickDialogueArea();
+            yield return null;
+            yield return null;
+            Assume.That(dialogueUI.IsDialoguePlaying, "前提: 1日目のココアへの対話は2ページ以上ある");
+            Assert.IsTrue(mark.IsShowing, "文字が全部出ても「▼」が出ません");
+
+            // 最後のページを表示し終えると会話が終わるので、「▼」は出ない
+            for (int i = 0; i < 50 && dialogueUI.IsDialoguePlaying; i++) dialogueUI.OnClickDialogueArea();
+            yield return null;
+            Assert.IsFalse(mark.IsShowing, "会話が終わっても「▼」が残っています");
+
+            // スマホの会話でも出る
+            yield return Click("Button_ToMonitor");
+            yield return Click("Button_Help", "MonitorPanel");
+            var talk = FindComponent<DialogueClickable>();
+            Assert.IsTrue(talk.IsOpen, "前提: スマホの会話が開く");
+            NextPageMarkUI phoneMark = FindNextPageMark("SmartphoneTalkPanel");
+            talk.AdvanceDialoguePage();   // 文字送りの途中なら全文を出す
+            yield return null;
+            yield return null;
+            Assert.IsTrue(phoneMark.IsShowing, "スマホの会話で文字が全部出ても「▼」が出ません");
+        }
+
+        private static NextPageMarkUI FindNextPageMark(string panelName)
+        {
+            foreach (var m in Object.FindObjectsByType<NextPageMarkUI>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                for (Transform t = m.transform; t != null; t = t.parent)
+                {
+                    if (t.name == panelName) return m;
+                }
+            }
+            Assert.Fail($"{panelName} の「▼」が見つかりません");
+            return null;
+        }
+
+        [UnityTest]
         public IEnumerator 四人全員に別々のアクションを実行できる()
         {
             var controller = FindComponent<GameUIController>();

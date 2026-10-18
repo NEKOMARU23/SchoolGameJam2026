@@ -31,6 +31,8 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private EndingPlayerUI endingPlayer;        // 最終日の後のエンディング
         [SerializeField] private AutoSkipButtonsUI[] autoSkipButtons; // 会話枠の「オート」「スキップ」（取調室・スマホ）
         [SerializeField] private PointGainUI pointGainUI;            // 行動で入ったポイント（「+20pt」）
+        [SerializeField] private NextPageMarkUI interrogationNextMark; // 取調室の会話の「▼」（クリックで次へ）
+        [SerializeField] private NextPageMarkUI smartphoneNextMark;    // スマホの会話の「▼」
 
         [Header("--- 朝の会話（その日の始めに自動で流れるスマホの会話） ---")]
         [Tooltip("スマホの呼び出し音（Data/SE のファイル名。空なら鳴らさない）")]
@@ -126,6 +128,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
                 smartphoneTalk.OnSkipStopped += StopSkip;
             }
             RefreshAutoSkipButtons();
+
+            // 「▼」はクリックで次へ進めるときだけ出す
+            // 取調室: 最後のページは表示し終えると会話が終わるので、次のページが残っているときだけ
+            // スマホ: 最後のページもクリックで閉じるので、会話画面が開いている間ずっと
+            if (interrogationNextMark != null) interrogationNextMark.SetCondition(() => dialogueUI != null && dialogueUI.IsDialoguePlaying);
+            if (smartphoneNextMark != null) smartphoneNextMark.SetCondition(() => smartphoneTalk != null && smartphoneTalk.IsOpen);
 
             // 立ち絵と SE は、Excel の名前で Data フォルダの素材を探す
             if (dialogueUI != null) dialogueUI.SetAssetResolvers(FindCharacterSprite, PlaySeByName);
