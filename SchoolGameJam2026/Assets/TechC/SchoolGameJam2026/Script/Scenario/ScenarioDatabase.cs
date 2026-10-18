@@ -49,6 +49,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         public List<NamedObject> effects = new List<NamedObject>();
         public List<NamedAudioClip> seClips = new List<NamedAudioClip>();
         public List<NamedAudioClip> bgmClips = new List<NamedAudioClip>();
+        public List<NamedSprite> itemImages = new List<NamedSprite>();
 
         [NonSerialized] private Dictionary<string, ScenarioDialogue> dialogueMap;
 
@@ -171,6 +172,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         public GameObject FindEffect(string name) => effects.Find(e => e.name == name)?.prefab;
         public AudioClip FindSE(string name) => seClips.Find(c => c.name == name)?.clip;
         public AudioClip FindBGM(string name) => bgmClips.Find(c => c.name == name)?.clip;
+        public Sprite FindItemImage(string name) => Find(itemImages, name)?.sprite;
 
         private static NamedSprite Find(List<NamedSprite> list, string name)
         {

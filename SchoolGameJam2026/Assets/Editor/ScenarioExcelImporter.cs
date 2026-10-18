@@ -30,6 +30,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Editor
             { AssetKind.Effect, "Effect" },
             { AssetKind.SE, "SE" },
             { AssetKind.BGM, "BGM" },
+            { AssetKind.Item, "Item" },
         };
 
         [MenuItem("Tools/シナリオExcelを取り込む")]
@@ -169,6 +170,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Editor
             foreach (var p in assets[AssetKind.Effect]) db.effects.Add(new NamedObject { name = p.Key, prefab = (GameObject)p.Value });
             db.seClips = ToClips(assets[AssetKind.SE]);
             db.bgmClips = ToClips(assets[AssetKind.BGM]);
+            db.itemImages = ToSprites(assets[AssetKind.Item]);
         }
 
         private static List<NamedSprite> ToSprites(Dictionary<string, UnityEngine.Object> map)

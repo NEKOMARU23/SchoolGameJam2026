@@ -94,6 +94,85 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 $"日別設定の{header}に「{value}」を書いてもエラーになりません: {string.Join(" / ", report.Errors)}");
         }
 
+        private static readonly string[] FlagHeaders = { "フラグ名", "種類", "表示先", "説明", "プロフィールに表示する文", "見出し", "解禁ポイント", "関係するキャラ", "画像" };
+
+        /// <summary> フラグ一覧のシートを、資料画面用の列つきに差し替える </summary>
+        private static Dictionary<string, List<List<string>>> CreateWorkbookWithFlagColumns(params string[][] extraRows)
+        {
+            var sheets = CreateWorkbook();
+            var rows = new List<string[]>
+            {
+                FlagHeaders,
+                new[] { "info_鍵", "情報", "A", "鍵の話", "鍵を持っていた", "鍵を持っていた", "", "B, C", "" },
+                new[] { "flag_和解", "進行フラグ", "なし", "", "", "", "", "", "" },
+            };
+            rows.AddRange(extraRows);
+            sheets["フラグ一覧"] = Table(rows.ToArray());
+            return sheets;
+        }
+
+        [Test]
+        public void フラグ一覧の資料画面用の列を取り込める()
+        {
+            var sheets = CreateWorkbookWithFlagColumns(
+                new[] { "info_停電", "情報", "その他", "", "停電は夜の9時だった", "停電の時刻", "30", "", "" },
+                new[] { "item_鍵束", "キーアイテム", "アイテム", "", "現場の鍵束", "鍵束", "", "A", "鍵束の絵" });
+            ScenarioDatabase db = Parse(sheets, out ImportReport report);
+
+            CollectionAssert.IsEmpty(report.Errors.Select(e => e.ToString()));
+            ScenarioFlagDefinition key = db.FindFlag("info_鍵");
+            Assert.AreEqual("鍵を持っていた", key.title);
+            CollectionAssert.AreEqual(new[] { "B", "C" }, key.relatedCharacters);
+            Assert.IsFalse(key.IsPointUnlock, "解禁ポイントが空なのにポイントで解禁する情報になっています");
+
+            ScenarioFlagDefinition point = db.FindFlag("info_停電");
+            Assert.IsTrue(point.IsPointUnlock);
+            Assert.AreEqual(30, point.unlockCost);
+            Assert.AreEqual("鍵束の絵", db.FindFlag("item_鍵束").image);
+        }
+
+        [TestCase("解禁ポイント", "たくさん", "数")]
+        [TestCase("関係するキャラ", "E", "は使えません")]
+        public void フラグ一覧の資料画面用の列の書き間違いはエラーになる(string header, string value, string expectedMessage)
+        {
+            var sheets = CreateWorkbookWithFlagColumns();
+            SetCell(sheets["フラグ一覧"], 1, header, value);
+
+            Parse(sheets, out ImportReport report);
+
+            Assert.IsTrue(report.Errors.Any(e => e.Sheet == "フラグ一覧" && e.Text.Contains(expectedMessage)),
+                $"{header}「{value}」で「{expectedMessage}」のエラーになりません: {string.Join(" / ", report.Errors)}");
+        }
+
+        [Test]
+        public void 解禁ポイントは情報にだけ書ける()
+        {
+            var sheets = CreateWorkbookWithFlagColumns(new[] { "item_鍵束", "キーアイテム", "アイテム", "", "", "鍵束", "30", "", "" });
+            Parse(sheets, out ImportReport report);
+            Assert.IsTrue(report.Errors.Any(e => e.Text.Contains("解禁ポイントは「情報」にだけ")), string.Join(" / ", report.Errors));
+        }
+
+        [Test]
+        public void 解禁ポイントがある情報を会話の獲得フラグに書くとエラーになる()
+        {
+            // 条件シートの1行目は info_鍵 を獲得する。その info_鍵 に解禁ポイントを付ける
+            var sheets = CreateWorkbookWithFlagColumns();
+            SetCell(sheets["フラグ一覧"], 1, "解禁ポイント", "30");
+
+            Parse(sheets, out ImportReport report);
+            Assert.IsTrue(report.Errors.Any(e => e.Text.Contains("会話かポイントのどちらか片方だけ")), string.Join(" / ", report.Errors));
+        }
+
+        [Test]
+        public void アイテムの絵の素材がないと警告になる()
+        {
+            var sheets = CreateWorkbookWithFlagColumns(new[] { "item_鍵束", "キーアイテム", "アイテム", "", "", "鍵束", "", "", "ない絵" });
+            Parse(sheets, out ImportReport report, assetExists: (kind, name) => kind != AssetKind.Item);
+
+            CollectionAssert.IsEmpty(report.Errors.Select(e => e.ToString()));
+            Assert.IsTrue(report.Warnings.Any(w => w.Text.Contains("ない絵")), string.Join(" / ", report.Warnings));
+        }
+
         [Test]
         public void 選択肢シートを取り込める()
         {
@@ -363,9 +442,9 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
             return new Dictionary<string, List<List<string>>>
             {
                 ["フラグ一覧"] = Table(
-                    new[] { "フラグ名", "種類", "表示先", "説明", "プロフィールに表示する文" },
-                    new[] { "info_鍵", "情報", "A", "鍵の話", "鍵を持っていた" },
-                    new[] { "flag_和解", "進行フラグ", "なし", "", "" }),
+                    new[] { "フラグ名", "種類", "表示先", "説明", "プロフィールに表示する文", "見出し" },
+                    new[] { "info_鍵", "情報", "A", "鍵の話", "鍵を持っていた", "鍵を持っていた" },
+                    new[] { "flag_和解", "進行フラグ", "なし", "", "", "" }),
                 ["本文"] = Table(
                     new[] { "セリフID", "種類", "話者", "本文", "SE", "立ち絵", "背景", "イベント絵", "エフェクト", "BGM" },
                     new[] { "A_D1_対話_1", "会話", "", "こんにちは", "", "A_通常", "", "", "", "" },

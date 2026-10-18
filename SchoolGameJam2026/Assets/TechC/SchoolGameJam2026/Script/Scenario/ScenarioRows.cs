@@ -145,6 +145,13 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario
         public string description = "";
         public string profileText = "";
         public string displayTarget = "";       // A〜D / その他 / アイテム / なし
+        public string title = "";               // 資料画面の一覧や窓に出す名前（例: メリとは顔見知り）
+        public int unlockCost;                  // ポイントで解禁する情報なら、そのポイント（0 なら会話で手に入る）
+        public List<string> relatedCharacters = new List<string>();   // 関係するキャラ（例: B, D）
+        public string image = "";               // アイテムの絵（Data/Item のファイル名。キーアイテムだけ）
+
+        /// <summary> ポイントで解禁する情報か（会話では手に入らない） </summary>
+        public bool IsPointUnlock => unlockCost > 0;
     }
 
     /// <summary> AI判定シートの1行 </summary>
