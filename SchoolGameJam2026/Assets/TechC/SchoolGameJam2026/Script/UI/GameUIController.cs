@@ -28,7 +28,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [SerializeField] private LogUI logUI;
         [SerializeField] private StatusHeaderUI statusHeaderUI;
         [SerializeField] private DayTransitionUI dayTransitionUI;
-        [SerializeField] private DialogueClickable smartphoneTalk;   // スマホ（補助ちゃんとの会話）
+        [SerializeField] private DialogueClickable smartphoneTalk;   // スマホ（マキナとの会話）
         [SerializeField] private ConfirmDialogUI confirmDialog;      // AI確定・解放・プロフィール解禁の確認
         [SerializeField] private ChoiceUI choiceUI;                  // 会話の後に出す選択肢
         [SerializeField] private EndingPlayerUI endingPlayer;        // 最終日の後のエンディング
@@ -643,7 +643,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// スマホ（補助ちゃん）との会話を開く。今日の回数が残っていなければ何もしない
+        /// スマホ（マキナ）との会話を開く。今日の回数が残っていなければ何もしない
         /// </summary>
         public void OpenSmartphoneTalk()
         {
@@ -744,7 +744,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
             if (logUI != null)
             {
-                foreach (DialoguePage page in currentSmartphonePages) AddLog(GetSpeaker(page, "補助ちゃん"), page.Body);
+                foreach (DialoguePage page in currentSmartphonePages) AddLog(GetSpeaker(page, "マキナ"), page.Body);
             }
         }
 

@@ -6,7 +6,7 @@ using TechC.SchoolGameJam2026.Scripts.Scenario;
 namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 {
     /// <summary>
-    /// スマホ（補助ちゃん）との会話回数を管理するマネージャー
+    /// スマホ（マキナ）との会話回数を管理するマネージャー
     /// 1日に聞ける回数はその日に用意されたセリフの数まで。日付が変わる・その日をリセットすると0回に戻る
     /// </summary>
     public class SmartphoneTalkManager : MonoBehaviour

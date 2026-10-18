@@ -72,7 +72,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// スマホ（補助ちゃんとの会話）パネルを表示する（通常遷移）
+        /// スマホ（マキナとの会話）パネルを表示する（通常遷移）
         /// </summary>
         public void ShowSmartphoneTalkPanel()
         {

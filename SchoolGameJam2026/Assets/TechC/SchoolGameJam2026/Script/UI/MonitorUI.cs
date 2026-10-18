@@ -41,7 +41,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- モニター画面の部屋ボタン登録 ---")]
         [SerializeField] private List<MonitorRoomBinding> monitorRoomBindings = new List<MonitorRoomBinding>();
 
-        [Header("--- スマホ（補助ちゃんとの会話）ボタン ---")]
+        [Header("--- スマホ（マキナとの会話）ボタン ---")]
         [SerializeField] private Button smartphoneButton;
 
         [Header("--- スマホのお知らせ表示（今日はもう連絡できない等） ---")]

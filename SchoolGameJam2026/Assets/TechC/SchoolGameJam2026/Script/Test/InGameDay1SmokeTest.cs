@@ -410,7 +410,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
         }
 
         [UnityTest]
-        public IEnumerator スマホで補助ちゃんと会話でき回数を使い切るとお知らせが出る()
+        public IEnumerator スマホでマキナと会話でき回数を使い切るとお知らせが出る()
         {
             var talk = FindComponent<DialogueClickable>();
             int limit = GameManager.Scenario.GetSmartphoneTalkCount(1);
