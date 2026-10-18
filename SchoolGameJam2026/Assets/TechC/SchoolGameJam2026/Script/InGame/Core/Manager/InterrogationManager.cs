@@ -196,7 +196,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
             // 3. 正解の判定・ポイント・好感度、会話の効果（獲得フラグ・AI化）
             int earnedPoints = ApplyScoring(targetChar, actionType, db.GetDailySetting(day, targetChar.CharacterId));
-            game.ApplyScenarioEffects(row);
+            game.ApplyScenarioEffects(row, AcquireMethod(game, targetChar, actionType, hearingTargetId));
 
             // 4. 状態更新（カウントアップ・履歴保持）
             IncrementActionCount(targetChar.CharacterId, actionType);
@@ -230,6 +230,51 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
             ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
             return dialogue != null ? ActionOutcome.FromDialogue(dialogue, earnedPoints) : ActionOutcome.FromText("「……」", earnedPoints);
+        }
+
+        /// <summary> 資料画面に出す「手に入れ方」（例: ココアに対話 / メリから聞き取り） </summary>
+        private static string AcquireMethod(GameManager game, CharacterInstance target, InterrogationActionType actionType, string hearingTargetId)
+        {
+            string name = game.GetCharacterName(target.CharacterId);
+            switch (actionType)
+            {
+                case InterrogationActionType.Torture: return $"{name}に拷問";
+                case InterrogationActionType.Talk: return $"{name}に対話";
+                case InterrogationActionType.Negotiate: return $"{name}に交渉";
+                case InterrogationActionType.HearAbout:
+                    return string.IsNullOrEmpty(hearingTargetId) ? $"{name}から聞き取り" : $"{name}から聞き取り（{game.GetCharacterName(hearingTargetId)}について）";
+                case InterrogationActionType.Release: return $"{name}を解放";
+                case InterrogationActionType.ConfirmAI: return $"{name}を AI と判定";
+                default: return name;
+            }
+        }
+
+        /// <summary>
+        /// ポイントで解禁する情報（フラグ一覧の「解禁ポイント」がある情報）を、今解禁できるか
+        /// </summary>
+        /// <returns>まだ持っておらず、ポイントが足りていれば true</returns>
+        public bool CanUnlockInfo(string flagName, out int cost)
+        {
+            cost = 0;
+            GameManager game = GameManager.Instance;
+            ScenarioFlagDefinition def = game != null && game.Scenario != null ? game.Scenario.FindFlag(flagName) : null;
+            if (def == null || !def.IsPointUnlock) return false;
+
+            cost = def.unlockCost;
+            return !game.Flags.IsOn(flagName) && currentPoints >= cost;
+        }
+
+        /// <summary>
+        /// ポイントを使って情報を解禁する（フラグを ON にし、「◯pt で解禁」と記録する）
+        /// </summary>
+        /// <returns>解禁できた場合 true（解禁済み・ポイント不足・ポイントで解禁する情報でない場合は false）</returns>
+        public bool TryUnlockInfo(string flagName)
+        {
+            if (!CanUnlockInfo(flagName, out int cost)) return false;
+            if (!TrySpendPoints(cost)) return false;
+
+            GameManager.Instance.GainFlags(new[] { flagName }, $"{cost}pt で解禁");
+            return true;
         }
 
         /// <summary>

@@ -54,11 +54,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         // その日の朝の状態（「今日をやり直す」で戻す先）
         private GameStateSnapshot morningSnapshot;
 
+        // この周回で手に入れたフラグの記録（いつ・どうやって。資料画面用）
+        private readonly List<InfoAcquisition> acquisitions = new List<InfoAcquisition>();
+
         // まだ流していない朝の会話（画面側が TakeMorningTalk で受け取って流す）
         private ScenarioDialogue pendingMorningTalk;
 
         #region プロパティ
         public int CurrentDay => currentDay;
+
+        /// <summary> 今が何周目か（エンディングまで行くたびに増える。1周目は 1） </summary>
+        public int CurrentPlaythrough { get; private set; } = 1;
+
+        /// <summary> この周回で手に入れたフラグの記録（古い順） </summary>
+        public IReadOnlyList<InfoAcquisition> Acquisitions => acquisitions;
         public int MaxDays => maxDays;
         public List<CharacterInstance> AllCharacters => allCharacters;
 
@@ -117,6 +126,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             SaveStore.CurrentSlot = 0;   // はじめから
+            CurrentPlaythrough = InfoRecordStore.CompletedPlaythroughs + 1;
             StartNewDay();
         }
 
@@ -142,10 +152,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary>
         /// 会話を聞いたときの効果を適用する（獲得フラグを ON、AI化のキャラを AI にする）
         /// </summary>
-        public void ApplyScenarioEffects(ScenarioConditionRow row)
+        /// <param name="method">手に入れ方（資料画面に出す。例: ココアに対話）</param>
+        public void ApplyScenarioEffects(ScenarioConditionRow row, string method = "")
         {
             if (row == null) return;
-            ApplyEffects(row.gainFlags, row.aiTargets, $"会話（{row.dialogueId}）");
+            ApplyEffects(row.gainFlags, row.aiTargets, $"会話（{row.dialogueId}）", method);
+        }
+
+        /// <summary>
+        /// フラグを ON にして、手に入れた記録を残す（ポイントで解禁する情報など、会話以外で手に入れるとき用）
+        /// </summary>
+        public void GainFlags(IEnumerable<string> flags, string method)
+        {
+            ApplyEffects(flags, Array.Empty<string>(), method, method);
+        }
+
+        /// <summary> キャラの表示名（資料画面の「手に入れ方」などに使う） </summary>
+        public string GetCharacterName(string characterId)
+        {
+            CharacterInstance c = allCharacters.Find(x => x != null && x.CharacterId == characterId);
+            if (c == null) return characterId ?? "";
+            return c.ProfileData != null ? c.ProfileData.basicInfo.characterName : c.CharacterId;
         }
 
         /// <summary>
@@ -176,15 +203,25 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             if (choice == null) return null;
 
             if (choice.affectionChange != 0 && partner != null) partner.AddAffection(choice.affectionChange);
-            ApplyEffects(choice.gainFlags, choice.aiTargets, $"選択肢（{choice.sourceLocation}「{choice.text}」）");
+            string method = partner != null ? $"{GetCharacterName(partner.CharacterId)}との会話の選択肢" : "スマホの選択肢";
+            ApplyEffects(choice.gainFlags, choice.aiTargets, $"選択肢（{choice.sourceLocation}「{choice.text}」）", method);
 
             return scenarioDatabase != null ? scenarioDatabase.FindDialogue(choice.nextDialogueId) : null;
         }
 
         /// <summary> 獲得フラグを ON にし、AI化のキャラを AI にする </summary>
-        private void ApplyEffects(IEnumerable<string> gainFlags, IEnumerable<string> aiTargets, string source)
+        private void ApplyEffects(IEnumerable<string> gainFlags, IEnumerable<string> aiTargets, string source, string method)
         {
-            foreach (string flag in gainFlags) Flags.TurnOn(flag);
+            foreach (string flag in gainFlags)
+            {
+                // 初めて ON になったときだけ、この周回の記録と、周回をまたぐ記録に残す（進行フラグは資料画面に出さないので周回をまたぐ記録には残さない）
+                if (!Flags.TurnOn(flag)) continue;
+                acquisitions.Add(new InfoAcquisition { flag = flag, day = currentDay, method = method ?? "" });
+                if (!flag.StartsWith(FlagStore.FlagPrefix, StringComparison.Ordinal))
+                {
+                    InfoRecordStore.RecordAcquired(flag, CurrentPlaythrough, currentDay, method);
+                }
+            }
 
             foreach (string id in aiTargets)
             {
@@ -246,7 +283,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 CreateSelectorContext(null, 0));
             if (row == null) return null;
 
-            ApplyScenarioEffects(row);
+            ApplyScenarioEffects(row, "スマホ（朝の連絡）");
             return scenarioDatabase.FindDialogue(row.dialogueId);
         }
 
@@ -294,6 +331,11 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             snapshot.flags = Flags.ToList();
+            snapshot.playthrough = CurrentPlaythrough;
+            foreach (InfoAcquisition a in acquisitions)
+            {
+                snapshot.acquisitions.Add(new InfoAcquisition { flag = a.flag, day = a.day, method = a.method });
+            }
             return snapshot;
         }
 
@@ -315,6 +357,15 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             }
 
             Flags.RestoreFrom(snapshot.flags);
+            CurrentPlaythrough = Mathf.Max(1, snapshot.playthrough);
+            acquisitions.Clear();
+            if (snapshot.acquisitions != null)
+            {
+                foreach (InfoAcquisition a in snapshot.acquisitions)
+                {
+                    if (a != null) acquisitions.Add(new InfoAcquisition { flag = a.flag, day = a.day, method = a.method });
+                }
+            }
             OnStateRestored?.Invoke();
         }
 
@@ -466,6 +517,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             if (decision == null) decision = DecideEnding();
             if (decision.Ending != null) EndingRecordStore.MarkSeen(decision.Ending.endingId);
+            InfoRecordStore.CompletePlaythrough(CurrentPlaythrough);   // 次に「はじめから」を始めると、次の周回になる
 
             string nextScene = decision.IsGameOver ? gameOverSceneName : clearSceneName;
             Debug.Log($"<color=gold>全日程が終了しました。判定結果: {decision.Result} / エンディング: {decision.Ending?.endingId ?? "なし"}（{nextScene}）へ遷移します。</color>");
