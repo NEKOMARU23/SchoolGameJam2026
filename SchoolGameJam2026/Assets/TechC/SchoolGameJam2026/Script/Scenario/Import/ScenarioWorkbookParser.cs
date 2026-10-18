@@ -15,7 +15,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
         EventCG,
         Effect,
         SE,
-        BGM
+        BGM,
+        Item    // アイテムの絵（フラグ一覧の「画像」）
     }
 
     /// <summary> 取り込み時のエラー・警告1件 </summary>
@@ -139,8 +140,32 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
             if (daily != null) ParseDaily(daily, target, context);
             if (ai != null) ParseAI(ai, target, context);
             if (endings != null) ParseEndings(endings, target, context);
+            CheckPointUnlockFlags(target, report);
 
             return report;
+        }
+
+        /// <summary>
+        /// ポイントで解禁する情報は、会話では手に入らない（1つの情報は、会話かポイントのどちらか片方だけ）
+        /// </summary>
+        private static void CheckPointUnlockFlags(ScenarioDatabase db, ImportReport report)
+        {
+            var pointFlags = new HashSet<string>(StringComparer.Ordinal);
+            foreach (ScenarioFlagDefinition f in db.flags) if (f.IsPointUnlock) pointFlags.Add(f.name);
+            if (pointFlags.Count == 0) return;
+
+            void Check(List<string> gainFlags, string where)
+            {
+                foreach (string name in gainFlags)
+                {
+                    if (pointFlags.Contains(name))
+                    {
+                        report.Error(SheetFlags, 0, $"「{name}」は解禁ポイントがある（ポイントで解禁する情報）のに、{where} の獲得フラグにも書かれています。会話かポイントのどちらか片方だけにしてください");
+                    }
+                }
+            }
+            foreach (ScenarioConditionRow c in db.conditions) Check(c.gainFlags, c.sourceLocation);
+            foreach (ScenarioChoice c in db.choices) Check(c.gainFlags, c.sourceLocation);
         }
 
         #region シートごとの読み取り
@@ -169,15 +194,39 @@ namespace TechC.SchoolGameJam2026.Scripts.Scenario.Import
                     ctx.Error(row, $"表示先「{target}」は使えません（A〜D / その他 / アイテム / なし）");
                 }
 
-                ctx.FlagNames.Add(name);
-                db.flags.Add(new ScenarioFlagDefinition
+                var flag = new ScenarioFlagDefinition
                 {
                     name = name,
                     kind = kind,
                     description = row["説明"],
                     profileText = row["プロフィールに表示する文"],
                     displayTarget = target.Length > 0 ? target : "なし",
-                });
+                    title = row["見出し"],
+                    relatedCharacters = ctx.ReadCharacterList(row, "関係するキャラ"),
+                    image = row["画像"],
+                };
+
+                // 解禁ポイント: 空なら会話で手に入る情報、数字があればそのポイントで解禁する情報
+                if (row["解禁ポイント"].Length > 0)
+                {
+                    if (!ctx.ReadInt(row, "解禁ポイント", out flag.unlockCost, required: true, min: 1)) continue;
+                    if (kind != FlagKind.Info) ctx.Error(row, $"解禁ポイントは「情報」にだけ書けます（{name} は{row["種類"]}）");
+                }
+
+                if (flag.image.Length > 0)
+                {
+                    if (kind != FlagKind.KeyItem) ctx.Warn(row, $"画像はキーアイテムにだけ使います（{name} は{row["種類"]}）");
+                    ctx.CheckAsset(row, AssetKind.Item, flag.image, "画像");
+                }
+
+                // 資料画面に出す情報・アイテムには、一覧に出す名前（見出し）が要る
+                if (flag.title.Length == 0 && kind != FlagKind.Progress && flag.displayTarget != "なし")
+                {
+                    ctx.Warn(row, $"見出しが空です（{name}）。資料画面の一覧に出す名前を書いてください");
+                }
+
+                ctx.FlagNames.Add(name);
+                db.flags.Add(flag);
             }
         }
 

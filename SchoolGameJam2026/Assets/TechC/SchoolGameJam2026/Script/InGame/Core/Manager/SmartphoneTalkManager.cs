@@ -53,7 +53,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             if (row == null) return false;
 
             dialogue = db.FindDialogue(row.dialogueId);
-            game.ApplyScenarioEffects(row);
+            game.ApplyScenarioEffects(row, "スマホ");
             SetTalkCount(talkNumber);
             return true;
         }
