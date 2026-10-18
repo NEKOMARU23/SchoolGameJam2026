@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -15,6 +16,12 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         /// <summary> オプション画面が開いているか（開いている間は下の画面の操作を止めるために使う） </summary>
         public static bool IsOpen => Instance != null && Instance.panelRoot != null && Instance.panelRoot.activeSelf;
+
+        /// <summary>
+        /// Esc を押したときに、ゲーム側で先に閉じる画面（ログなど）があれば閉じる処理（閉じたら true）
+        /// true が返ったときは、オプション画面は開かない
+        /// </summary>
+        public static Func<bool> EscapeHandler;
 
         [Header("--- 設定の管理 ---")]
         [SerializeField] private SettingsManager settingsManager;
@@ -74,6 +81,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             // Esc でオプションを開閉（セーブ・ロードの枠が開いていれば、先にそちらを閉じる）
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
+                if (!IsOpen && EscapeHandler != null && EscapeHandler()) return;
                 if (SaveLoadController.Instance != null && SaveLoadController.Instance.IsOpen) SaveLoadController.Instance.Close();
                 else if (IsOpen) Close();
                 else Open();
