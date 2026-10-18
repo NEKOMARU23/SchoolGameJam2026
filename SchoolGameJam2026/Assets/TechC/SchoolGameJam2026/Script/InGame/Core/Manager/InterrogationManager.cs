@@ -221,13 +221,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
                 Debug.Log($"[InterrogationManager] {targetChar.CharacterId} を AI と判定しました。（正解: {targetChar.IsAI}）");
             }
 
-            // 6. 夜フェーズ移行チェック
-            if (IsActionLimitReached)
-            {
-                Debug.Log("[InterrogationManager] 行動制限到達。夜フェーズへ移行します。");
-                game.TransitionToNightPhase();
-            }
-
             ScenarioDialogue dialogue = row != null ? db.FindDialogue(row.dialogueId) : null;
             return dialogue != null ? ActionOutcome.FromDialogue(dialogue, earnedPoints) : ActionOutcome.FromText("「……」", earnedPoints);
         }
