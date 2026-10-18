@@ -11,15 +11,15 @@ const { applyTheme } = require("C:/Users/nekos/.claude/skills/synced/05ca163d-71
 const IMG = "C:/Unity/SchoolGameJam2026/Docs/images/wire/";   // 四角と文字だけの図（Docs/tools/make_wireframes.py で作る）
 const OUT = process.argv[2] || "資料画面のデザイン相談.pptx";
 
-// ゲームの画面に合わせた色（暗い紺 + 黄緑）
+// 色はゲームの見た目に似せず、中立の色にする（白い背景・黒い文字・灰色。強調は濃い青）
 const THEME = {
-  name: "SchoolGameJam Profile",
+  name: "SchoolGameJam Neutral",
   headFontFace: "Yu Gothic",
   bodyFontFace: "Yu Gothic",
   colors: {
-    dk1: "1B1F2A", lt1: "EEF1F6", dk2: "262C3A", lt2: "C9CFDA",
-    accent1: "CCFF40", accent2: "F25C5C", accent3: "5BC0EB", accent4: "8A93A6", accent5: "3A4254", accent6: "FFD166",
-    hlink: "CCFF40", folHlink: "A9D63A",
+    dk1: "1F2328", lt1: "FFFFFF", dk2: "57606A", lt2: "F3F4F6",
+    accent1: "1F4E8C", accent2: "C83232", accent3: "4A7FC1", accent4: "8C959F", accent5: "D0D7DE", accent6: "9A6700",
+    hlink: "1F4E8C", folHlink: "4A7FC1",
   },
 };
 
@@ -49,30 +49,30 @@ pres.addSlide = (opts) => {
 
 pres.defineSlideMaster({
   title: "TITLE",
-  background: { color: C.text1 },
+  background: { color: C.background1 },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: M, y: 2.4, w: W - 2 * M, h: 1.2, fontSize: 44, bold: true, color: C.accent1, valign: "bottom", margin: 0 }, text: "" } },
-    { placeholder: { options: { name: "body", type: "body", x: M, y: 3.8, w: W - 2 * M, h: 1.6, fontSize: 18, color: C.background1, valign: "top", margin: 0 }, text: "" } },
+    { placeholder: { options: { name: "body", type: "body", x: M, y: 3.8, w: W - 2 * M, h: 1.6, fontSize: 18, color: C.text1, valign: "top", margin: 0 }, text: "" } },
   ],
 });
 
 pres.defineSlideMaster({
   title: "SECTION",
-  background: { color: C.text1 },
+  background: { color: C.background1 },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: M, y: 2.9, w: W - 2 * M, h: 1.0, fontSize: 40, bold: true, color: C.accent1, valign: "middle", margin: 0 }, text: "" } },
-    { placeholder: { options: { name: "body", type: "body", x: M, y: 4.0, w: W - 2 * M, h: 0.8, fontSize: 18, color: C.background2, valign: "top", margin: 0 }, text: "" } },
+    { placeholder: { options: { name: "body", type: "body", x: M, y: 4.0, w: W - 2 * M, h: 0.8, fontSize: 18, color: C.text2, valign: "top", margin: 0 }, text: "" } },
   ],
-  slideNumber: { x: W - 1.0, y: H - 0.5, w: 0.5, h: 0.3, fontSize: 11, color: C.background2, align: "right" },
+  slideNumber: { x: W - 1.0, y: H - 0.5, w: 0.5, h: 0.3, fontSize: 11, color: C.text2, align: "right" },
 });
 
 pres.defineSlideMaster({
   title: "CONTENT",
-  background: { color: C.text1 },
+  background: { color: C.background1 },
   objects: [
-    { placeholder: { options: { name: "title", type: "title", x: M, y: 0.35, w: W - 2 * M, h: 0.8, fontSize: 30, bold: true, color: C.background1, valign: "middle", margin: 0 }, text: "" } },
+    { placeholder: { options: { name: "title", type: "title", x: M, y: 0.35, w: W - 2 * M, h: 0.8, fontSize: 30, bold: true, color: C.text1, valign: "middle", margin: 0 }, text: "" } },
   ],
-  slideNumber: { x: W - 1.0, y: H - 0.5, w: 0.5, h: 0.3, fontSize: 11, color: C.background2, align: "right" },
+  slideNumber: { x: W - 1.0, y: H - 0.5, w: 0.5, h: 0.3, fontSize: 11, color: C.text2, align: "right" },
 });
 
 // --- 補助 ---
@@ -98,7 +98,7 @@ function bullets(slide, items, x, y, w, h, size = 16, name = "本文") {
         bullet: isSub ? { indent: 18 } : { indent: 16 },
         indentLevel: isSub ? 1 : 0,
         fontSize: isSub ? size - 2 : size,
-        color: isSub ? C.background2 : C.background1,
+        color: isSub ? C.text2 : C.text1,
         paraSpaceAfter: 6,
         breakLine: i < items.length - 1,
       },
@@ -107,14 +107,14 @@ function bullets(slide, items, x, y, w, h, size = 16, name = "本文") {
   slide.addText(runs, { x, y, w, h, valign: "top", margin: 0, isTextBox: true, objectName: name });
 }
 function caption(slide, text, x, y, w, name = "説明") {
-  slide.addText(text, { x, y, w, h: 0.4, fontSize: 12, color: C.background2, margin: 0, isTextBox: true, objectName: name });
+  slide.addText(text, { x, y, w, h: 0.4, fontSize: 12, color: C.text2, margin: 0, isTextBox: true, objectName: name });
 }
 function card(slide, x, y, w, h, name) {
-  slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color: C.text2 }, line: { color: C.accent5, width: 1 }, objectName: name });
+  slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, rectRadius: 0.08, fill: { color: C.background2 }, line: { color: C.accent5, width: 1 }, objectName: name });
 }
 function badge(slide, n, x, y, name) {
   slide.addShape(pres.shapes.OVAL, { x, y, w: 0.42, h: 0.42, fill: { color: C.accent1 }, line: { type: "none" }, objectName: name + "の丸" });
-  slide.addText(String(n), { x, y, w: 0.42, h: 0.42, fontSize: 16, bold: true, color: C.text1, align: "center", valign: "middle", margin: 0, isTextBox: true, objectName: name + "の番号" });
+  slide.addText(String(n), { x, y, w: 0.42, h: 0.42, fontSize: 16, bold: true, color: C.background1, align: "center", valign: "middle", margin: 0, isTextBox: true, objectName: name + "の番号" });
 }
 function content(title, section) {
   const s = pres.addSlide({ masterName: "CONTENT", sectionTitle: section });
@@ -129,7 +129,7 @@ pres.addSection({ title: "表紙" });
   s.addText("資料画面のデザイン相談", { placeholder: "title" });
   s.addText([
     { text: "キャラの切り替えを画面の上のタブにした、新しいレイアウトのお願い", options: { breakLine: true } },
-    { text: "図は四角と文字だけで描いた叩き台です（絵の場所は灰色の四角）。色・形・配置は自由に変えてください", options: { fontSize: 14, color: C.background2 } },
+    { text: "図は四角と文字だけで描いた叩き台です（絵の場所は灰色の四角）。色・形・配置は自由に変えてください", options: { fontSize: 14, color: C.text2 } },
   ], { placeholder: "body" });
   image(s, "profile_char.png", 8.3, 4.9, 4.4, 2.3, "叩き台の画像");
 }
@@ -138,22 +138,22 @@ pres.addSection({ title: "表紙" });
 pres.addSection({ title: "お願いしたいこと" });
 {
   const s = content("お願いしたいこと", "お願いしたいこと");
-  s.addText("資料画面を、新しいレイアウトで描き直してほしいです。描いてほしい画面は5つです", { x: M, y: 1.35, w: 12, h: 0.5, fontSize: 18, color: C.background1, margin: 0, isTextBox: true, objectName: "リード" });
+  s.addText("資料画面を、新しいレイアウトで描き直してほしいです。描いてほしい画面は5つです", { x: M, y: 1.35, w: 12, h: 0.5, fontSize: 18, color: C.text1, margin: 0, isTextBox: true, objectName: "リード" });
   const screens = ["キャラのページ（ココア・メリ・カネル・レイジ）", "「手に入れた情報」の詳しい表示（窓）", "「手に入れた情報」の一覧（窓）", "「その他」のページ", "「アイテム」のページ"];
   screens.forEach((t, i) => {
     const y = 2.15 + i * 0.72;
     badge(s, i + 1, M, y, `画面${i + 1}`);
-    s.addText(t, { x: M + 0.6, y, w: 5.6, h: 0.42, fontSize: 17, color: C.background1, valign: "middle", margin: 0, isTextBox: true, objectName: `画面${i + 1}の名前` });
+    s.addText(t, { x: M + 0.6, y, w: 5.6, h: 0.42, fontSize: 17, color: C.text1, valign: "middle", margin: 0, isTextBox: true, objectName: `画面${i + 1}の名前` });
   });
   card(s, 7.1, 2.15, 5.6, 1.15, "素材のカード");
   s.addText([
     { text: "作ってほしい素材", options: { bold: true, color: C.accent1, fontSize: 18, breakLine: true } },
-    { text: "素材の分け方と一覧は「素材」の章にまとめました", options: { fontSize: 15, color: C.background1 } },
+    { text: "素材の分け方と一覧は「素材」の章にまとめました", options: { fontSize: 15, color: C.text1 } },
   ], { x: 7.35, y: 2.3, w: 5.1, h: 0.9, valign: "top", margin: 0, isTextBox: true, objectName: "素材の文" });
   card(s, 7.1, 3.6, 5.6, 1.15, "決めてほしいことのカード");
   s.addText([
     { text: "決めてほしいこと", options: { bold: true, color: C.accent1, fontSize: 18, breakLine: true } },
-    { text: "配置・フォント・状態ごとの色などは、最後のスライドにまとめました", options: { fontSize: 15, color: C.background1 } },
+    { text: "配置・フォント・状態ごとの色などは、最後のスライドにまとめました", options: { fontSize: 15, color: C.text1 } },
   ], { x: 7.35, y: 3.75, w: 5.1, h: 0.9, valign: "top", margin: 0, isTextBox: true, objectName: "決めてほしいことの文" });
 }
 
@@ -173,21 +173,21 @@ pres.addSection({ title: "お願いしたいこと" });
 // ===== 3. 1キャラ分の資料に載せる情報 =====
 {
   const s = content("1キャラ分の資料に載せる情報", "お願いしたいこと");
-  const head = (t) => ({ text: t, options: { bold: true, color: C.text1, fill: { color: C.accent1 }, fontSize: 15 } });
-  const cell = (t, bold) => ({ text: t, options: { color: C.background1, fill: { color: C.text2 }, fontSize: 14, bold: !!bold } });
+  const head = (t) => ({ text: t, options: { bold: true, color: C.background1, fill: { color: C.accent1 }, fontSize: 15 } });
+  const cell = (t, bold) => ({ text: t, options: { color: C.text1, fill: { color: C.background2 }, fontSize: 14, bold: !!bold } });
   s.addTable([
     [head("種類"), head("中身"), head("量")],
     [cell("基礎情報", true), cell("名前・年齢・職業・誕生日・身長・体重・特技・好きなもの・嫌いなもの"), cell("9項目（どれも短い）。ポイントで解禁する")],
     [cell("過去の情報", true), cell("ココアの例: 「大切なもの：家族」、幼少期（4行くらいの文）、現在（5行くらいの文）"), cell("3項目以上（これから増やす予定。長い文もある）。1つずつポイントで解禁する")],
     [cell("手に入れた情報", true), cell("会話で知った情報（例:「メリのアリバイ」）"), cell("遊ぶほど増える（2周目以降も引き継ぐ）")],
   ], { x: M, y: 1.45, w: W - 2 * M, colW: [2.1, 5.6, 4.43], border: { type: "solid", color: THEME.colors.dk1, pt: 2 }, margin: 0.1, rowH: [0.45, 0.8, 0.8, 0.6], objectName: "載せる情報の表" });
-  s.addText("キャラごとのページとは別に、次の2つのページもあります", { x: M, y: 4.5, w: 12, h: 0.4, fontSize: 16, color: C.background1, margin: 0, isTextBox: true, objectName: "別のページの説明" });
+  s.addText("キャラごとのページとは別に、次の2つのページもあります", { x: M, y: 4.5, w: 12, h: 0.4, fontSize: 16, color: C.text1, margin: 0, isTextBox: true, objectName: "別のページの説明" });
   [["その他", "キャラに関係しない情報（例:「事件当日は雨だった」）"], ["アイテム", "キーアイテム（例:「現場の鍵」）"]].forEach(([t, d], i) => {
     const x = M + i * 6.2;
     card(s, x, 5.1, 5.9, 1.3, t + "のカード");
     s.addText([
       { text: t, options: { bold: true, fontSize: 18, color: C.accent1, breakLine: true } },
-      { text: d, options: { fontSize: 15, color: C.background1 } },
+      { text: d, options: { fontSize: 15, color: C.text1 } },
     ], { x: x + 0.25, y: 5.25, w: 5.4, h: 1.0, valign: "top", margin: 0, isTextBox: true, objectName: t + "の文" });
   });
 }
@@ -217,7 +217,7 @@ pres.addSection({ title: "描いてほしい画面" });
 }
 {
   const s = content("② 「手に入れた情報」の詳しい表示（窓）", "描いてほしい画面");
-  s.addText("手に入れた情報の行を押すと開く窓です。過去の情報の枠を押したとき・解禁した直後も、同じ窓で全文を見せます", { x: M, y: 1.3, w: 12.1, h: 0.6, fontSize: 16, color: C.background1, margin: 0, isTextBox: true, objectName: "リード" });
+  s.addText("手に入れた情報の行を押すと開く窓です。過去の情報の枠を押したとき・解禁した直後も、同じ窓で全文を見せます", { x: M, y: 1.3, w: 12.1, h: 0.6, fontSize: 16, color: C.text1, margin: 0, isTextBox: true, objectName: "リード" });
   image(s, "profile_detail.png", M, 2.05, 5.9, 3.32, "詳しい表示の叩き台", "left");
   image(s, "profile_unlock.png", 6.83, 2.05, 5.9, 3.32, "解禁した直後の叩き台", "left");
   bullets(s, ["手に入れた情報: 見出し、NEW の印、説明の文、手に入れた日・手に入れ方・関係するキャラ・周回", "右上に「×」（閉じる）"], M, 5.55, 5.9, 1.4, 14, "左の説明");
@@ -282,7 +282,7 @@ pres.addSection({ title: "作ってほしい素材" });
     badge(s, i + 1, M, y + 0.05, `ルール${i + 1}`);
     s.addText([
       { text: t, options: { bold: true, fontSize: 17, color: C.accent1, breakLine: true } },
-      { text: d, options: { fontSize: 14, color: C.background1 } },
+      { text: d, options: { fontSize: 14, color: C.text1 } },
     ], { x: M + 0.6, y, w: 5.9, h: 0.95, valign: "top", margin: 0, isTextBox: true, objectName: `ルール${i + 1}の文` });
   });
   image(s, "nine_slice.png", 7.3, 1.6, 5.4, 2.0, "9スライスの説明");
@@ -290,14 +290,14 @@ pres.addSection({ title: "作ってほしい素材" });
   card(s, 7.3, 4.6, 5.4, 1.55, "今ある素材のカード");
   s.addText([
     { text: "今ある素材を使うもの（新しく作らなくてよい）", options: { bold: true, fontSize: 15, color: C.accent1, breakLine: true } },
-    { text: "戻るボタン（今の緑の矢印）", options: { bullet: { indent: 14 }, fontSize: 14, color: C.background1, breakLine: true } },
-    { text: "上のタブのキャラ4人（今ある名前プレートの画像）", options: { bullet: { indent: 14 }, fontSize: 14, color: C.background1, breakLine: true } },
-    { text: "キャラの立ち絵（表情の差分も）", options: { bullet: { indent: 14 }, fontSize: 14, color: C.background1 } },
+    { text: "戻るボタン（今の緑の矢印）", options: { bullet: { indent: 14 }, fontSize: 14, color: C.text1, breakLine: true } },
+    { text: "上のタブのキャラ4人（今ある名前プレートの画像）", options: { bullet: { indent: 14 }, fontSize: 14, color: C.text1, breakLine: true } },
+    { text: "キャラの立ち絵（表情の差分も）", options: { bullet: { indent: 14 }, fontSize: 14, color: C.text1 } },
   ], { x: 7.5, y: 4.72, w: 5.0, h: 1.7, valign: "top", margin: 0, isTextBox: true, objectName: "今ある素材の文" });
 }
 {
   const s = content("背景（ページごとに1枚）", "作ってほしい素材");
-  s.addText("文字や、上に重ねる部品（タブ・行・ボタンなど）は背景には入れません", { x: M, y: 1.25, w: 12, h: 0.4, fontSize: 15, color: C.background2, margin: 0, isTextBox: true, objectName: "リード" });
+  s.addText("文字や、上に重ねる部品（タブ・行・ボタンなど）は背景には入れません", { x: M, y: 1.25, w: 12, h: 0.4, fontSize: 15, color: C.text2, margin: 0, isTextBox: true, objectName: "リード" });
   const bgs = [
     ["キャラのページ", "外枠、タブの下の区切り線、立ち絵の枠"],
     ["その他", "外枠、区切り線、右の詳しい表示の枠"],
@@ -309,14 +309,14 @@ pres.addSection({ title: "作ってほしい素材" });
     card(s, x, 1.9, 2.85, 1.75, t + "のカード");
     s.addText([
       { text: t, options: { bold: true, fontSize: 17, color: C.accent1, breakLine: true } },
-      { text: d, options: { fontSize: 14, color: C.background1 } },
+      { text: d, options: { fontSize: 14, color: C.text1 } },
     ], { x: x + 0.2, y: 2.05, w: 2.45, h: 1.5, valign: "top", margin: 0, isTextBox: true, objectName: t + "の文" });
   });
-  s.addText("形は「描いてほしい画面」の各ページの図を参考にしてください", { x: M, y: 3.95, w: 12, h: 0.4, fontSize: 15, color: C.background2, margin: 0, isTextBox: true, objectName: "補足" });
+  s.addText("形は「描いてほしい画面」の各ページの図を参考にしてください", { x: M, y: 3.95, w: 12, h: 0.4, fontSize: 15, color: C.text2, margin: 0, isTextBox: true, objectName: "補足" });
 }
 {
   const s = content("外枠（すべて伸び縮みできる外枠）", "作ってほしい素材");
-  s.addText("文字が入る土台は、ページをまたいで同じ外枠を使い回します。各外枠は1種類だけ作ってください。色の違いは、ゲーム側で色を変えて出します", { x: M, y: 1.25, w: 12.1, h: 0.65, fontSize: 15, color: C.background2, margin: 0, isTextBox: true, objectName: "リード" });
+  s.addText("文字が入る土台は、ページをまたいで同じ外枠を使い回します。各外枠は1種類だけ作ってください。色の違いは、ゲーム側で色を変えて出します", { x: M, y: 1.25, w: 12.1, h: 0.65, fontSize: 15, color: C.text2, margin: 0, isTextBox: true, objectName: "リード" });
   const cols = [
     ["① 角の丸い外枠", "上のタブ（その他・アイテム）、小タブ、「すべて見る」ボタン、所持ポイントの枠"],
     ["② 解禁ボタン", "「◯pt で解禁」ボタン。枠ではなく、中まで塗りつぶしたボタン"],
@@ -327,7 +327,7 @@ pres.addSection({ title: "作ってほしい素材" });
     card(s, M, y, w, 1.2, t + "のカード");
     s.addText([
       { text: t, options: { bold: true, fontSize: 17, color: C.accent1, breakLine: true } },
-      { text: d, options: { fontSize: 13, color: C.background1 } },
+      { text: d, options: { fontSize: 13, color: C.text1 } },
     ], { x: M + 0.2, y: y + 0.12, w: w - 0.4, h: 1.0, valign: "top", margin: 0, isTextBox: true, objectName: t + "の文" });
   });
   image(s, "tint_explain.png", 6.55, 2.05, 6.2, 3.9, "1枚の外枠に色を付けて状態を出す図");
@@ -346,10 +346,10 @@ pres.addSection({ title: "作ってほしい素材" });
     card(s, x, 1.45, w, 2.55, t + "のカード");
     s.addText([
       { text: t, options: { bold: true, fontSize: 16, color: C.accent1, breakLine: true } },
-      { text: d, options: { fontSize: 14, color: C.background1 } },
+      { text: d, options: { fontSize: 14, color: C.text1 } },
     ], { x: x + 0.15, y: 1.6, w: w - 0.3, h: 2.3, valign: "top", margin: 0, isTextBox: true, objectName: t + "の文" });
   });
-  s.addText("置く場所は「描いてほしい画面」の各ページの図を見てください", { x: M, y: 4.3, w: 12, h: 0.4, fontSize: 15, color: C.background2, margin: 0, isTextBox: true, objectName: "補足" });
+  s.addText("置く場所は「描いてほしい画面」の各ページの図を見てください", { x: M, y: 4.3, w: 12, h: 0.4, fontSize: 15, color: C.text2, margin: 0, isTextBox: true, objectName: "補足" });
 }
 
 // ===== 6. 決めてほしいこと =====
@@ -367,9 +367,9 @@ pres.addSection({ title: "決めてほしいこと" });
     const y = 1.4 + i * 1.0;
     badge(s, i + 1, M, y + 0.03, `確認${i + 1}`);
     s.addText(d ? [
-      { text: t, options: { bold: true, fontSize: 17, color: C.background1, breakLine: true } },
-      { text: d, options: { fontSize: 13, color: C.background2 } },
-    ] : [{ text: t, options: { bold: true, fontSize: 17, color: C.background1 } }], { x: M + 0.6, y, w: 11.5, h: 0.95, valign: "top", margin: 0, isTextBox: true, objectName: `確認${i + 1}の文` });
+      { text: t, options: { bold: true, fontSize: 17, color: C.text1, breakLine: true } },
+      { text: d, options: { fontSize: 13, color: C.text2 } },
+    ] : [{ text: t, options: { bold: true, fontSize: 17, color: C.text1 } }], { x: M + 0.6, y, w: 11.5, h: 0.95, valign: "top", margin: 0, isTextBox: true, objectName: `確認${i + 1}の文` });
   });
   s.addText("わからないことがあれば、いつでも聞いてください", { x: M, y: 6.55, w: 12, h: 0.4, fontSize: 16, bold: true, color: C.accent1, margin: 0, isTextBox: true, objectName: "結び" });
 }
