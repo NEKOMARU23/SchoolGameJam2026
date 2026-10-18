@@ -13,7 +13,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         [Header("--- 持ち上げる高さ ---")]
         [SerializeField] private float liftAmount = 12f;
 
-        [Header("--- ふちの光（後ろに置いた光の画像。乗せている間だけ表示し、一緒に持ち上げる） ---")]
+        [Header("--- ふちの光（後ろに置いた半透明の四角。乗せている間だけ表示し、一緒に持ち上げる） ---")]
         [SerializeField] private RectTransform glow;
 
         [Header("--- 名前の札（乗せている間だけ表示する） ---")]
