@@ -51,7 +51,7 @@ Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/�
 - Console is cp932: `PYTHONIOENCODING=utf-8`. Keep CRLF when patching files from Python.
 - The scratchpad and Unity's `Temp/` get cleared between days — don't rely on files kept there.
 - Docs-only commits without touching the Unity project's checked-out branch: `git -c core.longpaths=true worktree add <scratchpad>/wt <branch>` (long Unity paths fail without core.longpaths), copy the docs in, commit, push, `git worktree remove`.
-- Mockups for UI discussions: since 2026-10-18 no real art or screenshots may be used. Add box-and-text diagrams to `Docs/tools/make_wireframes.py` (PIL, font `C:/Windows/Fonts/YuGothB.ttc`; art positions = gray boxes labelled with what they are). Viewing these own diagrams is fine. The user still prefers to decide UI from pictures.
+- Mockups for UI discussions: since 2026-10-18 no real art or screenshots may be used. Add box-and-text diagrams to `Docs/tools/make_wireframes.py` (PIL, font `C:/Windows/Fonts/YuGothB.ttc`; art positions = gray boxes labelled with what they are). Use **neutral colours only** (white background, black/gray lines and text, blue notes, red only for meaning like AI判定/NEW) — never the game's navy/lime palette, which was copied from the designer's art before the ban (user's decision 2026-10-19). Same for the deck theme. Viewing these own diagrams is fine. The user still prefers to decide UI from pictures.
 
 ## Open items
 See `Docs/開発状況まとめ.md` (仮のまま・既知の問題) and `Docs/操作の分かりやすさ_改善案.md` (section 3 = status table).
