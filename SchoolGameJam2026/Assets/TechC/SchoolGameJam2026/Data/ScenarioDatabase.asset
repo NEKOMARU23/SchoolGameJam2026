@@ -15717,9 +15717,7 @@ MonoBehaviour:
     priority: 1
     hasSelfAffection: 0
     selfAffection: 0
-    otherAffections:
-    - characterId: C
-      minValue: 0
+    otherAffections: []
     hasActionCount: 0
     actionCount: 0
     requiredFlags: []
@@ -20863,7 +20861,7 @@ MonoBehaviour:
     hearingTargetId: 
     talkNumber: 0
     priority: 1
-    hasSelfAffection: 1
+    hasSelfAffection: 0
     selfAffection: 0
     otherAffections: []
     hasActionCount: 0
@@ -21101,7 +21099,7 @@ MonoBehaviour:
     hearingTargetId: 
     talkNumber: 0
     priority: 1
-    hasSelfAffection: 1
+    hasSelfAffection: 0
     selfAffection: 0
     otherAffections: []
     hasActionCount: 0
