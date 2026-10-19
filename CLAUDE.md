@@ -6,9 +6,9 @@ Human-facing docs (Japanese): `Docs/開発状況まとめ.md` (rules, progress, 
 ## Handoff — start here (2026-10-19)
 - **Everything up to PR #50 is merged** (keyboard shortcuts #49, profile-screen data #50). The only open PR is #51 (this handoff doc update). Start new work from the latest `main` (`git fetch https://github.com/NEKOMARU23/SchoolGameJam2026.git main` → new `feature/kono/<word>` branch). Before pushing more commits to a branch, check its PR is still open (`gh pr view N --json state`) — the user merges quickly, and commits pushed after a merge never reach main.
 - Local checkout at handoff: `feature/kono/handoff-docs` (= PR #51). Merged feature branches are kept on purpose (user: leave them for now). `feature/kono/vfx-test` (local only, has 8 AI-made VFX textures) — leave it alone (user's decision).
-- Tests: 122, all passing. Unity Editor may be open (check `unity status`; launch with `"C:/Program Files/Unity/Hub/Editor/6000.4.3f1/Editor/Unity.exe" -projectPath "C:/Unity/SchoolGameJam2026/SchoolGameJam2026"` in the background if needed).
+- Tests: 146 (145 pass, 1 skipped on purpose: `RouteTest` AI-release ending needs an AI route in the data). Unity Editor may be open (check `unity status`; launch with `"C:/Program Files/Unity/Hub/Editor/6000.4.3f1/Editor/Unity.exe" -projectPath "C:/Unity/SchoolGameJam2026/SchoolGameJam2026"` in the background if needed).
 - **Rules that must not slip**: Japanese only; no art to AI (never open image files or screenshots; screenshots only for the user, saved to `Screenshots/`); wireframes/decks in neutral colours; designer-owned design is not edited; commit as soon as something is confirmed working (user asked for this).
-- Next candidates (non-visual, ready to build): full-route automated tests (16番), remaining debug-menu ideas (12番: show which condition row chose the dialogue, play an ending directly, delete saves/records).
+- Next candidates (non-visual, ready to build): remaining debug-menu ideas (12番: show which condition row chose the dialogue, play an ending directly, delete saves/records).
 - Decided 2026-10-19: U5 character reactions = scenario-only (expression/SE columns of 本文; no automatic reaction code); night phase not used (removed); button SE = only the "play a sound on press" mechanism, sound asset later; 補助ちゃん is shown as「マキナ」; old `Day1–7_Scenario.asset` deleted.
 - Waiting on others: designer (profile-screen UI U7, replacing placeholder visuals), scenario writer (all dialogue/flags/endings, U9 day-1 朝の会話 text, day-7 text, 見出し for フラグ一覧 rows), SE assets (morning ring tone).
 
@@ -45,7 +45,7 @@ Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/�
 ## How to work here
 ### Prefer the Unity CLI while the Editor is open (memory: unity-cli-pipeline)
 - `unity status` / `unity command editor_status` → "ready". `unity recompile --json` (`compilationFailed` is `null` when already up to date).
-- Tests: `unity command run_tests --mode PlayMode --async_tests true`, then poll `unity command test_status --result-only` until `"status": "completed"` (122 tests ≈ 2–9 min).
+- Tests: `unity command run_tests --mode PlayMode --async_tests true`, then poll `unity command test_status --result-only` until `"status": "completed"` (146 tests ≈ 2–9 min; add `--filter ClassName` for one class).
 - Prefab/scene edits: write a temp `[MenuItem("Tools/ClaudeTemp/…")]` script, `unity recompile`, then `unity command menu --path …`. Edit other scenes with `OpenScene(Additive)` → `SaveScene` → `CloseScene` so the user's open scene isn't changed. Right after a recompile, commands can fail with "Connection reset" or "Main thread operation timed out" — wait and retry.
 - C# in the Editor: `unity command eval_file --file x.cs` (put code in a file; PowerShell mangles quoted `--code`).
 - **No art to AI (designer's instruction, 2026-10-18)**: never open image files (sprites, stand art, name plates, `Docs/images/*`) with Read or PIL, never look at game screenshots (`capture_game_view` shows the art), never generate art (no glow images or composed mockups). Verify UI with numbers via `eval_file` (RectTransform / TMP `textInfo` positions) and tests, then ask the user to check it in Unity. Build visuals from UI parts, font glyphs and colors only. (memory: no-designer-art-to-ai)
@@ -53,6 +53,7 @@ Scenario data comes only from `Assets/Editor/ScenarioData.xlsx` (sheets 説明/�
 - If the Editor is closed: batch mode `Unity.exe -batchmode -projectPath … -executeMethod …` / `-runTests -testPlatform PlayMode`.
 
 ### Tests
+Full-route test (仕様書16番): `RouteTest` + `ScenarioRouteChecker` check the imported data — every scene × every combination of the affection/action-count/flag values its rows mention selects a row with an existing dialogue; every ending result picks an ending and every ending is reachable; AI判定/AI化/獲得フラグ behave as written; 10 play styles run 7 days through the managers (no UI). Its "AI release ending" test calls `Assert.Ignore` while no AI route exists. Rows whose only condition is 好感度 >= 0 are a trap (affection goes negative after NG actions).
 `Script/Test/`: `InGameTestUtility` (`LoadInGameScene` also redirects ending/read/info records to temp files via `UseTestEndingRecord`; `JudgeOnFinalDay`, `EndDayByButton`, `ClickConfirmYes`, `GetConfirmDialog(path)` — two `ConfirmDialog` objects exist, InGame's and Option's, so find by path). Don't `using …Core.Manager;` in tests — `GameManager` collides with the utility property; qualify as `Core.Manager.X`. Test names can't start with a digit.
 
 ### Shell gotchas (Windows)
