@@ -28,6 +28,34 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
     }
 
     /// <summary>
+    /// 条件シートから会話を選んだときの記録（デバッグメニューで、どの条件で選ばれたかを見るため）
+    /// </summary>
+    public class ScenarioSelectionRecord
+    {
+        /// <summary> 候補の行1つと、選んだときにその行の条件を満たしていたか </summary>
+        public class Candidate
+        {
+            public ScenarioConditionRow Row;
+            public bool Satisfied;
+        }
+
+        /// <summary> 何日目か </summary>
+        public int Day;
+
+        /// <summary> 場面（例: ココアに対話 / スマホ 1回目 / 朝の会話 / 選択肢「…」） </summary>
+        public string Scene = "";
+
+        /// <summary> 候補の行（優先度順）。選択肢のときは空 </summary>
+        public List<Candidate> Candidates = new List<Candidate>();
+
+        /// <summary> 選ばれた行（どの行も条件を満たさなければ null） </summary>
+        public ScenarioConditionRow Chosen;
+
+        /// <summary> 選択肢を選んだときの、その選択肢（それ以外は null） </summary>
+        public ScenarioChoice Choice;
+    }
+
+    /// <summary>
     /// ゲーム全体の進行管理、日数、および「その日の朝に戻す」リセット機能を管理するマネージャー (Singleton)
     /// </summary>
     public class GameManager : MonoBehaviour
@@ -132,6 +160,27 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         /// <summary> シナリオのデータ（会話・条件・日別設定・フラグ一覧など） </summary>
         public ScenarioDatabase Scenario => scenarioDatabase;
 
+        /// <summary> 直前に会話を選んだ記録（デバッグメニュー用。まだ選んでいなければ null） </summary>
+        public ScenarioSelectionRecord LastSelection { get; private set; }
+
+        /// <summary>
+        /// 条件シートの候補の行から、条件を満たす最初の行を選ぶ。どの行がなぜ選ばれたかを LastSelection に残す
+        /// </summary>
+        /// <param name="scene">場面の説明（例: ココアに対話）</param>
+        /// <param name="rows">優先度順の候補の行</param>
+        /// <returns>選ばれた行（どの行も条件を満たさなければ null）</returns>
+        public ScenarioConditionRow SelectConditionRow(string scene, List<ScenarioConditionRow> rows, ScenarioSelector.Context context)
+        {
+            var record = new ScenarioSelectionRecord { Day = currentDay, Scene = scene ?? "" };
+            foreach (ScenarioConditionRow row in rows)
+            {
+                record.Candidates.Add(new ScenarioSelectionRecord.Candidate { Row = row, Satisfied = ScenarioSelector.IsSatisfied(row, context) });
+            }
+            record.Chosen = ScenarioSelector.Select(rows, context);
+            LastSelection = record;
+            return record.Chosen;
+        }
+
         /// <summary>
         /// 条件シートの判定に使う、今の状態をまとめる
         /// </summary>
@@ -201,6 +250,7 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             if (choice == null) return null;
 
+            LastSelection = new ScenarioSelectionRecord { Day = currentDay, Scene = $"選択肢「{choice.text}」", Choice = choice };
             if (choice.affectionChange != 0 && partner != null) partner.AddAffection(choice.affectionChange);
             string method = partner != null ? $"{GetCharacterName(partner.CharacterId)}との会話の選択肢" : "スマホの選択肢";
             ApplyEffects(choice.gainFlags, choice.aiTargets, $"選択肢（{choice.sourceLocation}「{choice.text}」）", method);
@@ -277,9 +327,10 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         {
             if (scenarioDatabase == null) return null;
 
-            ScenarioConditionRow row = ScenarioSelector.Select(
-                scenarioDatabase.GetConditionRows(currentDay, "", ScenarioAction.Morning),
-                CreateSelectorContext(null, 0));
+            List<ScenarioConditionRow> rows = scenarioDatabase.GetConditionRows(currentDay, "", ScenarioAction.Morning);
+            if (rows.Count == 0) return null;
+
+            ScenarioConditionRow row = SelectConditionRow("朝の会話", rows, CreateSelectorContext(null, 0));
             if (row == null) return null;
 
             ApplyScenarioEffects(row, "スマホ（朝の連絡）");

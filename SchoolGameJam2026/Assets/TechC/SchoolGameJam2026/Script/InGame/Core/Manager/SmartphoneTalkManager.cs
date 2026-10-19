@@ -47,7 +47,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             int talkNumber = talkCountToday + 1;
             if (talkNumber > db.GetSmartphoneTalkCount(day)) return false;
 
-            ScenarioConditionRow row = ScenarioSelector.Select(
+            ScenarioConditionRow row = game.SelectConditionRow(
+                $"スマホ {talkNumber}回目",
                 db.GetConditionRows(day, "", ScenarioAction.Smartphone, "", talkNumber),
                 game.CreateSelectorContext(null, 0));
             if (row == null) return false;

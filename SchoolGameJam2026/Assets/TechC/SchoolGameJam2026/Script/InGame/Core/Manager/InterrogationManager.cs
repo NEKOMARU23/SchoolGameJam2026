@@ -186,7 +186,8 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
             // 2. 会話を選ぶ（今回の行動による好感度の変化より前の状態で判定する）
             int day = game.CurrentDay;
             int actionCount = GetCharacterActionCount(targetChar.CharacterId, actionType);
-            ScenarioConditionRow row = ScenarioSelector.Select(
+            ScenarioConditionRow row = game.SelectConditionRow(
+                AcquireMethod(game, targetChar, actionType, hearingTargetId),
                 db.GetConditionRows(day, targetChar.CharacterId, (ScenarioAction)(int)actionType, hearingTargetId),
                 game.CreateSelectorContext(targetChar, actionCount));
             if (row == null)
