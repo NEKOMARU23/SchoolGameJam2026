@@ -90,7 +90,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
 
         /// <summary> 状態をまとめて戻したとき（リセット・ロード・デバッグ）に通知。画面の更新に使う </summary>
         public event Action OnStateRestored;
-        public event Action OnNightPhaseStarted;
 
         /// <summary> セーブを読み込んだとき（状態を戻した後）に通知。ログなど画面側の情報を戻すのに使う </summary>
         public event Action<SaveData> OnSaveLoaded;
@@ -423,13 +422,6 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.Manager
         }
 
         #endregion
-
-        /// <summary> 夜フェーズ（1日の行動終了後）への移行処理 </summary>
-        public void TransitionToNightPhase()
-        {
-            Debug.Log("<color=purple>--- 1日の取り調べが終了しました。夜フェーズへ移行します ---</color>");
-            OnNightPhaseStarted?.Invoke();
-        }
 
         /// <summary>
         /// AI判定シートの判定: その日が判定日のキャラは、回避フラグがすべて ON でなければ AI になる
