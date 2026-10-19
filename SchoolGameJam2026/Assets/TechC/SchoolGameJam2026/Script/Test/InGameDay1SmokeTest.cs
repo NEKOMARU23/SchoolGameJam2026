@@ -539,6 +539,19 @@ namespace TechC.SchoolGameJam2026.Scripts.Test
                 Assert.IsFalse(transition.IsPlaying, $"{day}日目の終了時の演出が終わりません");
             }
         }
+
+        [UnityTest]
+        public IEnumerator 取調室の会話が終わると最後のセリフが会話枠から消える()
+        {
+            var dialogueUI = FindComponent<DialogueUI>();
+            yield return Click("SelectRoomA_Button");
+            yield return Click("Button_Talk");
+            Assert.IsTrue(dialogueUI.IsDialoguePlaying, "前提: 会話が始まる");
+            Assert.IsNotEmpty(dialogueUI.DisplayedText, "前提: 会話枠にセリフが出ている");
+
+            yield return SkipDialogueByButton();
+            Assert.IsEmpty(dialogueUI.DisplayedText, "会話が終わったのに、最後のセリフが会話枠に残っています");
+        }
     }
 }
 #endif

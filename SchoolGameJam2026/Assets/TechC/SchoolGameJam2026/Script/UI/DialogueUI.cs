@@ -43,6 +43,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         /// <summary> 文字送り中、または未表示のページが残っているか </summary>
         public bool IsDialoguePlaying { get; private set; } = false;
 
+        /// <summary> 会話枠に今出ている本文（テストで確かめる用） </summary>
+        public string DisplayedText => dialogueText != null ? dialogueText.text : "";
+
         private readonly Queue<DialoguePage> pages = new Queue<DialoguePage>();
         private string currentSpeakerName = "";
 

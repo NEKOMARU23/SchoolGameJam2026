@@ -769,7 +769,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
         }
 
         /// <summary>
-        /// 取調室の会話が終わったら、選択肢があれば出す
+        /// 取調室の会話が終わったら、選択肢があれば出す（選ぶ間は最後のセリフを残しておく）
         /// </summary>
         private void HandleDialogueFinished()
         {
@@ -779,8 +779,17 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             interrogationPartner = null;
 
             if (finished != null) ReadHistoryStore.MarkRead(finished.id);
-            if (!TryShowChoices(finished, partner, isSmartphone: false)) ShowEarnedPoints();
+            if (!TryShowChoices(finished, partner, isSmartphone: false)) EndInterrogationConversation();
             UpdateInterrogationState();
+        }
+
+        /// <summary>
+        /// 取調室の行動の会話（選択肢の後の会話も含む）が全部終わったとき: 最後のセリフを会話枠から消し、入ったポイントを出す
+        /// </summary>
+        private void EndInterrogationConversation()
+        {
+            if (dialogueUI != null) dialogueUI.ResetDialogueState();
+            ShowEarnedPoints();
         }
 
         /// <summary>
@@ -816,7 +825,7 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
             }
 
             if (next != null) ShowOutcome(partner, ActionOutcome.FromDialogue(next));
-            else ShowEarnedPoints();   // 選択肢で会話が終わったら、ここで行動のポイントを出す
+            else EndInterrogationConversation();   // 選択肢で会話が終わったら、ここでセリフを消して行動のポイントを出す
             RefreshProfileView(currentProfileCharacterId);
             UpdateInterrogationState();
         }
