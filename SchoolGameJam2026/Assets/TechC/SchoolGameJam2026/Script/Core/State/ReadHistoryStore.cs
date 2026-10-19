@@ -56,6 +56,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.State
             lookup = new HashSet<string>(data.readDialogueIds, StringComparer.Ordinal);
         }
 
+        /// <summary> 【デバッグ用】既読の記録をすべて消す（保存したファイルも消す） </summary>
+        public static void ClearAll()
+        {
+            data = new RecordData();
+            lookup = new HashSet<string>(StringComparer.Ordinal);
+            try
+            {
+                if (File.Exists(FilePath)) File.Delete(FilePath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[ReadHistoryStore] 既読の記録を消せませんでした: {e.Message}");
+            }
+        }
+
         private static RecordData Load()
         {
             try

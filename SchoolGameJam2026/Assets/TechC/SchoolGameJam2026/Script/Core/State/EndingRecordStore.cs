@@ -58,6 +58,20 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.State
             }
         }
 
+        /// <summary> 【デバッグ用】見たエンディングの記録をすべて消す（保存したファイルも消す） </summary>
+        public static void ClearAll()
+        {
+            data = new RecordData();
+            try
+            {
+                if (File.Exists(FilePath)) File.Delete(FilePath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[EndingRecordStore] 見たエンディングの記録を消せませんでした: {e.Message}");
+            }
+        }
+
         private static RecordData Load()
         {
             try
