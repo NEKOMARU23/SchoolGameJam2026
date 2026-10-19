@@ -74,4 +74,4 @@ See `Docs/開発状況まとめ.md` (仮のまま・既知の問題) and `Docs/�
 - 日別設定 accepts only 拷問/対話/交渉 (parser error otherwise; its dropdown uses the `リスト` column 「日別設定の行動」). The old NG行動「解放」 rows (left over from when 解放 was possible on any day) were changed to 拷問.
 - Excel edits: openpyxl keeps the data validations/comments/freeze panes of `ScenarioData.xlsx` (checked); the 説明 sheet's text starts at column B. Re-import with `unity command menu --path "Tools/シナリオExcelを取り込む"`.
 - Profile screen rebuild (U7): design request `Docs/資料画面のデザイン相談.md` (designer-only content — keep programmer behaviour out of it), implementation plan `Docs/資料画面の動き_プログラム側.md` (section 9 = build list). Waiting for the designer.
-- Still open: U10 English headings, U11 (マキナ = 補助ちゃん's name; Meri's 友人について button uses the wrong plate `Game_Charactername_MakinaAI.png`), U15, U5 undecided parts, hidden-stat (好感度) discussion (改善案 U5).
+- Still open: U10 English headings, U11 heading only (名前 done 2026-10-19: speaker is「マキナ」in Excel; the wrong plate was on カネル's hearing button `Button_C`, now `Game_Charactername_Kaneru.png`), U15, U5 undecided parts, hidden-stat (好感度) discussion (改善案 U5).
