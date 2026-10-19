@@ -29,6 +29,9 @@ namespace TechC.SchoolGameJam2026.Scripts.UI
 
         public bool IsOpen => panel != null && panel.activeSelf;
 
+        /// <summary> エンディングの会話を探すシナリオのデータ（デバッグメニューでも使う） </summary>
+        public ScenarioDatabase Database => scenarioDatabase;
+
         /// <summary> 表示中の各行の文（テスト・確認用） </summary>
         public List<string> ShownNames { get; } = new List<string>();
 

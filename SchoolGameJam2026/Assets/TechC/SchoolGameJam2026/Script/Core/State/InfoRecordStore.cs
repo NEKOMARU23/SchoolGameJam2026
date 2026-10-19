@@ -100,6 +100,21 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.State
             Save();
         }
 
+        /// <summary> 【デバッグ用】手に入れた情報の記録（周回の数も）をすべて消す（保存したファイルも消す） </summary>
+        public static void ClearAll()
+        {
+            data = new RecordData();
+            lookup = new Dictionary<string, Entry>(StringComparer.Ordinal);
+            try
+            {
+                if (File.Exists(FilePath)) File.Delete(FilePath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[InfoRecordStore] 手に入れた情報の記録（周回の数も）を消せませんでした: {e.Message}");
+            }
+        }
+
         private static void EnsureLoaded()
         {
             if (data != null) return;

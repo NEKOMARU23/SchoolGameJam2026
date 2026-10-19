@@ -82,6 +82,12 @@ namespace TechC.SchoolGameJam2026.Scripts.Core.State
             if (CurrentSlot == slot) CurrentSlot = 0;
         }
 
+        /// <summary> 【デバッグ用】すべての枠のセーブを消す </summary>
+        public static void DeleteAll()
+        {
+            for (int slot = 1; slot <= SlotCount; slot++) Delete(slot);
+        }
+
         /// <summary>
         /// タイトル画面からロードするとき: シーンを切り替えた後の InGame に渡すセーブを預ける
         /// </summary>
